@@ -24,9 +24,18 @@ async fn main() {
         ]
     ];
     for message in messages {
-        api::send_message(api_key.clone(), &message).await;
+        match api::send_message(api_key.clone(), &message).await {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error sending message: {}", e),
+        }
         tokio::time::sleep(Duration::from_secs(2)).await;
     }
-    api::clear_board(api_key.clone()).await;
-    api::blank_board(api_key.clone()).await;
+    match api::clear_board(api_key.clone()).await {
+        Ok(_) => (),
+        Err(e) => eprintln!("Error clearing board: {}", e),
+    }
+    match api::blank_board(api_key.clone()).await {
+        Ok(_) => (),
+        Err(e) => eprintln!("Error blanking board: {}", e),
+    }
 }

@@ -28,12 +28,24 @@ pub async fn send_message(api_key: String, message: &Vec<[i32; 22]>) -> Result<(
 
 pub async fn clear_board(api_key: String) -> Result<(), reqwest::Error> {
     let message = vec![[0; 22]; 6];
-    send_message(api_key, &message).await
+    match send_message(api_key, &message).await {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            println!("Error: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 pub async fn blank_board(api_key: String) -> Result<(), reqwest::Error> {
     let message = vec![[70; 22]; 6];
-    send_message(api_key, &message).await
+    match send_message(api_key, &message).await {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            println!("Error: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 pub async fn get_message(api_key: String) -> Result<(), reqwest::Error> {

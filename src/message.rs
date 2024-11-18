@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 enum Character {
-    Space,
+    Blank,
     A,
     B,
     C,
@@ -43,32 +43,31 @@ enum Character {
     At,
     Hash,
     Dollar,
-    Percent,
-    Caret,
-    Ampersand,
-    Asterisk,
     LeftParen,
     RightParen,
     Hyphen,
-    Underscore,
-    Equals,
     Plus,
-    LeftBracket,
-    RightBracket,
-    LeftBrace,
-    RightBrace,
-    Backslash,
-    Pipe,
+    Ampersand,
+    Equals,
     Semicolon,
     Colon,
     SingleQuote,
     DoubleQuote,
+    Percent,
     Comma,
     Period,
-    LessThan,
-    GreaterThan,
     Slash,
     Question,
+    Degree,
+    Red,
+    Orange,
+    Yellow,
+    Green,
+    Blue,
+    Violet,
+    White,
+    Black,
+    Filled,
 }
 
 struct CharacterInfo {
@@ -81,6 +80,8 @@ struct CharacterInfo {
 impl Character {
     fn info(&self) -> CharacterInfo {
         match self {
+            Character::Blank =>
+                CharacterInfo { value: 0, label: " ", name: "Blank", note: "Blank" },
             Character::A =>
                 CharacterInfo { value: 1, label: "A", name: "Letter A", note: "Uppercase A" },
             Character::B =>
@@ -166,75 +167,71 @@ impl Character {
                 CharacterInfo { value: 39, label: "#", name: "Hash Symbol", note: "Punctuation" },
             Character::Dollar =>
                 CharacterInfo { value: 40, label: "$", name: "Dollar Symbol", note: "Punctuation" },
-            Character::Percent =>
-                CharacterInfo {
-                    value: 41,
-                    label: "%",
-                    name: "Percent Symbol",
-                    note: "Punctuation",
-                },
-            Character::Caret =>
-                CharacterInfo { value: 42, label: "^", name: "Caret Symbol", note: "Punctuation" },
-            Character::Ampersand =>
-                CharacterInfo { value: 43, label: "&", name: "Ampersand", note: "Punctuation" },
-            Character::Asterisk =>
-                CharacterInfo { value: 44, label: "*", name: "Asterisk", note: "Punctuation" },
             Character::LeftParen =>
                 CharacterInfo {
-                    value: 45,
+                    value: 41,
                     label: "(",
                     name: "Left Parenthesis",
                     note: "Punctuation",
                 },
             Character::RightParen =>
                 CharacterInfo {
-                    value: 46,
+                    value: 42,
                     label: ")",
                     name: "Right Parenthesis",
                     note: "Punctuation",
                 },
             Character::Hyphen =>
-                CharacterInfo { value: 47, label: "-", name: "Hyphen", note: "Punctuation" },
-            Character::Underscore =>
-                CharacterInfo { value: 48, label: "_", name: "Underscore", note: "Punctuation" },
-            Character::Equals =>
-                CharacterInfo { value: 49, label: "=", name: "Equals Sign", note: "Punctuation" },
+                CharacterInfo { value: 44, label: "-", name: "Hyphen", note: "Punctuation" },
             Character::Plus =>
-                CharacterInfo { value: 50, label: "+", name: "Plus Sign", note: "Punctuation" },
-            Character::LeftBracket =>
-                CharacterInfo { value: 51, label: "[", name: "Left Bracket", note: "Punctuation" },
-            Character::RightBracket =>
-                CharacterInfo { value: 52, label: "]", name: "Right Bracket", note: "Punctuation" },
-            Character::LeftBrace =>
-                CharacterInfo { value: 53, label: "{", name: "Left Brace", note: "Punctuation" },
-            Character::RightBrace =>
-                CharacterInfo { value: 54, label: "}", name: "Right Brace", note: "Punctuation" },
-            Character::Backslash =>
-                CharacterInfo { value: 55, label: "\\", name: "Backslash", note: "Punctuation" },
-            Character::Pipe =>
-                CharacterInfo { value: 56, label: "|", name: "Pipe", note: "Punctuation" },
+                CharacterInfo { value: 46, label: "+", name: "Plus Sign", note: "Punctuation" },
+            Character::Ampersand =>
+                CharacterInfo { value: 47, label: "&", name: "Ampersand", note: "Punctuation" },
+            Character::Equals =>
+                CharacterInfo { value: 48, label: "=", name: "Equals Sign", note: "Punctuation" },
             Character::Semicolon =>
-                CharacterInfo { value: 57, label: ";", name: "Semicolon", note: "Punctuation" },
+                CharacterInfo { value: 49, label: ";", name: "Semicolon", note: "Punctuation" },
             Character::Colon =>
-                CharacterInfo { value: 58, label: ":", name: "Colon", note: "Punctuation" },
+                CharacterInfo { value: 50, label: ":", name: "Colon", note: "Punctuation" },
             Character::SingleQuote =>
-                CharacterInfo { value: 59, label: "'", name: "Single Quote", note: "Punctuation" },
+                CharacterInfo { value: 52, label: "'", name: "Single Quote", note: "Punctuation" },
             Character::DoubleQuote =>
-                CharacterInfo { value: 60, label: "\"", name: "Double Quote", note: "Punctuation" },
+                CharacterInfo { value: 53, label: "\"", name: "Double Quote", note: "Punctuation" },
+            Character::Percent =>
+                CharacterInfo {
+                    value: 54,
+                    label: "%",
+                    name: "Percent Symbol",
+                    note: "Punctuation",
+                },
             Character::Comma =>
-                CharacterInfo { value: 61, label: ",", name: "Comma", note: "Punctuation" },
+                CharacterInfo { value: 55, label: ",", name: "Comma", note: "Punctuation" },
             Character::Period =>
-                CharacterInfo { value: 62, label: ".", name: "Period", note: "Punctuation" },
-            Character::LessThan =>
-                CharacterInfo { value: 63, label: "<", name: "Less Than", note: "Punctuation" },
-            Character::GreaterThan =>
-                CharacterInfo { value: 64, label: ">", name: "Greater Than", note: "Punctuation" },
+                CharacterInfo { value: 56, label: ".", name: "Period", note: "Punctuation" },
             Character::Slash =>
-                CharacterInfo { value: 65, label: "/", name: "Slash", note: "Punctuation" },
+                CharacterInfo { value: 59, label: "/", name: "Slash", note: "Punctuation" },
             Character::Question =>
-                CharacterInfo { value: 66, label: "?", name: "Question Mark", note: "Punctuation" },
-            Character::Space =>
-                CharacterInfo { value: 0, label: " ", name: "Space", note: "Whitespace" },
+                CharacterInfo { value: 60, label: "?", name: "Question Mark", note: "Punctuation" },
+            Character::Degree =>
+                CharacterInfo { value: 62, label: "°", name: "Degree", note: "Punctuation" },
+            Character::Red =>
+                CharacterInfo { value: 63, label: "Red", name: "Red Block", note: "Color" },
+            Character::Orange =>
+                CharacterInfo { value: 64, label: "Orange", name: "Orange Block", note: "Color" },
+            Character::Yellow =>
+                CharacterInfo { value: 63, label: "Yellow", name: "Yellow Block", note: "Color" },
+            Character::Green =>
+                CharacterInfo { value: 63, label: "Green", name: "Green Block", note: "Color" },
+            Character::Blue =>
+                CharacterInfo { value: 63, label: "Blue", name: "Blue Block", note: "Color" },
+            Character::Violet =>
+                CharacterInfo { value: 63, label: "Violet", name: "Violet Block", note: "Color" },
+            Character::White =>
+                CharacterInfo { value: 63, label: "White", name: "White Block", note: "Color" },
+            Character::Black =>
+                CharacterInfo { value: 63, label: "Black", name: "Black Block", note: "Color" },
+            Character::Filled =>
+                CharacterInfo { value: 63, label: "Filled", name: "Filled Block", note: "Color" },
         }
     }
 }
@@ -252,7 +249,7 @@ fn main() {
     character_codes.insert(Character::A, Character::A.info());
     character_codes.insert(Character::B, Character::B.info());
     // ...insert other characters...
-    character_codes.insert(Character::Space, Character::Space.info());
+    character_codes.insert(Character::Blank, Character::Blank.info());
 
     // Example usage
     // println!("Info for A: {:?}", character_codes[&Character::A]);
