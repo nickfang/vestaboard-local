@@ -4,8 +4,7 @@ use std::env;
 use dotenv::dotenv;
 use tokio::time::Duration;
 
-#[tokio::main]
-async fn main() {
+async fn send_message() {
     dotenv().ok();
     if env::var("LOCAL_API_KEY").is_err() {
         eprintln!("Error: LOCAL_API_KEY environment variable is not set.");
@@ -38,4 +37,14 @@ async fn main() {
         Ok(_) => (),
         Err(e) => eprintln!("Error blanking board: {}", e),
     }
+}
+
+#[tokio::main]
+async fn main() {
+    // send_message().await;
+    match message::to_codes("hello, world!") {
+        None => println!("Error: message contains invalid characters."),
+        Some(code) => println!("{:?}", code),
+    }
+    // println!("{:?}", code);
 }
