@@ -1,0 +1,3 @@
+pub mod message;
+
+// ...existing code...
