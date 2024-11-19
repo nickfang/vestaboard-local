@@ -329,6 +329,23 @@ pub fn to_codes(message: &str) -> Option<Vec<u8>> {
     Some(codes)
 }
 
+pub fn format_message(message: &str) -> Option<Vec<[i32; 22]>> {
+    let mut formatted_message = vec![[0; 22]; 6];
+    let codes = to_codes(message)?;
+
+    for (i, &code) in codes.iter().enumerate() {
+        let row = i / 22;
+        let col = i % 22;
+        if row < 6 {
+            formatted_message[row][col] = code as i32;
+        } else {
+            break;
+        }
+    }
+
+    Some(formatted_message)
+}
+
 fn main() {
     let hello_world = vec![
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
