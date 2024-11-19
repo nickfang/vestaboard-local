@@ -331,15 +331,91 @@ pub fn to_codes(message: &str) -> Option<Vec<u8>> {
 
 pub fn format_message(message: &str) -> Option<Vec<[i32; 22]>> {
     let mut formatted_message = vec![[0; 22]; 6];
-    let codes = to_codes(message)?;
+    let words: Vec<&str> = message.split_whitespace().collect();
+    let mut row = 0;
+    let mut col = 0;
 
-    for (i, &code) in codes.iter().enumerate() {
-        let row = i / 22;
-        let col = i % 22;
-        if row < 6 {
-            formatted_message[row][col] = code as i32;
-        } else {
+    for word in words {
+        let word_codes = to_codes(word)?;
+        if col + word_codes.len() > 22 {
+            row += 1;
+            col = 0;
+        }
+        if row >= 6 {
             break;
+        }
+        for &code in &word_codes {
+            if col < 22 {
+                formatted_message[row][col] = code as i32;
+                col += 1;
+            }
+        }
+        if col < 22 {
+            formatted_message[row][col] = 0; // Add space between words
+            col += 1;
+        }
+    }
+
+    // Center the message horizontally
+    for row in &mut formatted_message {
+        let mut start = 0;
+        let mut end = 21;
+        while start < end && row[start] == 0 {
+            start += 1;
+        }
+        while end > start && row[end] == 0 {
+            end -= 1;
+        }
+        let len = end - start + 1;
+        let padding = (22 - len) / 2;
+        if padding > 0 {
+            for i in (start..=end).rev() {
+                if i + padding < 22 {
+                    row[i + padding] = row[i];
+                }
+            }
+            for i in start..start + padding {
+                if i < 22 {
+                    row[i] = 0;
+                }
+            }
+            for i in end + padding + 1..22 {
+                if i < 22 {
+                    row[i] = 0;
+                }
+            }
+        }
+    }
+
+    // Center the message vertically
+    let mut first_non_empty_row = 0;
+    let mut last_non_empty_row = 5;
+    while first_non_empty_row < 6 && formatted_message[first_non_empty_row].iter().all(|&x| x == 0) {
+        first_non_empty_row += 1;
+    }
+    while
+        last_non_empty_row > first_non_empty_row &&
+        formatted_message[last_non_empty_row].iter().all(|&x| x == 0)
+    {
+        last_non_empty_row -= 1;
+    }
+    let vertical_len = last_non_empty_row - first_non_empty_row + 1;
+    let vertical_padding = (6 - vertical_len) / 2;
+    if vertical_padding > 0 {
+        for i in (first_non_empty_row..=last_non_empty_row).rev() {
+            if i + vertical_padding < 6 {
+                formatted_message[i + vertical_padding] = formatted_message[i];
+            }
+        }
+        for i in first_non_empty_row..first_non_empty_row + vertical_padding {
+            if i < 6 {
+                formatted_message[i] = [0; 22];
+            }
+        }
+        for i in last_non_empty_row + vertical_padding + 1..6 {
+            if i < 6 {
+                formatted_message[i] = [0; 22];
+            }
         }
     }
 
