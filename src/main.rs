@@ -1,7 +1,5 @@
 mod api;
 mod message;
-use std::env;
-use dotenv::dotenv;
 use tokio::time::Duration;
 
 // async fn send_message() {
@@ -34,18 +32,14 @@ use tokio::time::Duration;
 
 #[tokio::main]
 async fn main() {
-    // send_message().await;
-    dotenv().ok();
-    if env::var("LOCAL_API_KEY").is_err() {
-        eprintln!("Error: LOCAL_API_KEY environment variable is not set.");
-        std::process::exit(1);
-    }
-    let api_key = env::var("LOCAL_API_KEY").expect("LOCAL_API_KEY not set");
-    match message::format_message("hello, world!") {
+    let joke = "what did the janitor say when he jumped out of the closet? \"supplies!\"";
+    let colors =
+        "R R R R R R R R R R R O O O O O O O O O O O Y Y Y Y Y Y Y Y Y Y Y G G G G G G G G G G G B B B B B B B B B B B V V V V V V V V V V V";
+    match message::format_message(joke) {
         None => println!("Error: message contains invalid characters."),
         Some(code) => {
             println!("{:?}", code);
-            api::send_message(api_key, &code).await.unwrap();
+            api::send_message(&code).await.unwrap();
         }
     }
     // println!("{:?}", code);

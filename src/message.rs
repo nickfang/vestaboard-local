@@ -220,19 +220,19 @@ use lazy_static::lazy_static;
 //             Character::Orange =>
 //                 CharacterInfo { value: 64, label: "Orange", name: "Orange Block", note: "Color" },
 //             Character::Yellow =>
-//                 CharacterInfo { value: 63, label: "Yellow", name: "Yellow Block", note: "Color" },
+//                 CharacterInfo { value: 65, label: "Yellow", name: "Yellow Block", note: "Color" },
 //             Character::Green =>
-//                 CharacterInfo { value: 63, label: "Green", name: "Green Block", note: "Color" },
+//                 CharacterInfo { value: 66, label: "Green", name: "Green Block", note: "Color" },
 //             Character::Blue =>
-//                 CharacterInfo { value: 63, label: "Blue", name: "Blue Block", note: "Color" },
+//                 CharacterInfo { value: 67, label: "Blue", name: "Blue Block", note: "Color" },
 //             Character::Violet =>
-//                 CharacterInfo { value: 63, label: "Violet", name: "Violet Block", note: "Color" },
+//                 CharacterInfo { value: 68, label: "Violet", name: "Violet Block", note: "Color" },
 //             Character::White =>
-//                 CharacterInfo { value: 63, label: "White", name: "White Block", note: "Color" },
+//                 CharacterInfo { value: 69, label: "White", name: "White Block", note: "Color" },
 //             Character::Black =>
-//                 CharacterInfo { value: 63, label: "Black", name: "Black Block", note: "Color" },
+//                 CharacterInfo { value: 70, label: "Black", name: "Black Block", note: "Color" },
 //             Character::Filled =>
-//                 CharacterInfo { value: 63, label: "Filled", name: "Filled Block", note: "Color" },
+//                 CharacterInfo { value: 71, label: "Filled", name: "Filled Block", note: "Color" },
 //         }
 //     }
 // }
@@ -297,14 +297,14 @@ lazy_static! {
     m.insert('?', 60);
     m.insert('°', 62);
     m.insert('R', 63);
-    m.insert('O', 63);
-    m.insert('Y', 63);
-    m.insert('G', 63);
-    m.insert('B', 63);
-    m.insert('V', 63);
-    m.insert('W', 63);
-    m.insert('B', 63);
-    m.insert('F', 63);
+    m.insert('O', 64);
+    m.insert('Y', 65);
+    m.insert('G', 66);
+    m.insert('B', 67);
+    m.insert('V', 68);
+    m.insert('W', 69);
+    m.insert('K', 70);
+    m.insert('F', 71);
     m
   };
 }
@@ -418,23 +418,4 @@ pub fn format_message(message: &str) -> Option<Vec<[i32; 22]>> {
     center_message_vertically(&mut formatted_message);
 
     Some(formatted_message)
-}
-
-fn main() {
-    let hello_world = vec![
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 8, 5, 12, 12, 15, 0, 23, 15, 18, 12, 4, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ];
-    // let mut character_codes = HashMap::new();
-    // character_codes.insert(Character::A, Character::A.info());
-    // character_codes.insert(Character::B, Character::B.info());
-    // // ...insert other characters...
-    // character_codes.insert(Character::Blank, Character::Blank.info());
-
-    // Example usage
-    // println!("Info for A: {:?}", character_codes[&Character::A]);
 }
