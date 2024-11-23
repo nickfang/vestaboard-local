@@ -15,7 +15,7 @@ lazy_static! {
     };
 }
 
-pub async fn send_message(message: &Vec<[i32; 22]>) -> Result<(), reqwest::Error> {
+pub async fn send_message(message: &Vec<[u8; 22]>) -> Result<(), reqwest::Error> {
     let client = Client::new();
     let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
     let body = json!(message);
