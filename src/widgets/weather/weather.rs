@@ -1,9 +1,7 @@
 use dotenv::dotenv;
 use std::env;
 use reqwest::Client;
-use vestaboard_local::api;
-use vestaboard_local::message;
-use serde::{ Deserialize, de::DeserializeOwned };
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 struct WeatherResponse {
@@ -63,7 +61,7 @@ struct Condition {
     code: i32,
 }
 
-pub async fn get_weather() -> Result<String, reqwest::Error> {
+pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
     dotenv().ok();
     let weather_api_key = env::var("WEATHER_API_KEY").expect("WEATHER_API_KEY not set");
     println!("Weather API Key: {}", weather_api_key);
@@ -79,14 +77,15 @@ pub async fn get_weather() -> Result<String, reqwest::Error> {
             match response.json::<WeatherResponse>().await {
                 Ok(json) => {
                     println!("Response: {:?}", json);
-                    let weather_description = format!(
-                        "At {}, the temperature is {}°F with {} inches of precipitation and a pressure of {} inHg.",
-                        json.location.localtime,
-                        json.current.temp_f,
-                        json.current.precip_in,
-                        json.current.pressure_in
+                    let mut weather_description = Vec::new();
+                    weather_description.push(format!("{}", json.location.localtime.to_lowercase()));
+                    weather_description.push(format!("temp:      {}", json.current.temp_f));
+                    weather_description.push(
+                        format!("condition: {:?}", json.current.condition.text.to_lowercase())
                     );
-                    println!("{}", weather_description);
+                    weather_description.push(format!("precip:    {}", json.current.precip_in));
+                    weather_description.push(format!("pressure:  {}", json.current.pressure_in));
+                    println!("{:?}", weather_description);
                     Ok(weather_description)
                 }
                 Err(e) => {

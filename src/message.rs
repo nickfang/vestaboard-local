@@ -94,99 +94,8 @@ pub fn to_codes(message: &str) -> Option<Vec<u8>> {
     Some(codes)
 }
 
-fn center_line(line: &mut [u8; 22]) {
-    let mut start = 0;
-    let mut end = 21;
-    while start < end && line[start] == 0 {
-        start += 1;
-    }
-    while end > start && line[end] == 0 {
-        end -= 1;
-    }
-    let len = end - start + 1;
-    let padding = (22 - len) / 2;
-    if padding > 0 {
-        for i in (start..=end).rev() {
-            if i + padding < 22 {
-                line[i + padding] = line[i];
-            }
-        }
-        for i in start..start + padding {
-            if i < 22 {
-                line[i] = 0;
-            }
-        }
-        for i in end + padding + 1..22 {
-            if i < 22 {
-                line[i] = 0;
-            }
-        }
-    }
-}
-
-fn center_message_vertically(message: &mut Vec<[u8; 22]>) {
-    let vertical_padding = (6 - message.len()) / 2;
-    println!("Vertical padding: {}", vertical_padding.clone());
-    if vertical_padding > 0 {
-        for _ in 0..vertical_padding {
-            message.insert(0, [0; 22]);
-        }
-        while message.len() < 6 {
-            message.push([0; 22]);
-        }
-    }
-}
-
-pub fn format_message(message: &str) -> Option<Vec<[u8; 22]>> {
-    let mut formatted_message = Vec::new();
-    let words: Vec<&str> = message.split_whitespace().collect();
-    let mut current_line = [0; 22];
-    let mut col = 0;
-
-    for word in words {
-        let word_codes = to_codes(word)?;
-        if col + word_codes.len() > 22 {
-            center_line(&mut current_line);
-            formatted_message.push(current_line);
-            current_line = [0; 22];
-            col = 0;
-        }
-        if col + word_codes.len() <= 22 {
-            for &code in &word_codes {
-                current_line[col] = code;
-                col += 1;
-            }
-            if col < 22 {
-                current_line[col] = 0; // Add space between words
-                col += 1;
-            }
-        } else {
-            // If a single word is longer than 22 characters, split it
-            for &code in &word_codes {
-                if col == 22 {
-                    center_line(&mut current_line);
-                    formatted_message.push(current_line);
-                    current_line = [0; 22];
-                    col = 0;
-                }
-                current_line[col] = code;
-                col += 1;
-            }
-        }
-    }
-
-    if col > 0 {
-        center_line(&mut current_line);
-        formatted_message.push(current_line);
-    }
-
-    center_message_vertically(&mut formatted_message);
-
-    Some(formatted_message)
-}
-
-pub fn convert_message(message: Vec<&str>) -> Option<Vec<[u8; 22]>> {
-    let mut formatted_message: Vec<[u8; 22]> = Vec::new();
+pub fn convert_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
+    let mut formatted_message: [[u8; 22]; 6] = [[0; 22]; 6];
     let mut current_line = [0; 22];
     let mut line_num = 0;
 
@@ -194,7 +103,7 @@ pub fn convert_message(message: Vec<&str>) -> Option<Vec<[u8; 22]>> {
         if line_num == 6 {
             break;
         }
-        let line_codes = to_codes(line)?;
+        let line_codes = to_codes(&line)?;
         if line_codes.len() > 22 {
             eprintln!("Too many characters on line {:?}", line_num);
         }
@@ -206,13 +115,8 @@ pub fn convert_message(message: Vec<&str>) -> Option<Vec<[u8; 22]>> {
                 current_line[i] = 0;
             }
         }
-        formatted_message.push(current_line);
+        formatted_message[line_num] = current_line;
         line_num += 1;
-    }
-
-    // Pad with empty lines if there are less than 6 lines
-    while formatted_message.len() < 6 {
-        formatted_message.push([0; 22]);
     }
 
     Some(formatted_message)

@@ -26,3 +26,5 @@ Cargo.lock
 
 .env
 .DS_Store
+
+text.txt

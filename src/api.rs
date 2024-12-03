@@ -15,11 +15,11 @@ lazy_static! {
     };
 }
 
-pub async fn send_message(message: &Vec<[u8; 22]>) -> Result<(), reqwest::Error> {
+pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     let client = Client::new();
     let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
     let body = json!(message);
-
+    // return Ok(());
     let res = client
         .post(&url)
         .header("X-Vestaboard-Local-Api-Key", API_KEY.clone())
@@ -39,8 +39,8 @@ pub async fn send_message(message: &Vec<[u8; 22]>) -> Result<(), reqwest::Error>
 }
 
 pub async fn clear_board() -> Result<(), reqwest::Error> {
-    let message = vec![[0; 22]; 6];
-    match send_message(&message).await {
+    let message = [[0; 22]; 6];
+    match send_message(message).await {
         Ok(_) => Ok(()),
         Err(e) => {
             println!("Error: {:?}", e);
@@ -50,8 +50,8 @@ pub async fn clear_board() -> Result<(), reqwest::Error> {
 }
 
 pub async fn blank_board() -> Result<(), reqwest::Error> {
-    let message = vec![[70; 22]; 6];
-    match send_message(&message).await {
+    let message = [[70; 22]; 6];
+    match send_message(message).await {
         Ok(_) => Ok(()),
         Err(e) => {
             println!("Error: {:?}", e);
