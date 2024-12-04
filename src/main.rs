@@ -12,7 +12,7 @@ use vestaboard_local::widgets::jokes::get_joke;
     name = "Vestaboard CLI",
     version = "1.0",
     author = "Nicholas Fang",
-    about = "A CLI for the Vestaboard"
+    about = "CLI for updating a local Vestaboard"
 )]
 struct Cli {
     #[clap(subcommand)]
