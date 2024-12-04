@@ -59,6 +59,10 @@ async fn main() {
             let clear = vec!["".to_string(); 6];
             Some(clear)
         }
+        _ => {
+            println!("Command not implemented");
+            return;
+        }
     };
 
     if let Some(msg) = message {
