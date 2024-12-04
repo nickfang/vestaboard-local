@@ -2,7 +2,7 @@ use std::fs;
 use clap::{ Parser, Subcommand };
 
 mod api;
-mod message;
+mod api_client;
 use vestaboard_local::widgets::text::{ get_text, get_text_from_file };
 use vestaboard_local::widgets::weather::get_weather;
 use vestaboard_local::widgets::jokes::get_joke;
@@ -66,7 +66,7 @@ async fn main() {
     };
 
     if let Some(msg) = message {
-        match message::convert_message(msg) {
+        match api_client::convert_message(msg) {
             None => println!("Error: message contains invalid characters."),
             Some(code) => {
                 vb_codes = code;

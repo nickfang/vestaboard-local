@@ -1,5 +1,5 @@
 pub mod api;
-pub mod message;
+pub mod api_client;
 pub mod widgets;
 
 // ...existing code...

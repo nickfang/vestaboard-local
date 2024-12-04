@@ -1,4 +1,4 @@
-use vestaboard_local::message::to_codes;
+use vestaboard_local::api_client::to_codes;
 
 #[test]
 fn test_valid_message() {
