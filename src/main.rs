@@ -29,6 +29,7 @@ enum Commands {
     },
     Weather,
     Jokes,
+    Clear,
 }
 
 #[tokio::main]
@@ -53,6 +54,10 @@ async fn main() {
         Commands::Jokes => {
             let joke = get_joke();
             Some(joke)
+        }
+        Commands::Clear => {
+            let clear = vec!["".to_string(); 6];
+            Some(clear)
         }
     };
 
