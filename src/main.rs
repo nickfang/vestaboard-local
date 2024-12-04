@@ -24,8 +24,8 @@ enum Commands {
     Text {
         #[clap(short, long, help = "Path to the file containing the message")]
         file: Option<String>,
-        #[clap(short, long, help = "The message to display")]
-        message: Option<String>,
+        #[clap(short, long, help = "The message to display in \"\"")]
+        message: Option<Vec<String>>,
     },
     Weather,
     Jokes,
@@ -41,7 +41,7 @@ async fn main() {
             if let Some(file) = file {
                 Some(get_text_from_file(file))
             } else if let Some(message) = message {
-                Some(get_text(message))
+                Some(get_text(&message.join(" ")))
             } else {
                 None
             }
