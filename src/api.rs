@@ -2,18 +2,16 @@ use reqwest::Client;
 use serde_json::json;
 use std::env;
 use dotenv::dotenv;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref API_KEY: String = {
-        dotenv().ok();
-        env::var("LOCAL_API_KEY").expect("LOCAL_API_KEY not set")
-    };
-    static ref IP_ADDRESS: String = {
-        dotenv().ok();
-        env::var("IP_ADDRESS").expect("IP_ADDRESS not set")
-    };
-}
+static API_KEY: Lazy<String> = Lazy::new(|| {
+    dotenv().ok();
+    env::var("LOCAL_API_KEY").expect("LOCAL_API_KEY not set")
+});
+static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
+    dotenv().ok();
+    env::var("IP_ADDRESS").expect("IP_ADDRESS not set")
+});
 
 pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     let client = Client::new();
@@ -22,7 +20,7 @@ pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> 
     // return Ok(());
     let res = client
         .post(&url)
-        .header("X-Vestaboard-Local-Api-Key", API_KEY.clone())
+        .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
         .json(&body)
         .send().await;
 
@@ -64,7 +62,7 @@ pub async fn get_message() -> Result<(), reqwest::Error> {
     let client = Client::new();
     let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
-    let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", API_KEY.clone()).send().await;
+    let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &*API_KEY).send().await;
 
     match res {
         Ok(response) => {

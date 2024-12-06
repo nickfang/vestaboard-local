@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-  static ref CHARACTER_CODES: HashMap<char, u8> = {
+static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert(' ', 0);
     m.insert('a', 1);
@@ -71,8 +70,7 @@ lazy_static! {
     m.insert('K', 70);
     m.insert('F', 71);
     m
-  };
-}
+});
 
 pub fn to_codes(message: &str) -> Option<Vec<u8>> {
     let mut codes = Vec::new();
