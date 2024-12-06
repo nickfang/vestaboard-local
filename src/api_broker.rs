@@ -3,6 +3,11 @@ use once_cell::sync::Lazy;
 
 static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     let mut m = HashMap::new();
+    // let letters_numbers = [' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','1','2','3','4','5','6','7','8','9','0',
+    // ];
+    // for (i, c) in letters_numbers.iter().enumerate() {
+    //     m.insert(*c, i as u8);
+    // }
     m.insert(' ', 0);
     m.insert('a', 1);
     m.insert('b', 2);

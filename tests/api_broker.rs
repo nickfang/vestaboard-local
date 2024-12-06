@@ -1,4 +1,4 @@
-use vestaboard_local::api_client::to_codes;
+use vestaboard_local::api_broker::to_codes;
 
 #[test]
 fn test_valid_message() {
@@ -24,5 +24,12 @@ fn test_empty_message() {
 fn test_message_with_spaces() {
     let message = "hello world";
     let expected_codes = Some(vec![8, 5, 12, 12, 15, 0, 23, 15, 18, 12, 4]);
+    assert_eq!(to_codes(message), expected_codes);
+}
+
+#[test]
+fn test_message_with_numbers() {
+    let message = "1234567890";
+    let expected_codes = Some(vec![27, 28, 29, 30, 31, 32, 33, 34, 35, 36]);
     assert_eq!(to_codes(message), expected_codes);
 }
