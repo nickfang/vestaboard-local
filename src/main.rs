@@ -4,7 +4,7 @@ use clap::{ Parser, Subcommand };
 mod api;
 mod api_broker;
 
-use api_broker::convert_message;
+use api_broker::display_message;
 use vestaboard_local::widgets::text::{ get_text, get_text_from_file };
 use vestaboard_local::widgets::weather::get_weather;
 use vestaboard_local::widgets::jokes::get_joke;
@@ -17,6 +17,9 @@ use vestaboard_local::widgets::jokes::get_joke;
     about = "CLI for updating a local Vestaboard"
 )]
 struct Cli {
+    #[clap(short, long, help = "Show message without sending to board.")]
+    test: bool,
+
     #[clap(subcommand)]
     command: Commands,
 }
@@ -32,12 +35,28 @@ enum Commands {
     Weather,
     Jokes,
     Clear,
+    SATWord,
+}
+
+fn print_message(message: Vec<String>) {
+    println!("Vestaboard Display:");
+    println!("|----------------------|");
+    message.iter().for_each(|line| {
+        let padded_line = format!("{:<22}", line);
+        println!("|{}|", padded_line);
+    });
+    println!("|----------------------|");
 }
 
 #[tokio::main]
 async fn main() {
     let mut vb_codes: [[u8; 22]; 6] = [[0; 22]; 6];
     let cli = Cli::parse();
+    let mut test_mode = false;
+    if cli.test {
+        test_mode = true;
+    }
+
     let message: Option<Vec<String>> = match &cli.command {
         Commands::Text { file, message } => {
             println!("{:?}", file);
@@ -61,14 +80,30 @@ async fn main() {
             let clear = vec!["".to_string(); 6];
             Some(clear)
         }
+        Commands::SATWord => {
+            let sat_word = match vestaboard_local::widgets::sat_words::get_sat_word() {
+                Ok(word) => word,
+                Err(e) => {
+                    eprintln!("Error retrieving SAT word: {:?}", e);
+                    vec!["error retrieving sat word".to_string()]
+                }
+            };
+            println!("{:?}", sat_word);
+            Some(sat_word)
+        }
         _ => {
             println!("Command not implemented");
             return;
         }
     };
 
+    // let message_text = message.unwrap();
     if let Some(msg) = message {
-        match convert_message(msg) {
+        if test_mode {
+            print_message(msg);
+            return;
+        }
+        match display_message(msg) {
             None => println!("Error: message contains invalid characters."),
             Some(code) => {
                 vb_codes = code;

@@ -97,7 +97,7 @@ pub fn to_codes(message: &str) -> Option<Vec<u8>> {
     Some(codes)
 }
 
-pub fn convert_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
+pub fn display_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
     let mut formatted_message: [[u8; 22]; 6] = [[0; 22]; 6];
     let mut current_line = [0; 22];
     let mut line_num = 0;
