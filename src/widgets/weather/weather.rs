@@ -3,6 +3,8 @@ use std::env;
 use reqwest::Client;
 use serde::Deserialize;
 
+// reference: https://www.weatherapi.com/api-explorer.aspx#forecast
+
 #[derive(Deserialize, Debug)]
 struct WeatherResponse {
     current: Current,

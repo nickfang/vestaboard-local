@@ -107,6 +107,11 @@ vbl weather
 ## Contributing
 
 
+## Widgets
+
+### Weather
+https://www.weatherapi.com/api-explorer.aspx#forecast
+
 ## License
 
 
