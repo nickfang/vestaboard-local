@@ -1,4 +1,3 @@
-use std::fs;
 use clap::{ Parser, Subcommand };
 
 mod api;
