@@ -155,7 +155,7 @@ struct Hour {
 pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
     dotenv().ok();
     let weather_api_key = env::var("WEATHER_API_KEY").expect("WEATHER_API_KEY not set");
-    println!("Weather API Key: {}", weather_api_key);
+
     let client = Client::new();
     let url_current =
         format!("https://api.weatherapi.com/v1/current.json?key={}&q=austin", weather_api_key);
