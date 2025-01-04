@@ -35,11 +35,12 @@ fn test_format_message_centered() {
 fn test_format_message_long_word() {
     let message = "thisisaverylongwordthatshouldwrap";
     let formatted = format_message(message).unwrap();
+    println!("{:?}", formatted);
     let expected = vec![
         "".to_string(),
         "".to_string(),
-        "thisisaverylongword".to_string(),
-        "thatshouldwrap".to_string(),
+        "thisisaverylongwordtha".to_string(),
+        "     tshouldwrap      ".to_string(),
         "".to_string(),
         "".to_string()
     ];
@@ -51,6 +52,22 @@ fn test_format_message_long_word() {
     //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     // ];
+    assert_eq!(formatted, expected);
+}
+
+#[test]
+fn test_format_message_long_word_2() {
+    let message = "1 1234567890123456789012 12345678901234567890123 1234567890 12345";
+    let formatted = format_message(message).unwrap();
+    println!("{:?}", formatted);
+    let expected = vec![
+        "          1           ".to_string(),
+        "1234567890123456789012".to_string(),
+        "          3           ".to_string(),
+        "1234567890123456789012".to_string(),
+        "   1234567890 12345   ".to_string(),
+        "".to_string()
+    ];
     assert_eq!(formatted, expected);
 }
 

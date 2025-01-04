@@ -32,27 +32,27 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
     let mut current_line = String::new();
 
     for word in words {
+        println!("formatted_message: {:?}", formatted_message);
         if word.len() > MAX_MESSAGE_LENGTH {
             let mut split_word = word.to_string();
             while !split_word.is_empty() {
-                if split_word.len() > MAX_MESSAGE_LENGTH {
-                    let split = split_word.split_off(MAX_MESSAGE_LENGTH);
-                    formatted_message.push(split_word);
-                    split_word = split;
-                } else {
-                    let split = split_word.split_off(MAX_MESSAGE_LENGTH);
-                    println!("Split word: {}, split: {}", split_word, split);
-                    formatted_message.push(split_word);
-                    split_word = split;
-                }
+                let split_index = split_word
+                    .char_indices()
+                    .nth(MAX_MESSAGE_LENGTH)
+                    .map(|(i, _)| i)
+                    .unwrap_or(split_word.len());
+                let split = split_word.split_off(split_index);
+                println!("Split word: {}, split: {}", split_word, split);
+                formatted_message.push(center_line(split_word));
+                split_word = split;
             }
             continue;
         }
         if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
             // if next word doesn't fit, center line and add to formatted_message
-            let padded_line = center_line(current_line);
-            println!("Padded line: {}", padded_line);
-            formatted_message.push(padded_line);
+            // let padded_line = center_line(current_line);
+            // println!("Padded line: {}", padded_line);
+            formatted_message.push(center_line(current_line));
             current_line = String::new();
         }
 
