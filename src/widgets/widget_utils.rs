@@ -5,7 +5,6 @@ pub const MAX_MESSAGE_HEIGHT: usize = 6;
 pub fn center_line(line: String) -> String {
     format!("{:^1$}", line, MAX_MESSAGE_LENGTH)
     // let half_padding = (22 - line.len()) / 2;
-    // println!("Half padding: {}", half_padding);
     // if half_padding > 0 {
     //     format!("{}{}", " ".repeat(half_padding), line)
     // } else {
@@ -32,7 +31,6 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
     let mut current_line = String::new();
 
     for word in words {
-        println!("formatted_message: {:?}", formatted_message);
         if word.len() > MAX_MESSAGE_LENGTH {
             let mut split_word = word.to_string();
             while !split_word.is_empty() {
@@ -42,7 +40,6 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
                     .map(|(i, _)| i)
                     .unwrap_or(split_word.len());
                 let split = split_word.split_off(split_index);
-                println!("Split word: {}, split: {}", split_word, split);
                 formatted_message.push(center_line(split_word));
                 split_word = split;
             }
@@ -50,9 +47,8 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
         }
         if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
             // if next word doesn't fit, center line and add to formatted_message
-            // let padded_line = center_line(current_line);
-            // println!("Padded line: {}", padded_line);
-            formatted_message.push(center_line(current_line));
+            let centered_line = center_line(current_line);
+            formatted_message.push(centered_line);
             current_line = String::new();
         }
 
@@ -78,7 +74,6 @@ pub fn format_error(error: &str) -> WidgetOutput {
     for word in words {
         if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
             let padded_line = center_line(current_line);
-            println!("Padded line: {}", padded_line);
             formatted_message.push(padded_line);
             current_line = String::new();
         }
