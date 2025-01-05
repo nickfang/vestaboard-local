@@ -2,12 +2,13 @@ use clap::{ Parser, Subcommand };
 
 mod api;
 mod api_broker;
+mod widgets;
 
 use api_broker::display_message;
-use vestaboard_local::widgets::text::{ get_text, get_text_from_file };
-use vestaboard_local::widgets::weather::get_weather;
-use vestaboard_local::widgets::jokes::get_joke;
-use vestaboard_local::widgets::sat_words::get_sat_word;
+use widgets::text::{ get_text, get_text_from_file };
+use widgets::weather::get_weather;
+use widgets::jokes::get_joke;
+use widgets::sat_words::get_sat_word;
 
 #[derive(Parser)]
 #[clap(
@@ -131,3 +132,6 @@ async fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

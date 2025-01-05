@@ -1,5 +1,8 @@
-use vestaboard_local::api_broker::to_codes;
+#[path = "../api_broker.rs"]
+mod api_broker;
+use api_broker::to_codes;
 
+#[cfg(test)]
 #[test]
 fn test_valid_message() {
     let message = "hello";

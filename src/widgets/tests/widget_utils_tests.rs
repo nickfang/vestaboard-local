@@ -1,5 +1,8 @@
-use vestaboard_local::widgets::widget_utils::{ format_message, center_line };
+#[path = "../widget_utils.rs"]
+mod widget_utils;
+use widget_utils::{ format_message, center_line };
 
+#[cfg(test)]
 #[test]
 fn test_center_line() {
     let line = "hello world".to_string();
