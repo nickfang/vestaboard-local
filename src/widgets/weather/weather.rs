@@ -161,15 +161,12 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
         format!("https://api.weatherapi.com/v1/current.json?key={}&q=austin", weather_api_key);
     let url_forecast =
         format!("https://api.weatherapi.com/v1/forecast.json?key={}&q=austin&days=1&aqi=no&alerts=no", weather_api_key);
-    println!("URL: {}", url_forecast);
-    // return Ok(());
     let res = client.get(&url_forecast).send().await;
 
     match res {
         Ok(response) => {
             match response.json::<WeatherResponse>().await {
                 Ok(json) => {
-                    println!("Response: {:?}", json);
                     let mut weather_description = Vec::new();
                     weather_description.push(format!("{}", json.location.localtime.to_lowercase()));
                     weather_description.push(
@@ -193,7 +190,6 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                         )
                     );
                     weather_description.push(format!("pressure: {}", json.current.pressure_in));
-                    println!("{:?}", weather_description);
                     Ok(weather_description)
                 }
                 Err(e) => {

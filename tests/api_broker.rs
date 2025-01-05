@@ -33,3 +33,10 @@ fn test_message_with_numbers() {
     let expected_codes = Some(vec![27, 28, 29, 30, 31, 32, 33, 34, 35, 36]);
     assert_eq!(to_codes(message), expected_codes);
 }
+
+#[test]
+fn test_message_with_colors() {
+    let message = "ROYGBVWK";
+    let expected_codes = Some(vec![63, 64, 65, 66, 67, 68, 69, 70]);
+    assert_eq!(to_codes(message), expected_codes);
+}

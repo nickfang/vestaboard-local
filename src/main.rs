@@ -7,6 +7,7 @@ use api_broker::display_message;
 use vestaboard_local::widgets::text::{ get_text, get_text_from_file };
 use vestaboard_local::widgets::weather::get_weather;
 use vestaboard_local::widgets::jokes::get_joke;
+use vestaboard_local::widgets::sat_words::get_sat_word;
 
 #[derive(Parser)]
 #[clap(
@@ -37,13 +38,33 @@ enum Commands {
     SATWord,
 }
 
-fn print_message(message: Vec<String>) {
+pub fn print_message(message: Vec<String>) {
     println!("Vestaboard Display:");
     println!("|----------------------|");
-    message.iter().for_each(|line| {
-        let padded_line = format!("{:<22}", line);
-        println!("|{}|", padded_line);
-    });
+    message
+        .iter()
+        .take(6)
+        .for_each(|line| {
+            let padded_line = format!("{:<22}", line);
+            const SOLID_SQUARE: char = '\u{2588}';
+            let modified_line = padded_line
+                .chars()
+                .map(|c| {
+                    match c {
+                        'R' => format!("\x1b[{}m{}\x1b[0m", "31", SOLID_SQUARE),
+                        'O' => format!("\x1b[{}m{}\x1b[0m", "38:5:208", SOLID_SQUARE),
+                        'Y' => format!("\x1b[{}m{}\x1b[0m", "33", SOLID_SQUARE),
+                        'G' => format!("\x1b[{}m{}\x1b[0m", "32", SOLID_SQUARE),
+                        'B' => format!("\x1b[{}m{}\x1b[0m", "34", SOLID_SQUARE),
+                        'V' => format!("\x1b[{}m{}\x1b[0m", "35", SOLID_SQUARE),
+                        'W' => format!("\x1b[{}m{}\x1b[0m", "37", SOLID_SQUARE),
+                        'K' => format!("\x1b[{}m{}\x1b[0m", "30", SOLID_SQUARE),
+                        _ => c.to_string(),
+                    }
+                })
+                .collect::<String>();
+            println!("|{}|", modified_line);
+        });
     println!("|----------------------|");
 }
 
@@ -80,7 +101,7 @@ async fn main() {
             Some(clear)
         }
         Commands::SATWord => {
-            let sat_word = match vestaboard_local::widgets::sat_words::get_sat_word() {
+            let sat_word = match get_sat_word() {
                 Ok(word) => word,
                 Err(e) => {
                     eprintln!("Error retrieving SAT word: {:?}", e);
@@ -95,20 +116,18 @@ async fn main() {
             return;
         }
     };
-
-    // let message_text = message.unwrap();
     if let Some(msg) = message {
-        if test_mode {
-            print_message(msg);
-            return;
-        }
-        match display_message(msg) {
+        match display_message(msg.clone()) {
             None => println!("Error: message contains invalid characters."),
             Some(code) => {
+                if test_mode {
+                    print_message(msg);
+                    return;
+                }
                 vb_codes = code;
                 println!("{:?}", code);
+                api::send_message(vb_codes).await.unwrap();
             }
         }
     }
-    api::send_message(vb_codes).await.unwrap();
 }
