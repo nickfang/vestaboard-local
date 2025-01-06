@@ -66,6 +66,8 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
     Some(center_message(formatted_message))
 }
 
+// TODO: Not sure if should be done here.
+#[allow(dead_code)]
 pub fn format_error(error: &str) -> WidgetOutput {
     let mut formatted_message: Vec<String> = Vec::new();
     let words: Vec<&str> = error.split_whitespace().collect();

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{ File, OpenOptions };
-use std::io::{ self, BufRead, Write };
+use std::io::{ self, BufRead };
 use std::path::Path;
 use serde::{ Deserialize, Serialize };
 use chrono::Utc;

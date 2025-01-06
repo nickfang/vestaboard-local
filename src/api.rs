@@ -36,6 +36,7 @@ pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> 
     }
 }
 
+#[allow(dead_code)]
 pub async fn clear_board() -> Result<(), reqwest::Error> {
     let message = [[0; 22]; 6];
     match send_message(message).await {
@@ -47,6 +48,7 @@ pub async fn clear_board() -> Result<(), reqwest::Error> {
     }
 }
 
+#[allow(dead_code)]
 pub async fn blank_board() -> Result<(), reqwest::Error> {
     let message = [[70; 22]; 6];
     match send_message(message).await {
@@ -58,6 +60,7 @@ pub async fn blank_board() -> Result<(), reqwest::Error> {
     }
 }
 
+#[allow(dead_code)]
 pub async fn get_message() -> Result<(), reqwest::Error> {
     let client = Client::new();
     let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);

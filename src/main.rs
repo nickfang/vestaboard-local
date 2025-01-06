@@ -71,7 +71,6 @@ pub fn print_message(message: Vec<String>) {
 
 #[tokio::main]
 async fn main() {
-    let mut vb_codes: [[u8; 22]; 6] = [[0; 22]; 6];
     let cli = Cli::parse();
     let mut test_mode = false;
     if cli.test {
@@ -112,10 +111,9 @@ async fn main() {
             println!("{:?}", sat_word);
             Some(sat_word)
         }
-        _ => {
-            println!("Command not implemented");
-            return;
-        }
+        // Catch for if an enum is added and a match arm is not created to handle it
+        #[allow(unreachable_patterns)]
+        _ => None, // Handle any future enum variants
     };
     if let Some(msg) = message {
         match display_message(msg.clone()) {
@@ -125,9 +123,7 @@ async fn main() {
                     print_message(msg);
                     return;
                 }
-                vb_codes = code;
-                println!("{:?}", code);
-                api::send_message(vb_codes).await.unwrap();
+                api::send_message(code).await.unwrap();
             }
         }
     }
