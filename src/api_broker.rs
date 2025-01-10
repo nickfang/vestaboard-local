@@ -57,7 +57,7 @@ static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     m.insert('=', 48);
     m.insert(';', 49);
     m.insert(':', 50);
-    m.insert('"', 52);
+    m.insert('\'', 52);
     m.insert('"', 53);
     m.insert('%', 54);
     m.insert(',', 55);
