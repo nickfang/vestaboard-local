@@ -30,10 +30,12 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Text {
-        #[clap(short, long, help = "Path to the file containing the message")]
-        file: Option<String>,
-        #[clap(short, long, help = "The message to display in \"\"")]
+        #[clap(help = "The message to display in \"\"")]
         message: Option<Vec<String>>,
+    },
+    File {
+        #[clap(help = "The filename to read the message from")]
+        name: String,
     },
     Weather,
     Jokes,
@@ -50,16 +52,8 @@ async fn main() {
     }
 
     let message: Option<Vec<String>> = match &cli.command {
-        Commands::Text { file, message } => {
-            println!("{:?}", file);
-            if let Some(file) = file {
-                Some(get_text_from_file(file))
-            } else if let Some(message) = message {
-                Some(get_text(&message.join(" ")))
-            } else {
-                None
-            }
-        }
+        Commands::Text { message } => { Some(get_text(&message.clone().unwrap().join(" "))) }
+        Commands::File { name } => { Some(get_text_from_file(name)) }
         Commands::Weather => {
             let weather_description = get_weather().await.unwrap();
             Some(weather_description)
@@ -88,7 +82,8 @@ async fn main() {
         _ => None, // Handle any future enum variants
     };
     if let Some(msg) = message {
-        match display_message(msg.clone()) {
+        let display = display_message(msg.clone());
+        match display {
             None => println!("Error: message contains invalid characters."),
             Some(code) => {
                 if test_mode {
