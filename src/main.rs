@@ -30,11 +30,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Text {
-        #[clap(help = "The message to display in \"\"")]
-        message: Option<Vec<String>>,
+        #[clap(help = "The message to display", required = true)]
+        message: Vec<String>,
     },
     File {
-        #[clap(help = "The filename to read the message from")]
+        #[clap(help = "The filename to read the message from", required = true, index = 1)]
         name: String,
     },
     Weather,
@@ -52,7 +52,7 @@ async fn main() {
     }
 
     let message: Option<Vec<String>> = match &cli.command {
-        Commands::Text { message } => { Some(get_text(&message.clone().unwrap().join(" "))) }
+        Commands::Text { message } => { Some(get_text(&message.join(" "))) }
         Commands::File { name } => { Some(get_text_from_file(name)) }
         Commands::Weather => {
             let weather_description = get_weather().await.unwrap();
