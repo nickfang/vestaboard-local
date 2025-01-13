@@ -266,29 +266,21 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
         Ok(response) => {
             match response.json::<WeatherResponse>().await {
                 Ok(json) => {
+                    let localtime = json.location.localtime.to_lowercase();
+                    let temp_f = json.current.temp_f;
+                    let min_temp_f = json.forecast.forecastday[0].day.mintemp_f;
+                    let max_temp_f = json.forecast.forecastday[0].day.maxtemp_f;
+                    let condition = json.current.condition.text.replace("\"", "").to_lowercase();
+                    let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
+                    let pressure_in = json.current.pressure_in;
                     let mut weather_description = Vec::new();
-                    weather_description.push(format!("{}", json.location.localtime.to_lowercase()));
+                    weather_description.push(localtime);
                     weather_description.push(
-                        format!(
-                            "{}° l:{}° h:{}°",
-                            json.current.temp_f,
-                            json.forecast.forecastday[0].day.mintemp_f,
-                            json.forecast.forecastday[0].day.maxtemp_f
-                        )
+                        format!("W{}° B{}° R{}°", temp_f, min_temp_f, max_temp_f)
                     );
-                    weather_description.push(
-                        format!(
-                            "{:?}",
-                            json.current.condition.text.replace("\"", "").to_lowercase()
-                        )
-                    );
-                    weather_description.push(
-                        format!(
-                            "with {}in of rain",
-                            json.forecast.forecastday[0].day.totalprecip_in
-                        )
-                    );
-                    weather_description.push(format!("pressure: {}", json.current.pressure_in));
+                    weather_description.push(format!("{:?}", condition));
+                    weather_description.push(format!("rain: {}\"", totalprecip_in));
+                    weather_description.push(format!("pressure: {}", pressure_in));
                     Ok(weather_description)
                 }
                 Err(e) => {

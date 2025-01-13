@@ -2,79 +2,75 @@ use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
 static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    // let letters_numbers = [' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','1','2','3','4','5','6','7','8','9','0',
-    // ];
-    // for (i, c) in letters_numbers.iter().enumerate() {
-    //     m.insert(*c, i as u8);
-    // }
-    m.insert(' ', 0);
-    m.insert('a', 1);
-    m.insert('b', 2);
-    m.insert('c', 3);
-    m.insert('d', 4);
-    m.insert('e', 5);
-    m.insert('f', 6);
-    m.insert('g', 7);
-    m.insert('h', 8);
-    m.insert('i', 9);
-    m.insert('j', 10);
-    m.insert('k', 11);
-    m.insert('l', 12);
-    m.insert('m', 13);
-    m.insert('n', 14);
-    m.insert('o', 15);
-    m.insert('p', 16);
-    m.insert('q', 17);
-    m.insert('r', 18);
-    m.insert('s', 19);
-    m.insert('t', 20);
-    m.insert('u', 21);
-    m.insert('v', 22);
-    m.insert('w', 23);
-    m.insert('x', 24);
-    m.insert('y', 25);
-    m.insert('z', 26);
-    m.insert('1', 27);
-    m.insert('2', 28);
-    m.insert('3', 29);
-    m.insert('4', 30);
-    m.insert('5', 31);
-    m.insert('6', 32);
-    m.insert('7', 33);
-    m.insert('8', 34);
-    m.insert('9', 35);
-    m.insert('0', 36);
-    m.insert('!', 37);
-    m.insert('@', 38);
-    m.insert('#', 39);
-    m.insert('$', 40);
-    m.insert('(', 41);
-    m.insert(')', 42);
-    m.insert('-', 44);
-    m.insert('+', 46);
-    m.insert('&', 47);
-    m.insert('=', 48);
-    m.insert(';', 49);
-    m.insert(':', 50);
-    m.insert('\'', 52);
-    m.insert('"', 53);
-    m.insert('%', 54);
-    m.insert(',', 55);
-    m.insert('.', 56);
-    m.insert('/', 59);
-    m.insert('?', 60);
-    m.insert('°', 62);
-    m.insert('R', 63);
-    m.insert('O', 64);
-    m.insert('Y', 65);
-    m.insert('G', 66);
-    m.insert('B', 67);
-    m.insert('V', 68);
-    m.insert('W', 69);
-    m.insert('K', 70);
-    m.insert('F', 71);
-    m
+    let characters = [
+        (' ', 0),
+        ('a', 1),
+        ('b', 2),
+        ('c', 3),
+        ('d', 4),
+        ('e', 5),
+        ('f', 6),
+        ('g', 7),
+        ('h', 8),
+        ('i', 9),
+        ('j', 10),
+        ('k', 11),
+        ('l', 12),
+        ('m', 13),
+        ('n', 14),
+        ('o', 15),
+        ('p', 16),
+        ('q', 17),
+        ('r', 18),
+        ('s', 19),
+        ('t', 20),
+        ('u', 21),
+        ('v', 22),
+        ('w', 23),
+        ('x', 24),
+        ('y', 25),
+        ('z', 26),
+        ('1', 27),
+        ('2', 28),
+        ('3', 29),
+        ('4', 30),
+        ('5', 31),
+        ('6', 32),
+        ('7', 33),
+        ('8', 34),
+        ('9', 35),
+        ('0', 36),
+        ('!', 37),
+        ('@', 38),
+        ('#', 39),
+        ('$', 40),
+        ('(', 41),
+        (')', 42),
+        ('-', 44),
+        ('+', 46),
+        ('&', 47),
+        ('=', 48),
+        (';', 49),
+        (':', 50),
+        ('\'', 52),
+        ('"', 53),
+        ('%', 54),
+        (',', 55),
+        ('.', 56),
+        ('/', 59),
+        ('?', 60),
+        ('°', 62),
+        ('R', 63),
+        ('O', 64),
+        ('Y', 65),
+        ('G', 66),
+        ('B', 67),
+        ('V', 68),
+        ('W', 69),
+        ('K', 70),
+        ('F', 71),
+    ];
+    characters.iter().cloned().collect()
 });
 
 pub fn to_codes(message: &str) -> Option<Vec<u8>> {
