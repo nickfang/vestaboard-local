@@ -272,6 +272,11 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     let max_temp_f = json.forecast.forecastday[0].day.maxtemp_f;
                     let condition = json.current.condition.text.replace("\"", "").to_lowercase();
                     let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
+                    let rain = if totalprecip_in > 0.0 {
+                        format!("w/ {}\" of rain", totalprecip_in)
+                    } else {
+                        "".to_string()
+                    };
                     let pressure_in = json.current.pressure_in;
                     let future_pressure_in = json.forecast.forecastday
                         .iter()
@@ -283,8 +288,8 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     weather_description.push(
                         format!("W{}° B{}° R{}°", temp_f, min_temp_f, max_temp_f)
                     );
-                    weather_description.push(format!("{:?}", condition));
-                    weather_description.push(format!("rain: {}\"", totalprecip_in));
+                    weather_description.push(format!("{:?} {}", condition, rain));
+                    weather_description.push("".to_string());
                     weather_description.push(format!("inhg: {}", pressure_in));
                     weather_description.push(future_pressure_in);
                     Ok(weather_description)
