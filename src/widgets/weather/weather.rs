@@ -3,6 +3,8 @@ use std::env;
 use reqwest::Client;
 use serde::Deserialize;
 
+use crate::widgets::widget_utils::full_justify_line;
+
 // reference: https://www.weatherapi.com/api-explorer.aspx#forecast
 
 #[derive(Deserialize, Debug)]
@@ -273,7 +275,7 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     let condition = json.current.condition.text.replace("\"", "").to_lowercase();
                     let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
                     let rain = if totalprecip_in > 0.0 {
-                        format!("w/ {}\" of rain", totalprecip_in)
+                        format!("{}\"", totalprecip_in)
                     } else {
                         "".to_string()
                     };
@@ -286,12 +288,14 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     let mut weather_description = Vec::new();
                     weather_description.push(localtime);
                     weather_description.push(
-                        format!("W{}° B{}° R{}°", temp_f, min_temp_f, max_temp_f)
+                        full_justify_line(format!("W {}°", temp_f), condition)
                     );
-                    weather_description.push(format!("{:?} {}", condition, rain));
-                    weather_description.push("".to_string());
-                    weather_description.push(format!("inhg: {}", pressure_in));
-                    weather_description.push(future_pressure_in);
+                    weather_description.push(full_justify_line(format!("B {}°", min_temp_f), rain));
+                    weather_description.push(format!("R {}°", max_temp_f));
+                    weather_description.push(format!(""));
+                    weather_description.push(
+                        full_justify_line(format!("{}", pressure_in), future_pressure_in)
+                    );
                     Ok(weather_description)
                 }
                 Err(e) => {
