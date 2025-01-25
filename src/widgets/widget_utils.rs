@@ -3,13 +3,13 @@ pub const MAX_MESSAGE_LENGTH: usize = 22;
 pub const MAX_MESSAGE_HEIGHT: usize = 6;
 
 pub fn full_justify_line(s1: String, s2: String) -> String {
-    let len1 = s1.len();
-    let len2 = s2.len();
+    let len1 = s1.chars().count();
+    let len2 = s2.chars().count();
     let mut padding = 1;
     if len1 + len2 < MAX_MESSAGE_LENGTH {
         padding = MAX_MESSAGE_LENGTH - len1 - len2;
     }
-
+    println!("{} {} {}", len1, len2, padding);
     return format!("{}{:padding$}{}", s1, "", s2);
 }
 

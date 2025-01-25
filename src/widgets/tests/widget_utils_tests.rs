@@ -70,16 +70,17 @@ fn test_format_message_full_colors() {
 fn test_full_justify_line() {
     let s1 = "hello".to_string();
     let s2 = "world".to_string();
-    let justified = widget_utils::full_justify_line(s1, s2);
-    let expected = "hello            world";
+    let justified = full_justify_line(s1, s2);
+    let expected = "hello            world".to_string();
     assert_eq!(justified, expected);
+    assert_eq!(expected.chars().count(), 22);
 }
 
 #[test]
 fn test_full_justify_line_long_words() {
     let longs1 = "thisisaverylongword".to_string();
     let longs2 = "thatshouldwrap".to_string();
-    let justified = widget_utils::full_justify_line(longs1, longs2);
+    let justified = full_justify_line(longs1, longs2);
     let expected = "thisisaverylongword thatshouldwrap";
     assert_eq!(justified, expected);
 }
@@ -88,13 +89,15 @@ fn test_full_justify_line_long_words() {
 fn test_full_justify_line_empty_strings() {
     let emptys1 = "".to_string();
     let s2 = "world".to_string();
-    let justified = widget_utils::full_justify_line(emptys1, s2);
-    let expected = "                 world";
+    let justified = full_justify_line(emptys1, s2);
+    let expected = "                 world".to_string();
     assert_eq!(justified, expected);
+    assert_eq!(expected.chars().count(), 22);
 
     let s1 = "hello".to_string();
     let emptys2 = "".to_string();
-    let justified = widget_utils::full_justify_line(s1, emptys2);
-    let expected = "hello                 ";
+    let justified = full_justify_line(s1, emptys2);
+    let expected = "hello                 ".to_string();
     assert_eq!(justified, expected);
+    assert_eq!(expected.chars().count(), 22);
 }

@@ -8,7 +8,7 @@ fn print_message_test() {
         "ROYGBVKW".to_string(),
         "abcdefghijklmnopqrstuv".to_string(),
         "wxyz1234567890".to_string(),
-        "!@#$()-+&=;:'\"%,./?°".to_string()
+        "!@#$()-+&=;:'\"%,./?D".to_string()
     ];
 
     let output = cli_display::print_message(message);
@@ -19,7 +19,7 @@ fn print_message_test() {
         "|\u{1b}[31m█\u{1b}[0m\u{1b}[38:5:208m█\u{1b}[0m\u{1b}[33m█\u{1b}[0m\u{1b}[32m█\u{1b}[0m\u{1b}[34m█\u{1b}[0m\u{1b}[35m█\u{1b}[0m\u{1b}[30m█\u{1b}[0m\u{1b}[37m█\u{1b}[0m              |",
         "|abcdefghijklmnopqrstuv|",
         "|wxyz1234567890        |",
-        "|!@#$()-+&=;:'\"%,./?°  |",
+        "|!@#$()-+&=;:'\"%,./?D  |",
         "|                      |",
         "|                      |",
         "|----------------------|",

@@ -84,7 +84,7 @@ Messages can be passed in as a text file or a string. Only characters below are 
 | '&' | Ampersand | '=' | Equal | ';' | Semicolon |
 | ':' | Colon | ''' | Single Quote | '"' | Double Quote |
 | '%' | Percent | ',' | Comma | '.' | Period |
-| '/' | Slash | '?' | Question Mark | '°' | Degree |
+| '/' | Slash | '?' | Question Mark | 'D' | Degree |
 | 'R' | Red | 'O' | Orange | 'Y' | Yellow |
 | 'G' | Green | 'B' | Blue | 'V' | Violet |
 | 'W' | White | 'K' | Black | 'b' | B |

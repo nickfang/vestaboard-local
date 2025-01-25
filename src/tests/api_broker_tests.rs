@@ -64,7 +64,7 @@ fn test_display_message_all_characters() {
         "ROYGBVKW".to_string(),
         "abcdefghijklmnopqrstuv".to_string(),
         "wxyz1234567890".to_string(),
-        "!@#$()-+&=;:'\"%,./?°".to_string()
+        "!@#$()-+&=;:'\"%,./?D".to_string()
     ];
     let codes = display_message(message).unwrap();
     assert_eq!(codes, [

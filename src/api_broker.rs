@@ -59,7 +59,7 @@ static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
         ('.', 56),
         ('/', 59),
         ('?', 60),
-        ('°', 62),
+        ('D', 62),
         ('R', 63),
         ('O', 64),
         ('Y', 65),

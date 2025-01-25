@@ -269,9 +269,9 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
             match response.json::<WeatherResponse>().await {
                 Ok(json) => {
                     let localtime = json.location.localtime.to_lowercase();
-                    let temp_f = json.current.temp_f;
-                    let min_temp_f = json.forecast.forecastday[0].day.mintemp_f;
-                    let max_temp_f = json.forecast.forecastday[0].day.maxtemp_f;
+                    let temp_f = format!("W {}D", json.current.temp_f);
+                    let min_temp_f = format!("B {}D", json.forecast.forecastday[0].day.mintemp_f);
+                    let max_temp_f = format!("R {}D", json.forecast.forecastday[0].day.maxtemp_f);
                     let condition = json.current.condition.text.replace("\"", "").to_lowercase();
                     let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
                     let rain = if totalprecip_in > 0.0 {
@@ -279,7 +279,7 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     } else {
                         "".to_string()
                     };
-                    let pressure_in = json.current.pressure_in;
+                    let pressure_in = format!("{}", json.current.pressure_in);
                     let future_pressure_in = json.forecast.forecastday
                         .iter()
                         .map(|day| day.hour[0].pressure_in.to_string())
@@ -287,15 +287,11 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                         .join(" ");
                     let mut weather_description = Vec::new();
                     weather_description.push(localtime);
-                    weather_description.push(
-                        full_justify_line(format!("W {}°", temp_f), condition)
-                    );
-                    weather_description.push(full_justify_line(format!("B {}°", min_temp_f), rain));
-                    weather_description.push(format!("R {}°", max_temp_f));
+                    weather_description.push(full_justify_line(temp_f, condition));
+                    weather_description.push(full_justify_line(min_temp_f, rain));
+                    weather_description.push(max_temp_f);
                     weather_description.push(format!(""));
-                    weather_description.push(
-                        full_justify_line(format!("{}", pressure_in), future_pressure_in)
-                    );
+                    weather_description.push(full_justify_line(pressure_in, future_pressure_in));
                     Ok(weather_description)
                 }
                 Err(e) => {
