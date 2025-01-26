@@ -30,7 +30,7 @@ pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> 
             Ok(())
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             Err(e)
         }
     }
@@ -42,7 +42,7 @@ pub async fn clear_board() -> Result<(), reqwest::Error> {
     match send_message(message).await {
         Ok(_) => Ok(()),
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             Err(e)
         }
     }
@@ -54,7 +54,7 @@ pub async fn blank_board() -> Result<(), reqwest::Error> {
     match send_message(message).await {
         Ok(_) => Ok(()),
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             Err(e)
         }
     }
@@ -73,7 +73,7 @@ pub async fn get_message() -> Result<(), reqwest::Error> {
             Ok(())
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             Err(e)
         }
     }

@@ -295,13 +295,13 @@ pub async fn get_weather() -> WidgetOutput {
                 }
                 Err(e) => {
                     let error = format!("Failed to parse JSON: {:?}", e);
-                    println!("{}", error);
+                    eprintln!("{}", error);
                     format_error("error parsing weather data.")
                 }
             }
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             format_error("error retrieving weather data.")
         }
     }

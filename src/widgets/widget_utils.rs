@@ -9,7 +9,6 @@ pub fn full_justify_line(s1: String, s2: String) -> String {
     if len1 + len2 < MAX_MESSAGE_LENGTH {
         padding = MAX_MESSAGE_LENGTH - len1 - len2;
     }
-    println!("{} {} {}", len1, len2, padding);
     return format!("{}{:padding$}{}", s1, "", s2);
 }
 

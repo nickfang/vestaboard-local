@@ -64,7 +64,7 @@ async fn main() {
     };
     match display_message(message.clone()) {
         None => {
-            println!("Error: message contains invalid characters.");
+            eprintln!("Error: message contains invalid characters.");
             // TODO: get formatted error message to send to vestaboard
         }
         Some(code) => {
