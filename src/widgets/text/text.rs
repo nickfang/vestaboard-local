@@ -3,17 +3,28 @@ use crate::widgets::widget_utils;
 
 pub fn get_text(text: &str) -> Vec<String> {
     match widget_utils::format_message(text) {
-        None => {
-            println!("Error: message contains invalid characters.");
-            Vec::new()
-        }
         Some(lines) => lines,
+        None => {
+            let error = vec![
+                "Error:".to_string(),
+                "message contains invalid characters.".to_string()
+            ];
+            error
+        }
     }
 }
 
 pub fn get_text_from_file(file: &str) -> Vec<String> {
-    let text = fs::read_to_string(file).expect("Unable to read file");
-    text.lines()
-        .map(|line| line.to_string())
-        .collect()
+    match fs::read_to_string(file) {
+        Ok(text) => {
+            text.lines()
+                .map(|line| line.to_string())
+                .collect()
+        }
+        Err(e) => {
+            eprintln!("Error reading file: {:?}", e);
+            let error = vec!["Error:".to_string(), "could not read file.".to_string()];
+            error
+        }
+    }
 }

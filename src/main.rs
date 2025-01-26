@@ -51,47 +51,28 @@ async fn main() {
         test_mode = true;
     }
 
-    let message: Option<Vec<String>> = match &cli.command {
-        Commands::Text { message } => { Some(get_text(&message.join(" "))) }
-        Commands::File { name } => { Some(get_text_from_file(name)) }
-        Commands::Weather => {
-            let weather_description = get_weather().await.unwrap();
-            Some(weather_description)
-        }
-        Commands::Jokes => {
-            let joke = get_joke();
-            Some(joke)
-        }
+    let message: Vec<String> = match &cli.command {
+        Commands::Text { message } => { get_text(&message.join(" ")) }
+        Commands::File { name } => { get_text_from_file(name) }
+        Commands::Weather => { get_weather().await }
+        Commands::Jokes => { get_joke() }
+        Commands::SATWord => { get_sat_word() }
         Commands::Clear => {
-            let clear = vec!["".to_string(); 6];
-            Some(clear)
+            api::clear_board().await.unwrap();
+            return;
         }
-        Commands::SATWord => {
-            let sat_word = match get_sat_word() {
-                Ok(word) => word,
-                Err(e) => {
-                    eprintln!("Error retrieving SAT word: {:?}", e);
-                    vec!["error retrieving sat word".to_string()]
-                }
-            };
-            println!("{:?}", sat_word);
-            Some(sat_word)
-        }
-        // Catch for if an enum is added and a match arm is not created to handle it
-        #[allow(unreachable_patterns)]
-        _ => None, // Handle any future enum variants
     };
-    if let Some(msg) = message {
-        let display = display_message(msg.clone());
-        match display {
-            None => println!("Error: message contains invalid characters."),
-            Some(code) => {
-                if test_mode {
-                    print_message(msg);
-                    return;
-                }
-                api::send_message(code).await.unwrap();
+    match display_message(message.clone()) {
+        None => {
+            println!("Error: message contains invalid characters.");
+            // TODO: get formatted error message to send to vestaboard
+        }
+        Some(code) => {
+            if test_mode {
+                print_message(message);
+                return;
             }
+            api::send_message(code).await.unwrap();
         }
     }
 }

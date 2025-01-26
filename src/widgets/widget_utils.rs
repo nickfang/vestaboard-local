@@ -77,13 +77,14 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
     Some(center_message(formatted_message))
 }
 
-// TODO: Not sure if should be done here.
-#[allow(dead_code)]
+// There is only room for 4 lines of error message on the Vestaboard
 pub fn format_error(error: &str) -> WidgetOutput {
     let mut formatted_message: Vec<String> = Vec::new();
-    let words: Vec<&str> = error.split_whitespace().collect();
+    let lowercase_error = error.to_lowercase();
+    let words: Vec<&str> = lowercase_error.split_whitespace().collect();
     let mut current_line = String::new();
-
+    formatted_message.push("R R R R error: R R R R".to_string());
+    formatted_message.push("".to_string());
     for word in words {
         if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
             let padded_line = center_line(current_line);
@@ -99,6 +100,5 @@ pub fn format_error(error: &str) -> WidgetOutput {
     if !current_line.is_empty() {
         formatted_message.push(center_line(current_line));
     }
-
-    center_message(formatted_message)
+    formatted_message
 }

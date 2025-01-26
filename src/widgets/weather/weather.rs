@@ -3,7 +3,7 @@ use std::env;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::widgets::widget_utils::full_justify_line;
+use crate::widgets::widget_utils::{ format_error, full_justify_line, WidgetOutput };
 
 // reference: https://www.weatherapi.com/api-explorer.aspx#forecast
 
@@ -252,7 +252,7 @@ struct Hour {
     uv: f64,
 }
 
-pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
+pub async fn get_weather() -> WidgetOutput {
     dotenv().ok();
     let weather_api_key = env::var("WEATHER_API_KEY").expect("WEATHER_API_KEY not set");
 
@@ -263,7 +263,6 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
     let url_forecast =
         format!("https://api.weatherapi.com/v1/forecast.json?key={}&q=austin&days=3&aqi=no&alerts=no", weather_api_key);
     let res = client.get(&url_forecast).send().await;
-
     match res {
         Ok(response) => {
             match response.json::<WeatherResponse>().await {
@@ -292,17 +291,18 @@ pub async fn get_weather() -> Result<Vec<String>, reqwest::Error> {
                     weather_description.push(max_temp_f);
                     weather_description.push(format!(""));
                     weather_description.push(full_justify_line(pressure_in, future_pressure_in));
-                    Ok(weather_description)
+                    weather_description
                 }
                 Err(e) => {
-                    println!("Failed to parse JSON: {:?}", e);
-                    Err(e)
+                    let error = format!("Failed to parse JSON: {:?}", e);
+                    println!("{}", error);
+                    format_error("error parsing weather data.")
                 }
             }
         }
         Err(e) => {
             println!("Error: {:?}", e);
-            Err(e)
+            format_error("error retrieving weather data.")
         }
     }
 }

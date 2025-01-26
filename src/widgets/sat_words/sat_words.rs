@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::fs::{ File, OpenOptions };
 use std::io::{ self, BufRead };
 use std::path::Path;
+use std::env;
 use serde::{ Deserialize, Serialize };
-use chrono::Utc;
+
+use crate::widgets::widget_utils::{ format_message, format_error, WidgetOutput };
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UsedWord {
@@ -11,33 +13,28 @@ struct UsedWord {
     timestamp: String,
 }
 
-pub fn get_sat_word() -> Result<Vec<String>, io::Error> {
-    let path = "./words.txt";
-    let words_map = create_words_map(path)?;
+pub fn get_sat_word() -> WidgetOutput {
+    let path = "./src/widgets/sat_words/words.txt";
+    let words_map = match create_words_map(path) {
+        Ok(map) => map,
+        Err(e) => {
+            eprintln!("Error reading file: {:?}", e);
+            return format_error("could not read file.");
+        }
+    };
     let used_words_path = "./used_words.json";
-    let mut used_words = load_used_words(used_words_path)?;
+    let mut used_words = load_used_words(used_words_path);
 
     // Example usage: print the HashMap
     for (key, value) in &words_map {
-        if key == "facile" {
-            println!("{}: {:?}", key, value);
-            if !used_words.iter().any(|w| w.word == *key) {
-                used_words.push(UsedWord {
-                    word: key.clone(),
-                    timestamp: Utc::now().to_rfc3339(),
-                });
-                save_used_words(used_words_path, &used_words)?;
-            }
-            return Ok(
-                vec![
-                    format!("{}", value[0].0),
-                    format!("{}", value[0].1),
-                    format!("{}", value[0].2)
-                ]
-            );
+        println!("{}: {:?}", key, value);
+        if key == "stoic" {
+            let message = format!("{}: {:?}", key, value[0]);
+            println!("{}", message);
+            return format_message(message.as_str()).unwrap();
         }
     }
-    Ok(vec!["".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string()])
+    vec!["".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string()]
 }
 
 fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, String, String)>>>

@@ -1,6 +1,6 @@
 #[path = "../widget_utils.rs"]
 mod widget_utils;
-use widget_utils::{ format_message, center_line, full_justify_line };
+use widget_utils::{ format_message, format_error, center_line, full_justify_line };
 
 #[cfg(test)]
 #[test]
@@ -62,6 +62,20 @@ fn test_format_message_full_colors() {
         "YGBVWKROYGBVWKROYGBVWK",
         "ROYGBVWKROYGBVWKROYGBV",
         "WKROYGBVWKROYGBVWKROYG"
+    ];
+    assert_eq!(formatted, expected);
+}
+
+#[test]
+fn test_format_error() {
+    let message = "This is an error message to display on the Vestaboard.";
+    let formatted = format_error(message);
+    let expected = vec![
+        "R R R R error: R R R R".to_string(),
+        "".to_string(),
+         "   this is an error   ".to_string(),
+         "message to display on ".to_string(),
+         "   the vestaboard.    ".to_string(),
     ];
     assert_eq!(formatted, expected);
 }
