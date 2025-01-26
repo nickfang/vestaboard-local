@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fs::{ File, OpenOptions };
 use std::io::{ self, BufRead };
 use std::path::Path;
-use std::env;
 use serde::{ Deserialize, Serialize };
 
 use crate::widgets::widget_utils::{ format_message, format_error, WidgetOutput };
@@ -22,7 +21,7 @@ pub fn get_sat_word() -> WidgetOutput {
             return format_error("could not read file.");
         }
     };
-    let used_words_path = "./used_words.json";
+    let used_words_path = "./src/widgets/sat_words/used_words.json";
     let mut used_words = load_used_words(used_words_path);
 
     // Example usage: print the HashMap

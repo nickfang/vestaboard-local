@@ -272,9 +272,15 @@ pub async fn get_weather() -> WidgetOutput {
                     let min_temp_f = format!("B {}D", json.forecast.forecastday[0].day.mintemp_f);
                     let max_temp_f = format!("R {}D", json.forecast.forecastday[0].day.maxtemp_f);
                     let condition = json.current.condition.text.replace("\"", "").to_lowercase();
+                    let chance_precip = json.forecast.forecastday[0].day.daily_chance_of_rain;
                     let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
-                    let rain = if totalprecip_in > 0.0 {
-                        format!("{}\"", totalprecip_in)
+                    let rain_chance = if chance_precip > 0 {
+                        format!("w/ {}% chance", chance_precip)
+                    } else {
+                        "".to_string()
+                    };
+                    let rain_amount = if totalprecip_in > 0.0 {
+                        format!("{}\" of rain", totalprecip_in)
                     } else {
                         "".to_string()
                     };
@@ -287,8 +293,8 @@ pub async fn get_weather() -> WidgetOutput {
                     let mut weather_description = Vec::new();
                     weather_description.push(localtime);
                     weather_description.push(full_justify_line(temp_f, condition));
-                    weather_description.push(full_justify_line(min_temp_f, rain));
-                    weather_description.push(max_temp_f);
+                    weather_description.push(full_justify_line(min_temp_f, rain_chance));
+                    weather_description.push(full_justify_line(max_temp_f, rain_amount));
                     weather_description.push(format!(""));
                     weather_description.push(full_justify_line(pressure_in, future_pressure_in));
                     weather_description
