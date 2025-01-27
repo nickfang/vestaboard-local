@@ -14,6 +14,7 @@ serde_derive = "1.0.215"
 clap = { version = "4.5.21", features = ["derive"] }
 once_cell = "1.20.2"
 chrono = "0.4.39"
+rand = "0.8.5"
 
 [[bin]]
 name = "vbl"

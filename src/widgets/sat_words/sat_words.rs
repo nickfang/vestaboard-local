@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::fs::{ File, OpenOptions };
+use std::fs::File;
 use std::io::{ self, BufRead };
 use std::path::Path;
 use serde::{ Deserialize, Serialize };
+use rand::{ thread_rng, Rng };
 
-use crate::widgets::widget_utils::{ format_message, format_error, WidgetOutput };
+use crate::widgets::widget_utils::{ format_error, split_into_lines, WidgetOutput };
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UsedWord {
@@ -21,17 +22,18 @@ pub fn get_sat_word() -> WidgetOutput {
             return format_error("could not read file.");
         }
     };
-    let used_words_path = "./src/widgets/sat_words/used_words.json";
-    let mut used_words = load_used_words(used_words_path);
-
-    // Example usage: print the HashMap
-    for (key, value) in &words_map {
-        println!("{}: {:?}", key, value);
-        if key == "stoic" {
-            let message = format!("{}: {:?}", key, value[0]);
-            println!("{}", message);
-            return format_message(message.as_str()).unwrap();
+    // let used_words_path = "./src/widgets/sat_words/used_words.json";
+    // let mut used_words = load_used_words(used_words_path);
+    // let used_words = match used_words {
+    let mut rng = thread_rng();
+    if let Some((key, value)) = words_map.iter().nth(rng.gen_range(0..words_map.len())) {
+        let mut message = vec![format!("{} ({}):", key.to_string(), value[0].0.clone())];
+        message.push("".to_string());
+        let lines = split_into_lines(&value[0].1);
+        for line in lines {
+            message.push(line);
         }
+        return message;
     }
     vec!["".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string()]
 }
@@ -53,11 +55,12 @@ fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, S
             while let Some((word_type, rest_of_line)) = rest.split_once(')') {
                 if let Some((description, example)) = rest_of_line.split_once('(') {
                     definitions.push((
-                        word_type.trim().to_string() + ")",
+                        word_type[1..].to_string(), // remove paired ( from split_once
                         description.trim().to_string(),
                         example.trim().trim_end_matches(')').to_string(),
                     ));
-                    rest = rest_of_line.split_once(')').map_or("", |(_, r)| r.trim());
+                    rest = "";
+                    // rest = rest_of_line.split_once(')').map_or("", |(_, r)| r.trim());
                 } else {
                     println!(
                         "Line {} does not follow the expected pattern: {}",
@@ -78,24 +81,24 @@ fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, S
     Ok(map)
 }
 
-fn load_used_words<P>(filename: P) -> io::Result<Vec<UsedWord>>
-    where P: AsRef<Path> + AsRef<std::ffi::OsStr>
-{
-    if !Path::new(&filename).exists() {
-        let file = File::create(&filename)?;
-        serde_json::to_writer(file, &Vec::<UsedWord>::new())?;
-        return Ok(Vec::new());
-    }
-    let file = File::open(filename)?;
-    let reader = io::BufReader::new(file);
-    let used_words: Vec<UsedWord> = serde_json::from_reader(reader)?;
-    Ok(used_words)
-}
+// fn load_used_words<P>(filename: P) -> io::Result<Vec<UsedWord>>
+//     where P: AsRef<Path> + AsRef<std::ffi::OsStr>
+// {
+//     if !Path::new(&filename).exists() {
+//         let file = File::create(&filename)?;
+//         serde_json::to_writer(file, &Vec::<UsedWord>::new())?;
+//         return Ok(Vec::new());
+//     }
+//     let file = File::open(filename)?;
+//     let reader = io::BufReader::new(file);
+//     let used_words: Vec<UsedWord> = serde_json::from_reader(reader)?;
+//     Ok(used_words)
+// }
 
-fn save_used_words<P>(filename: P, used_words: &Vec<UsedWord>) -> io::Result<()>
-    where P: AsRef<Path>
-{
-    let file = OpenOptions::new().write(true).create(true).truncate(true).open(filename)?;
-    serde_json::to_writer(file, used_words)?;
-    Ok(())
-}
+// fn save_used_words<P>(filename: P, used_words: &Vec<UsedWord>) -> io::Result<()>
+//     where P: AsRef<Path>
+// {
+//     let file = OpenOptions::new().write(true).create(true).truncate(true).open(filename)?;
+//     serde_json::to_writer(file, used_words)?;
+//     Ok(())
+// }

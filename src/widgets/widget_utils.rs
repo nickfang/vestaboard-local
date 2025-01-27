@@ -12,6 +12,46 @@ pub fn full_justify_line(s1: String, s2: String) -> String {
     return format!("{}{:padding$}{}", s1, "", s2);
 }
 
+pub fn split_into_lines(text: &str) -> WidgetOutput {
+    let mut formatted_message: Vec<String> = Vec::new();
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut current_line = String::new();
+
+    for word in words {
+        if word.len() > MAX_MESSAGE_LENGTH {
+            let mut split_word = word.to_string();
+            while !split_word.is_empty() {
+                let split_index = split_word
+                    .char_indices()
+                    .nth(MAX_MESSAGE_LENGTH)
+                    .map(|(i, _)| i)
+                    .unwrap_or(split_word.len());
+                let split = split_word.split_off(split_index);
+                formatted_message.push(split_word);
+                split_word = split;
+            }
+            continue;
+        }
+        if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
+            // if next word doesn't fit, add to formatted_message
+            formatted_message.push(current_line);
+            current_line = String::new();
+        }
+
+        if !current_line.is_empty() {
+            // add space between words
+            current_line.push(' ');
+        }
+        current_line.push_str(word);
+    }
+
+    if !current_line.is_empty() {
+        formatted_message.push(current_line);
+    }
+
+    formatted_message
+}
+
 pub fn center_line(line: String) -> String {
     format!("{:^1$}", line, MAX_MESSAGE_LENGTH)
     // let half_padding = (22 - line.len()) / 2;
@@ -37,42 +77,11 @@ fn center_message(mut message: Vec<String>) -> WidgetOutput {
 
 pub fn format_message(message: &str) -> Option<WidgetOutput> {
     let mut formatted_message: Vec<String> = Vec::new();
-    let words: Vec<&str> = message.split_whitespace().collect();
-    let mut current_line = String::new();
-
-    for word in words {
-        if word.len() > MAX_MESSAGE_LENGTH {
-            let mut split_word = word.to_string();
-            while !split_word.is_empty() {
-                let split_index = split_word
-                    .char_indices()
-                    .nth(MAX_MESSAGE_LENGTH)
-                    .map(|(i, _)| i)
-                    .unwrap_or(split_word.len());
-                let split = split_word.split_off(split_index);
-                formatted_message.push(center_line(split_word));
-                split_word = split;
-            }
-            continue;
-        }
-        if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
-            // if next word doesn't fit, center line and add to formatted_message
-            let centered_line = center_line(current_line);
-            formatted_message.push(centered_line);
-            current_line = String::new();
-        }
-
-        if !current_line.is_empty() {
-            // add space between words
-            current_line.push(' ');
-        }
-        current_line.push_str(word);
-    }
-
-    if !current_line.is_empty() {
-        formatted_message.push(center_line(current_line));
-    }
-
+    split_into_lines(message)
+        .iter()
+        .for_each(|line| {
+            formatted_message.push(center_line(line.to_string()));
+        });
     Some(center_message(formatted_message))
 }
 

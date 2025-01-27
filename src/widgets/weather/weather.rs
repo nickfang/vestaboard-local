@@ -307,7 +307,7 @@ pub async fn get_weather() -> WidgetOutput {
             }
         }
         Err(e) => {
-            eprintln!("Error: {:?}", e);
+            eprintln!("Failed to retrieve weather data: {:?}", e);
             format_error("error retrieving weather data.")
         }
     }
