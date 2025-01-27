@@ -1,9 +1,9 @@
 # vestaboard-local
 
-[![Crates.io](https://img.shields.io/crates/v/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local)
+<!-- [![Crates.io](https://img.shields.io/crates/v/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local)
 [![Docs.rs](https://docs.rs/vestaboard_local/badge.svg)](https://docs.rs/vestaboard_local)
 [![Build Status](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml/badge.svg)](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml)
-[![License](https://img.shields.io/crates/l/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local)
+[![License](https://img.shields.io/crates/l/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local) -->
 
 ## Table of Contents
 
@@ -19,8 +19,6 @@
 - [Acknowledgements](#acknowledgements)
 - [Disclaimer (if applicable)](#disclaimer-if-applicable)
 
-
-This is a template README for open-source Rust projects. It provides a structured outline to help you present your project effectively.
 
 ## Features
 
@@ -91,6 +89,10 @@ Messages can be passed in as a text file or a string. Only characters below are 
 
 
 ## Examples
+See possible commands.
+```
+vbl
+```
 To send a center-aligned string to the Vestaboard:
 ```
 vbl text -m "hello from vestaboard local."
@@ -103,17 +105,29 @@ Using the weather widget.
 ```
 vbl weather
 ```
+Preview message.
+```
+cargo run -- -t sat-word
+```
 
 ## Contributing
 
 
 ## Widgets
 
-### Weather
+### `weather` - Current weather
+
+Pulls data from:
 https://www.weatherapi.com/api-explorer.aspx#forecast
+
+### `sat-word` - Random SAT word and definition
+Word bank located at: `src/widgets/sat_words/words.txt`
 
 ## License
 
+Copyright (c) 2024 Nicholas Fang
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/nickfang/vestaboard-local/blob/main/LICENSE)
 
 ## Contact
 
