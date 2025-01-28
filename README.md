@@ -5,6 +5,8 @@
 [![Build Status](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml/badge.svg)](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml)
 [![License](https://img.shields.io/crates/l/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local) -->
 
+This project allows a user to connect to their vesta board locally
+
 ## Table of Contents
 
 - [Features](#features)
@@ -27,15 +29,14 @@
 
 ### Prerequisites
 
-To run this project, these environment variables need to be added to a `.env` file:
-```
-LOCAL_API_KEY
-IP_ADDRESS
-```
-Optional environment variables for widgets.
-```
-WEATHER_API_KEY
-```
+Enable Local API on your Vestaboard: https://docs-v1.vestaboard.com/local
+
+Add these environment variables a `.env` file:
+- `LOCAL_API_KEY` - Key received after enabling Local API<br>
+- `IP_ADDRESS` - Local IP address of the Vestaboard
+
+Optional environment variables for widgets:
+- `WEATHER_API_KEY` - https://www.weatherapi.com/docs/ (Getting Started)
 
 ### Installation
 1. Clone the repository:
