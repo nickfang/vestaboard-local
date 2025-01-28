@@ -12,6 +12,7 @@ pub fn print_message(message: Vec<String>) -> Vec<String> {
                 .chars()
                 .map(|c| {
                     match c {
+                        'D' => "°".to_string(),
                         'R' => format!("\x1b[{}m{}\x1b[0m", "31", SOLID_SQUARE),
                         'O' => format!("\x1b[{}m{}\x1b[0m", "38:5:208", SOLID_SQUARE),
                         'Y' => format!("\x1b[{}m{}\x1b[0m", "33", SOLID_SQUARE),

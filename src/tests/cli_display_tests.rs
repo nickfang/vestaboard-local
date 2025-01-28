@@ -50,3 +50,25 @@ fn print_message_with_colors_test() {
         "|----------------------|",
     ]);
 }
+
+#[test]
+fn print_message_with_degree_character() {
+    let message = vec![
+        "100D is really hot".to_string(),
+        "0D is really cold".to_string(),
+        "but even worse".to_string(),
+        "in metric.".to_string()
+    ];
+    let output = cli_display::print_message(message);
+    assert_eq!(output, [
+        "Vestaboard Display:",
+        "|----------------------|",
+        "|100° is really hot    |",
+        "|0° is really cold     |",
+        "|but even worse        |",
+        "|in metric.            |",
+        "|                      |",
+        "|                      |",
+        "|----------------------|",
+    ])
+}
