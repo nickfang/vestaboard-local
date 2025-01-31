@@ -3,7 +3,7 @@ use std::env;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::widgets::widget_utils::{ format_error, full_justify_line, WidgetOutput };
+use crate::widgets::widget_utils::{ format_error, full_justify_line, center_line, WidgetOutput };
 
 // reference: https://www.weatherapi.com/api-explorer.aspx#forecast
 
@@ -291,11 +291,11 @@ pub async fn get_weather() -> WidgetOutput {
                         .collect::<Vec<String>>()
                         .join(" ");
                     let mut weather_description = Vec::new();
-                    weather_description.push(localtime);
+                    weather_description.push(center_line(localtime));
                     weather_description.push(full_justify_line(temp_f, condition));
                     weather_description.push(full_justify_line(min_temp_f, rain_chance));
                     weather_description.push(full_justify_line(max_temp_f, rain_amount));
-                    weather_description.push(format!(""));
+                    weather_description.push("pressure:".to_string());
                     weather_description.push(full_justify_line(pressure_in, future_pressure_in));
                     weather_description
                 }
