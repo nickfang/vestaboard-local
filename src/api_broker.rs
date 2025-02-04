@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
+use crate::api::{ Api, LocalApi };
+use crate::cli_display::print_message;
+
 static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     let characters = [
         (' ', 0),
@@ -73,50 +76,86 @@ static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     characters.iter().cloned().collect()
 });
 
-pub fn to_codes(message: &str) -> Option<Vec<u8>> {
-    let mut codes = Vec::new();
-    let mut invalid_chars = Vec::new();
-
-    for c in message.chars() {
-        match CHARACTER_CODES.get(&c) {
-            Some(&code) => codes.push(code),
-            None => invalid_chars.push(c),
-        }
-    }
-
-    if !invalid_chars.is_empty() {
-        eprintln!("Invalid characters found: {:?}", invalid_chars);
-        // eprintln!("These characters have been removed from the message.");
-        return None;
-    }
-
-    Some(codes)
+pub fn get_valid_characters() -> HashMap<char, u8> {
+    CHARACTER_CODES.clone()
 }
 
-pub fn display_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
-    let mut formatted_message: [[u8; 22]; 6] = [[0; 22]; 6];
-    let mut current_line = [0; 22];
-    let mut line_num = 0;
+// Define the ApiBroker trait
+pub trait ApiBroker {
+    async fn display_message(&self, message: Vec<String>, test_mode: bool);
+}
 
-    for line in message {
-        if line_num == 6 {
-            break;
-        }
-        let line_codes = to_codes(&line)?;
-        if line_codes.len() > 22 {
-            eprintln!("Too many characters on line {:?}", line_num);
-        }
-        // make sure and pad with 0's or characters on the previous line will be duplicated
-        for i in 0..22 {
-            if i < line_codes.len() {
-                current_line[i] = line_codes[i];
-            } else {
-                current_line[i] = 0;
-            }
-        }
-        formatted_message[line_num] = current_line;
-        line_num += 1;
+pub struct LocalApiBroker;
+
+impl LocalApiBroker {
+    pub fn new() -> Self {
+        LocalApiBroker
     }
 
-    Some(formatted_message)
+    fn to_codes(&self, message: &str) -> Option<Vec<u8>> {
+        let mut codes = Vec::new();
+        let mut invalid_chars = Vec::new();
+
+        for c in message.chars() {
+            match CHARACTER_CODES.get(&c) {
+                Some(&code) => codes.push(code),
+                None => invalid_chars.push(c),
+            }
+        }
+
+        if !invalid_chars.is_empty() {
+            eprintln!("API_BROKER: Invalid characters found: {:?}", invalid_chars);
+            // eprintln!("These characters have been removed from the message.");
+            return None;
+        }
+
+        Some(codes)
+    }
+}
+impl ApiBroker for LocalApiBroker {
+    async fn display_message(&self, message: Vec<String>, test_mode: bool) {
+        if test_mode {
+            print_message(message);
+            return;
+        }
+
+        let mut formatted_message: [[u8; 22]; 6] = [[0; 22]; 6];
+        let mut current_line = [0; 22];
+        let mut line_num = 0;
+
+        for line in message {
+            if line_num == 6 {
+                break;
+            }
+            let line_codes = match self.to_codes(&line) {
+                Some(codes) => codes,
+                None => {
+                    return;
+                }
+            };
+            if line_codes.len() > 22 {
+                eprintln!("API_BROKER: Too many characters on line {:?}", line_num);
+            }
+            // make sure and pad with 0's or characters on the previous line will be duplicated
+            for i in 0..22 {
+                if i < line_codes.len() {
+                    current_line[i] = line_codes[i];
+                } else {
+                    current_line[i] = 0;
+                }
+            }
+            formatted_message[line_num] = current_line;
+            line_num += 1;
+        }
+
+        let api = LocalApi::new();
+        match api.send_message(formatted_message).await {
+            Ok(_) => {
+                println!("API_BROKER: Message sent to Vestaboard.");
+            }
+            Err(e) => {
+                eprintln!("API_BROKER: Error sending message: {:?}", e);
+            }
+        }
+    }
 }

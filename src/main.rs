@@ -1,12 +1,13 @@
 use clap::{ Parser, Subcommand };
+use std::thread::sleep;
+use std::time::Duration;
 
 mod api;
 mod api_broker;
 mod cli_display;
 mod widgets;
 
-use api_broker::display_message;
-use cli_display::print_message;
+use crate::api_broker::{ ApiBroker, LocalApiBroker };
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
@@ -41,6 +42,7 @@ enum Commands {
     Jokes,
     Clear,
     SATWord,
+    Multiple,
 }
 
 #[tokio::main]
@@ -51,30 +53,53 @@ async fn main() {
         test_mode = true;
     }
 
-    let message: Vec<String> = match &cli.command {
-        Commands::Text { message } => { get_text(&message.join(" ")) }
-        Commands::File { name } => { get_text_from_file(name) }
-        Commands::Weather => { get_weather().await }
-        Commands::Jokes => { get_joke() }
-        Commands::SATWord => { get_sat_word() }
+    let api_broker = LocalApiBroker::new();
+
+    match &cli.command {
+        Commands::Text { message } => {
+            let message = get_text(&message.join(" "));
+            api_broker.display_message(message, test_mode).await;
+        }
+        Commands::File { name } => {
+            let message = get_text_from_file(name);
+            api_broker.display_message(message, test_mode).await;
+        }
+        Commands::Weather => {
+            let message = get_weather().await;
+            api_broker.display_message(message, test_mode).await;
+        }
+        Commands::Jokes => {
+            let message = get_joke();
+            api_broker.display_message(message, test_mode).await;
+        }
+        Commands::SATWord => {
+            let message = get_sat_word();
+            api_broker.display_message(message, test_mode).await;
+        }
         Commands::Clear => {
-            api::clear_board().await.unwrap();
+            let empty_message = vec!["".to_string()];
+            api_broker.display_message(empty_message, test_mode).await;
+            return;
+        }
+        Commands::Multiple => {
+            let message1 = get_text_from_file("text1.txt");
+            api_broker.display_message(message1, test_mode).await;
+            sleep(Duration::from_secs(4)); // Add a 4-second delay
+
+            let message2 = get_text_from_file("text2.txt");
+            api_broker.display_message(message2, test_mode).await;
+            sleep(Duration::from_secs(4)); // Add a 4-second delay
+
+            let message3 = get_text_from_file("text3.txt");
+            api_broker.display_message(message3, test_mode).await;
+            sleep(Duration::from_secs(4)); // Add a 4-second delay
+
+            let message4 = get_text_from_file("text4.txt");
+            api_broker.display_message(message4, test_mode).await;
+
             return;
         }
     };
-    match display_message(message.clone()) {
-        None => {
-            eprintln!("Error: message contains invalid characters.");
-            // TODO: get formatted error message to send to vestaboard
-        }
-        Some(code) => {
-            if test_mode {
-                print_message(message);
-                return;
-            }
-            api::send_message(code).await.unwrap();
-        }
-    }
 }
 
 #[cfg(test)]

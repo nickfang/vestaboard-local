@@ -1,6 +1,7 @@
-use reqwest::Client;
+use reqwest::ClientBuilder;
 use serde_json::json;
 use std::env;
+use std::time::Duration;
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 
@@ -13,68 +14,72 @@ static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
     env::var("IP_ADDRESS").expect("IP_ADDRESS not set")
 });
 
-pub async fn send_message(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
-    let client = Client::new();
-    let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
-    let body = json!(message);
-    // return Ok(());
-    let res = client
-        .post(&url)
-        .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
-        .json(&body)
-        .send().await;
+// Define the Api trait
+pub trait Api {
+    async fn send_message(&self, message: [[u8; 22]; 6]) -> Result<(), reqwest::Error>;
+    async fn get_message(&self) -> Result<(), reqwest::Error>;
+}
 
-    match res {
-        Ok(response) => {
-            println!("Response: {:?}", response);
-            Ok(())
+// Implement a concrete LocalApi
+pub struct LocalApi;
+
+impl LocalApi {
+    pub fn new() -> Self {
+        LocalApi
+    }
+}
+
+impl Api for LocalApi {
+    async fn send_message(&self, message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
+        let client = ClientBuilder::new().timeout(Duration::from_secs(10)).build()?;
+        let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
+        let body = json!(message);
+        let res = client
+            .post(&url)
+            .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
+            .json(&body)
+            .send().await;
+
+        match res {
+            Ok(response) => {
+                println!("API: Response: {:?}", response);
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("API Error: {:?}", e);
+                Err(e)
+            }
         }
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            Err(e)
+    }
+
+    async fn get_message(&self) -> Result<(), reqwest::Error> {
+        let client = ClientBuilder::new().timeout(Duration::from_secs(10)).build()?;
+        let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
+
+        let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &*API_KEY).send().await;
+
+        match res {
+            Ok(response) => {
+                println!("API: Response: {:?}", response);
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("API: Error: {:?}", e);
+                Err(e)
+            }
         }
     }
 }
 
+// Helper functions now take a reference to anything implementing Api
 #[allow(dead_code)]
-pub async fn clear_board() -> Result<(), reqwest::Error> {
+pub async fn clear_board(board: &impl Api) -> Result<(), reqwest::Error> {
     let message = [[0; 22]; 6];
-    match send_message(message).await {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            Err(e)
-        }
-    }
+    board.send_message(message).await
 }
 
 #[allow(dead_code)]
-pub async fn blank_board() -> Result<(), reqwest::Error> {
+pub async fn blank_board(board: &impl Api) -> Result<(), reqwest::Error> {
     let message = [[70; 22]; 6];
-    match send_message(message).await {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            Err(e)
-        }
-    }
-}
-
-#[allow(dead_code)]
-pub async fn get_message() -> Result<(), reqwest::Error> {
-    let client = Client::new();
-    let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
-
-    let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &*API_KEY).send().await;
-
-    match res {
-        Ok(response) => {
-            println!("Response: {:?}", response);
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            Err(e)
-        }
-    }
+    board.send_message(message).await
 }
