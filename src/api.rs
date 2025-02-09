@@ -73,13 +73,13 @@ impl Api for LocalApi {
 
 // Helper functions now take a reference to anything implementing Api
 #[allow(dead_code)]
-pub async fn clear_board(board: &impl Api) -> Result<(), reqwest::Error> {
+pub async fn clear_board(api: &impl Api) -> Result<(), reqwest::Error> {
     let message = [[0; 22]; 6];
-    board.send_message(message).await
+    api.send_message(message).await
 }
 
 #[allow(dead_code)]
-pub async fn blank_board(board: &impl Api) -> Result<(), reqwest::Error> {
+pub async fn blank_board(api: &impl Api) -> Result<(), reqwest::Error> {
     let message = [[70; 22]; 6];
-    board.send_message(message).await
+    api.send_message(message).await
 }

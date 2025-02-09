@@ -85,14 +85,16 @@ pub trait ApiBroker {
     async fn display_message(&self, message: Vec<String>, test_mode: bool);
 }
 
-pub struct LocalApiBroker;
+pub struct LocalApiBroker<T: Api> {
+    api: T,
+}
 
-impl LocalApiBroker {
-    pub fn new() -> Self {
-        LocalApiBroker
+impl<T: Api> LocalApiBroker<T> {
+    pub fn new_with_api(api: T) -> Self {
+        LocalApiBroker { api }
     }
 
-    fn to_codes(&self, message: &str) -> Option<Vec<u8>> {
+    pub fn to_codes(&self, message: &str) -> Option<Vec<u8>> {
         let mut codes = Vec::new();
         let mut invalid_chars = Vec::new();
 
@@ -112,7 +114,13 @@ impl LocalApiBroker {
         Some(codes)
     }
 }
-impl ApiBroker for LocalApiBroker {
+
+impl LocalApiBroker<LocalApi> {
+    pub fn new() -> Self {
+        LocalApiBroker { api: LocalApi::new() }
+    }
+}
+impl<T: Api> ApiBroker for LocalApiBroker<T> {
     async fn display_message(&self, message: Vec<String>, test_mode: bool) {
         if test_mode {
             print_message(message);

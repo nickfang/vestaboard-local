@@ -79,7 +79,6 @@ async fn main() {
         Commands::Clear => {
             let empty_message = vec!["".to_string()];
             api_broker.display_message(empty_message, test_mode).await;
-            return;
         }
         Commands::Multiple => {
             let message1 = get_text_from_file("text1.txt");
@@ -96,8 +95,6 @@ async fn main() {
 
             let message4 = get_text_from_file("text4.txt");
             api_broker.display_message(message4, test_mode).await;
-
-            return;
         }
     };
 }

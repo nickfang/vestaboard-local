@@ -1,6 +1,10 @@
+use std::collections::HashMap;
+use crate::api_broker::get_valid_characters;
+
 pub type WidgetOutput = Vec<String>;
 pub const MAX_MESSAGE_LENGTH: usize = 22;
 pub const MAX_MESSAGE_HEIGHT: usize = 6;
+pub const MAX_ERROR_HEIGHT: usize = 4;
 
 pub fn full_justify_line(s1: String, s2: String) -> String {
     let len1 = s1.chars().count();
@@ -54,12 +58,6 @@ pub fn split_into_lines(text: &str) -> WidgetOutput {
 
 pub fn center_line(line: String) -> String {
     format!("{:^1$}", line, MAX_MESSAGE_LENGTH)
-    // let half_padding = (22 - line.len()) / 2;
-    // if half_padding > 0 {
-    //     format!("{}{}", " ".repeat(half_padding), line)
-    // } else {
-    //     line
-    // }
 }
 
 fn center_message(mut message: Vec<String>) -> WidgetOutput {
@@ -109,4 +107,9 @@ pub fn format_error(error: &str) -> WidgetOutput {
         formatted_message.push(center_line(current_line));
     }
     formatted_message
+}
+
+pub fn check_characters(message: &str) -> bool {
+    let valid_characters: HashMap<char, u8> = get_valid_characters();
+    message.chars().all(|c| valid_characters.contains_key(&c))
 }
