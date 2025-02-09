@@ -15,7 +15,7 @@ struct UsedWord {
 
 pub fn get_sat_word() -> WidgetOutput {
     let path = "./src/widgets/sat_words/words.txt";
-    let words_map = match create_words_map(path) {
+    let words_map = match create_word_map(path) {
         Ok(map) => map,
         Err(e) => {
             eprintln!("Error reading file: {:?}", e);
@@ -38,7 +38,7 @@ pub fn get_sat_word() -> WidgetOutput {
     vec!["".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string()]
 }
 
-fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
+fn create_word_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
     where P: AsRef<Path>
 {
     let file = File::open(filename)?;

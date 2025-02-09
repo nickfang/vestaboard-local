@@ -28,4 +28,5 @@ Cargo.lock
 .DS_Store
 
 text.txt
+text*
 .codegpt
