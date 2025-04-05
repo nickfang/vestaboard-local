@@ -113,6 +113,7 @@ cargo run -- -t sat-word
 
 ## Contributing
 
+When pushing to a remote branch, tests are automatically run.
 
 ## Widgets
 
