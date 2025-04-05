@@ -121,6 +121,24 @@ cargo run -- -t sat-word
 Pulls data from:
 https://www.weatherapi.com/api-explorer.aspx#forecast
 
+API Error Codes
+If there is an error, API response contains error message including error code for following 4xx HTTP Status codes.
+
+| HTTP Status Code | Error code | Description |
+|-----------------|------------|-------------|
+| 401 | 1002 | API key not provided. |
+| 400 | 1003 | Parameter 'q' not provided. |
+| 400 | 1005 | API request url is invalid |
+| 400 | 1006 | No location found matching parameter 'q' |
+| 401 | 2006 | API key provided is invalid |
+| 403 | 2007 | API key has exceeded calls per month quota. |
+| 403 | 2008 | API key has been disabled. |
+| 403 | 2009 | API key does not have access to the resource. Please check pricing page for what is allowed in your API subscription plan. |
+| 400 | 9000 | Json body passed in bulk request is invalid. Please make sure it is valid json with utf-8 encoding. |
+| 400 | 9001 | Json body contains too many locations for bulk request. Please keep it below 50 in a single request. |
+| 400 | 9999 | Internal application error. |
+
+
 ### `sat-word` - Random SAT word and definition
 Word bank located at: `src/widgets/sat_words/words.txt`
 

@@ -261,73 +261,107 @@ pub async fn get_weather() -> WidgetOutput {
     #[allow(unused_variables)]
     let url_current =
         format!("https://api.weatherapi.com/v1/current.json?key={}&q=austin", weather_api_key);
+    // format!("https://api.weatherapi.com/v1/current.json?key={}", weather_api_key);
     let url_forecast =
         format!("https://api.weatherapi.com/v1/forecast.json?key={}&q=austin&days=3&aqi=no&alerts=no", weather_api_key);
     let res = client.get(&url_forecast).send().await;
     match res {
         Ok(response) => {
-            // Get the response text first
-            match response.text().await {
-                Ok(text) => {
-                    // Try to parse the text as JSON
-                    match serde_json::from_str::<WeatherResponse>(&text) {
-                        Ok(json) => {
-                            let localtime = json.location.localtime.to_lowercase();
-                            let temp_f = format!("W {}D", json.current.temp_f);
-                            let min_temp_f = format!(
-                                "B {}D",
-                                json.forecast.forecastday[0].day.mintemp_f
-                            );
-                            let max_temp_f = format!(
-                                "R {}D",
-                                json.forecast.forecastday[0].day.maxtemp_f
-                            );
-                            let condition = json.current.condition.text
-                                .replace("\"", "")
-                                .to_lowercase();
-                            let chance_precip = json.forecast.forecastday
-                                [0].day.daily_chance_of_rain;
-                            let totalprecip_in = json.forecast.forecastday[0].day.totalprecip_in;
-                            let rain_chance = if chance_precip > 0 {
-                                format!("w/ {}% chance", chance_precip)
-                            } else {
-                                "".to_string()
-                            };
-                            let rain_amount = if totalprecip_in > 0.0 {
-                                format!("{}\" of rain", totalprecip_in)
-                            } else {
-                                "".to_string()
-                            };
-                            let pressure_in = format!("{}", json.current.pressure_in);
-                            let future_pressure_in = json.forecast.forecastday
-                                .iter()
-                                .map(|day| day.hour[0].pressure_in.to_string())
-                                .collect::<Vec<String>>()
-                                .join(" ");
-                            let mut weather_description = Vec::new();
-                            weather_description.push(center_line(localtime));
-                            weather_description.push(full_justify_line(temp_f, condition));
-                            weather_description.push(full_justify_line(min_temp_f, rain_chance));
-                            weather_description.push(full_justify_line(max_temp_f, rain_amount));
-                            weather_description.push("pressure:".to_string());
-                            weather_description.push(
-                                full_justify_line(pressure_in, future_pressure_in)
-                            );
-                            weather_description
+            let status_code = response.status().as_u16();
+            let response_text = response.text().await;
+            match status_code {
+                200 => {
+                    println!("Success");
+                    match response_text {
+                        Ok(text) => {
+                            // Try to parse the text as JSON
+                            match serde_json::from_str::<WeatherResponse>(&text) {
+                                Ok(json) => {
+                                    let localtime = json.location.localtime.to_lowercase();
+                                    let temp_f = format!("W {}D", json.current.temp_f);
+                                    let min_temp_f = format!(
+                                        "B {}D",
+                                        json.forecast.forecastday[0].day.mintemp_f
+                                    );
+                                    let max_temp_f = format!(
+                                        "R {}D",
+                                        json.forecast.forecastday[0].day.maxtemp_f
+                                    );
+                                    let condition = json.current.condition.text
+                                        .replace("\"", "")
+                                        .to_lowercase();
+                                    let chance_precip = json.forecast.forecastday
+                                        [0].day.daily_chance_of_rain;
+                                    let totalprecip_in = json.forecast.forecastday
+                                        [0].day.totalprecip_in;
+                                    let rain_chance = if chance_precip > 0 {
+                                        format!("w/ {}% chance", chance_precip)
+                                    } else {
+                                        "".to_string()
+                                    };
+                                    let rain_amount = if totalprecip_in > 0.0 {
+                                        format!("{}\" of rain", totalprecip_in)
+                                    } else {
+                                        "".to_string()
+                                    };
+                                    let pressure_in = format!("{}", json.current.pressure_in);
+                                    let future_pressure_in = json.forecast.forecastday
+                                        .iter()
+                                        .map(|day| day.hour[0].pressure_in.to_string())
+                                        .collect::<Vec<String>>()
+                                        .join(" ");
+                                    let mut weather_description = Vec::new();
+                                    weather_description.push(center_line(localtime));
+                                    weather_description.push(full_justify_line(temp_f, condition));
+                                    weather_description.push(
+                                        full_justify_line(min_temp_f, rain_chance)
+                                    );
+                                    weather_description.push(
+                                        full_justify_line(max_temp_f, rain_amount)
+                                    );
+                                    weather_description.push("pressure:".to_string());
+                                    weather_description.push(
+                                        full_justify_line(pressure_in, future_pressure_in)
+                                    );
+                                    weather_description
+                                }
+                                Err(e) => {
+                                    let error = format!("Failed to parse JSON: {:?}", e);
+                                    eprintln!("{}", error);
+                                    eprintln!("Raw response: {}", text);
+                                    format_error("error parsing weather data.")
+                                }
+                            }
                         }
                         Err(e) => {
-                            let error = format!("Failed to parse JSON: {:?}", e);
-                            eprintln!("{}", error);
-                            eprintln!("Raw response: {}", text);
-                            format_error("error parsing weather data.")
+                            eprintln!("Failed to get response text: {:?}", e);
+                            format_error("error retrieving weather data.")
                         }
                     }
                 }
-                Err(e) => {
-                    eprintln!("Failed to get response text: {:?}", e);
-                    format_error("error retrieving weather data.")
+                400 | 401 | 403 => {
+                    println!("Bad Request");
+                    match response_text {
+                        Ok(text) => {
+                            let error: serde_json::Value = serde_json
+                                ::from_str(&text)
+                                .expect("JSON was not well-formatted");
+                            let error_code = error["error"]["code"].as_i64().unwrap();
+                            let error_message = error["error"]["message"].as_str().unwrap();
+                            format_error(&format!("{}: {}", error_code, error_message))
+                        }
+                        Err(e) => {
+                            println!("Error handling bad request text {}.", e);
+                            format_error("error retrieving weather data.")
+                        }
+                    }
+                }
+                _ => {
+                    println!("Error handling response status code {}.", status_code);
+                    format_error("error retrieving weather data.  Unhandled status code.")
                 }
             }
+            // Get the response text first
         }
         Err(e) => {
             eprintln!("Failed to retrieve weather data: {:?}", e);

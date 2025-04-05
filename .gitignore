@@ -27,5 +27,6 @@ Cargo.lock
 .env
 .DS_Store
 
+*.txt
 text.txt
 .codegpt
