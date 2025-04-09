@@ -268,10 +268,13 @@ pub async fn get_weather() -> WidgetOutput {
     match res {
         Ok(response) => {
             let status_code = response.status().as_u16();
-            let response_text = response.text().await.unwrap_or_else(|e| {
-                eprintln!("Failed to get response text: {:?}", e);
-                format_error("error retrieving weather data.")
-            });
+            let response_text = match response.text().await {
+                Ok(text) => text,
+                Err(e) => {
+                    eprintln!("Failed to get response text: {:?}", e);
+                    return format_error("error retrieving weather data.");
+                }
+            };
             match status_code {
                 200 => {
                     println!("Success");
@@ -341,7 +344,7 @@ pub async fn get_weather() -> WidgetOutput {
                 400 | 401 | 403 => {
                     println!("Bad Request");
                     match response_text {
-                        Ok(text) => {
+                        text => {
                             let error: serde_json::Value = serde_json
                                 ::from_str(&text)
                                 .expect("JSON was not well-formatted");
@@ -349,22 +352,14 @@ pub async fn get_weather() -> WidgetOutput {
                             let error_message = error["error"]["message"].as_str().unwrap();
                             format_error(&format!("{}: {}", error_code, error_message))
                         }
-                        Err(e) => {
-                            println!("Error handling bad request text {}.", e);
-                            format_error("error retrieving weather data.")
-                        }
                     }
                 }
                 504 | 502 => {
                     println!("Bad Gateway");
                     match response_text {
-                        Ok(text) => {
+                        text => {
                             println!("{}", text);
                             format_error("error retrieving weather data.  please try again later.")
-                        }
-                        Err(e) => {
-                            println!("Error handling bad request text {}.", e);
-                            format_error("error retrieving weather data.")
                         }
                     }
                 }
