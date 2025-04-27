@@ -4,7 +4,13 @@ use reqwest::Client;
 use serde::Deserialize;
 use serde_json;
 
-use crate::widgets::widget_utils::{ format_error, full_justify_line, center_line, WidgetOutput };
+use crate::widgets::widget_utils::{
+    format_error,
+    full_justify_line,
+    center_line,
+    split_into_lines,
+    WidgetOutput,
+};
 
 // reference: https://www.weatherapi.com/api-explorer.aspx#forecast
 
@@ -284,13 +290,19 @@ pub async fn get_weather() -> WidgetOutput {
                             match serde_json::from_str::<WeatherResponse>(&text) {
                                 Ok(json) => {
                                     let localtime = json.location.localtime.to_lowercase();
-                                    let temp_f = format!("W {}D", json.current.temp_f);
-                                    let min_temp_f = format!(
-                                        "B {}D",
-                                        json.forecast.forecastday[0].day.mintemp_f
-                                    );
-                                    let max_temp_f = format!(
-                                        "R {}D",
+                                    // let temp_f = format!("W{:>3.1}D", json.current.temp_f);
+                                    // let min_temp_f = format!(
+                                    //     "B{:>3.1}D",
+                                    //     json.forecast.forecastday[0].day.mintemp_f
+                                    // );
+                                    // let max_temp_f = format!(
+                                    //     "R{:>3.1}D",
+                                    //     json.forecast.forecastday[0].day.maxtemp_f
+                                    // );
+                                    let temps = format!(
+                                        "W{:>3.1}D B{:>3.1}D R{:>3.1}D",
+                                        json.current.temp_f,
+                                        json.forecast.forecastday[0].day.mintemp_f,
                                         json.forecast.forecastday[0].day.maxtemp_f
                                     );
                                     let condition = json.current.condition.text
@@ -310,6 +322,12 @@ pub async fn get_weather() -> WidgetOutput {
                                     } else {
                                         "".to_string()
                                     };
+                                    let weather_summary = format!(
+                                        "{} {} {}",
+                                        condition,
+                                        rain_chance,
+                                        rain_amount
+                                    );
                                     let pressure_in = format!("{}", json.current.pressure_in);
                                     let future_pressure_in = json.forecast.forecastday
                                         .iter()
@@ -318,17 +336,31 @@ pub async fn get_weather() -> WidgetOutput {
                                         .join(" ");
                                     let mut weather_description = Vec::new();
                                     weather_description.push(center_line(localtime));
-                                    weather_description.push(full_justify_line(temp_f, condition));
-                                    weather_description.push(
-                                        full_justify_line(min_temp_f, rain_chance)
-                                    );
-                                    weather_description.push(
-                                        full_justify_line(max_temp_f, rain_amount)
-                                    );
-                                    weather_description.push("pressure:".to_string());
+                                    weather_description.push(center_line(temps));
+                                    for line in split_into_lines(&weather_summary)
+                                        .into_iter()
+                                        .take(3) {
+                                        weather_description.push(center_line(line.to_string()));
+                                    }
+                                    while weather_description.len() < 5 {
+                                        weather_description.push("".to_string());
+                                    }
                                     weather_description.push(
                                         full_justify_line(pressure_in, future_pressure_in)
                                     );
+                                    // old layout keep for possible future use with multiple views
+                                    // weather_description.push(center_line(localtime));
+                                    // weather_description.push(full_justify_line(temp_f, condition));
+                                    // weather_description.push(
+                                    //     full_justify_line(min_temp_f, rain_chance)
+                                    // );
+                                    // weather_description.push(
+                                    //     full_justify_line(max_temp_f, rain_amount)
+                                    // );
+                                    // weather_description.push("pressure:".to_string());
+                                    // weather_description.push(
+                                    //     full_justify_line(pressure_in, future_pressure_in)
+                                    // );
                                     weather_description
                                 }
                                 Err(e) => {
