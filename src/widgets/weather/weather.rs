@@ -9,6 +9,7 @@ use crate::widgets::widget_utils::{
     full_justify_line,
     center_line,
     split_into_lines,
+    center_message,
     WidgetOutput,
 };
 
@@ -328,22 +329,24 @@ pub async fn get_weather() -> WidgetOutput {
                                         rain_chance,
                                         rain_amount
                                     );
-                                    let pressure_in = format!("{}", json.current.pressure_in);
-                                    let future_pressure_in = json.forecast.forecastday
-                                        .iter()
-                                        .map(|day| day.hour[0].pressure_in.to_string())
-                                        .collect::<Vec<String>>()
-                                        .join(" ");
+                                    let pressure_in = format!(" {}", json.current.pressure_in);
+                                    let future_pressure_in =
+                                        json.forecast.forecastday
+                                            .iter()
+                                            .take(2)
+                                            .map(|day| day.hour[0].pressure_in.to_string())
+                                            .collect::<Vec<String>>()
+                                            .join(" ") + " ";
+
                                     let mut weather_description = Vec::new();
                                     weather_description.push(center_line(localtime));
                                     weather_description.push(center_line(temps));
-                                    for line in split_into_lines(&weather_summary)
-                                        .into_iter()
-                                        .take(3) {
+
+                                    for line in center_message(
+                                        split_into_lines(&weather_summary),
+                                        3
+                                    ) {
                                         weather_description.push(center_line(line.to_string()));
-                                    }
-                                    while weather_description.len() < 5 {
-                                        weather_description.push("".to_string());
                                     }
                                     weather_description.push(
                                         full_justify_line(pressure_in, future_pressure_in)

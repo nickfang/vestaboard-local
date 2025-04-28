@@ -62,13 +62,13 @@ pub fn center_line(line: String) -> String {
     // }
 }
 
-fn center_message(mut message: Vec<String>) -> WidgetOutput {
-    if message.len() < MAX_MESSAGE_HEIGHT {
-        let half_padding = (MAX_MESSAGE_HEIGHT - message.len()) / 2;
+pub fn center_message(mut message: Vec<String>, height: usize) -> WidgetOutput {
+    if message.len() < height {
+        let half_padding = (height - message.len()) / 2;
         for _ in 0..half_padding {
             message.insert(0, String::new());
         }
-        while message.len() < MAX_MESSAGE_HEIGHT {
+        while message.len() < height {
             message.push(String::new());
         }
     }
@@ -82,7 +82,7 @@ pub fn format_message(message: &str) -> Option<WidgetOutput> {
         .for_each(|line| {
             formatted_message.push(center_line(line.to_string()));
         });
-    Some(center_message(formatted_message))
+    Some(center_message(formatted_message, MAX_MESSAGE_HEIGHT))
 }
 
 // There is only room for 4 lines of error message on the Vestaboard
