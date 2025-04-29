@@ -334,7 +334,7 @@ pub async fn get_weather() -> WidgetOutput {
                                         json.forecast.forecastday
                                             .iter()
                                             .take(2)
-                                            .map(|day| day.hour[0].pressure_in.to_string())
+                                            .map(|day| format!("{:>.2}", day.hour[0].pressure_in))
                                             .collect::<Vec<String>>()
                                             .join(" ") + " ";
 
