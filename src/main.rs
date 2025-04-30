@@ -8,14 +8,13 @@ mod widgets;
 
 use api_broker::display_message;
 use cli_display::print_message;
-use scheduler::ScheduledTask;
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
 use widgets::sat_words::get_sat_word;
 
 #[derive(Subcommand, Debug)]
-pub enum Commands {
+enum Commands {
     Text {
         #[clap(help = "The message to display", required = true)]
         message: Vec<String>,
