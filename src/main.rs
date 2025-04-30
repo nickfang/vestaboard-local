@@ -3,15 +3,32 @@ use clap::{ Parser, Subcommand };
 mod api;
 mod api_broker;
 mod cli_display;
+mod scheduler;
 mod widgets;
 
 use api_broker::display_message;
 use cli_display::print_message;
+use scheduler::ScheduledTask;
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
 use widgets::sat_words::get_sat_word;
 
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    Text {
+        #[clap(help = "The message to display", required = true)]
+        message: Vec<String>,
+    },
+    File {
+        #[clap(help = "The filename to read the message from", required = true, index = 1)]
+        name: String,
+    },
+    Weather,
+    Jokes,
+    Clear,
+    SATWord,
+}
 #[derive(Parser)]
 #[clap(
     name = "Vestaboard CLI",
@@ -25,22 +42,6 @@ struct Cli {
 
     #[clap(subcommand)]
     command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Text {
-        #[clap(help = "The message to display", required = true)]
-        message: Vec<String>,
-    },
-    File {
-        #[clap(help = "The filename to read the message from", required = true, index = 1)]
-        name: String,
-    },
-    Weather,
-    Jokes,
-    Clear,
-    SATWord,
 }
 
 #[tokio::main]
