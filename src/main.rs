@@ -3,6 +3,7 @@ use clap::{ Parser, Subcommand };
 mod api;
 mod api_broker;
 mod cli_display;
+mod scheduler;
 mod widgets;
 
 use api_broker::display_message;
@@ -12,22 +13,7 @@ use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
 use widgets::sat_words::get_sat_word;
 
-#[derive(Parser)]
-#[clap(
-    name = "Vestaboard CLI",
-    version = "1.0",
-    author = "Nicholas Fang",
-    about = "CLI for updating a local Vestaboard"
-)]
-struct Cli {
-    #[clap(short, long, help = "Show message without sending to board.")]
-    test: bool,
-
-    #[clap(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Commands {
     Text {
         #[clap(help = "The message to display", required = true)]
@@ -41,6 +27,20 @@ enum Commands {
     Jokes,
     Clear,
     SATWord,
+}
+#[derive(Parser)]
+#[clap(
+    name = "Vestaboard CLI",
+    version = "1.0",
+    author = "Nicholas Fang",
+    about = "CLI for updating a local Vestaboard"
+)]
+struct Cli {
+    #[clap(short, long, help = "Show message without sending to board.")]
+    test: bool,
+
+    #[clap(subcommand)]
+    command: Commands,
 }
 
 #[tokio::main]
