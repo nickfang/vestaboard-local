@@ -96,19 +96,19 @@ vbl
 ```
 To send a center-aligned string to the Vestaboard:
 ```
-vbl text -m "hello from vestaboard local."
+vbl send text "hello from vestaboard local."
 ```
 Sending a message to the Vestaboard in the arrangement that is in the text file.
 ```
-vbl text -f ./text.txt
+vbl send file ./text.txt
 ```
 Using the weather widget.
 ```
-vbl weather
+vbl send weather
 ```
 Preview message.
 ```
-cargo run -- -t sat-word
+cargo run -- send -d sat-word
 ```
 
 ## Contributing

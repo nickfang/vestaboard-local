@@ -1,4 +1,4 @@
-use std::fs;
+use std::{ fs, path::PathBuf };
 use crate::widgets::widget_utils;
 
 pub fn get_text(text: &str) -> Vec<String> {
@@ -14,7 +14,7 @@ pub fn get_text(text: &str) -> Vec<String> {
     }
 }
 
-pub fn get_text_from_file(file: &str) -> Vec<String> {
+pub fn get_text_from_file(file: PathBuf) -> Vec<String> {
     match fs::read_to_string(file) {
         Ok(text) => {
             text.lines()
