@@ -21,7 +21,7 @@ fn test_widget_command_variants() {
     }
 
     // Call the function to ensure all variants are covered
-    assert_widget_command(WidgetCommand::Text(TextArgs { message: vec![] }));
+    assert_widget_command(WidgetCommand::Text(TextArgs { message: String::from("example") }));
     assert_widget_command(WidgetCommand::File(FileArgs { name: PathBuf::new() }));
     assert_widget_command(WidgetCommand::Weather);
     assert_widget_command(WidgetCommand::Jokes);
@@ -68,7 +68,7 @@ fn test_command_variants() {
 fn test_invalid_args() {
     // Test invalid arguments for SendArgs
     let invalid_send_args = SendArgs {
-        widget_command: WidgetCommand::Text(TextArgs { message: vec![] }),
+        widget_command: WidgetCommand::Text(TextArgs { message: String::from("Invalid message") }),
         dry_run: true,
     };
 
