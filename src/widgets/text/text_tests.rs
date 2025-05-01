@@ -1,3 +1,5 @@
+use std::path;
+
 use super::text::{ get_text, get_text_from_file };
 
 #[cfg(test)]
@@ -9,7 +11,8 @@ fn test_text_get_text() {
 
 #[test]
 fn test_text_get_text_from_file() {
-    let text = get_text_from_file("text.txt");
+    let path = std::path::PathBuf::from("text.txt");
+    let text = get_text_from_file(path);
     println!("{:?}", text);
     // assert_eq!(text, text);
 }
