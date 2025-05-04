@@ -1,11 +1,13 @@
 use clap::{ Parser };
 
+mod errors;
 mod api;
 mod api_broker;
 mod cli_display;
 mod cli_setup;
-mod scheduler;
 mod widgets;
+mod scheduler;
+mod daemon;
 
 use api_broker::display_message;
 use cli_display::print_message;
@@ -14,6 +16,7 @@ use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
 use widgets::sat_words::get_sat_word;
+use daemon::run_daemon;
 
 #[tokio::main]
 async fn main() {
@@ -69,7 +72,9 @@ async fn main() {
                 }
             }
         }
-        Command::Daemon => {}
+        Command::Daemon => {
+            run_daemon().unwrap();
+        }
     }
 }
 
