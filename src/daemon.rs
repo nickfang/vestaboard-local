@@ -1,5 +1,5 @@
 use crate::scheduler::{ Schedule, ScheduledTask };
-use crate::errors::VestaboardError::{ self, IOError, ScheduleError, WidgetError };
+use crate::errors::VestaboardError::{ self, IOError, ScheduleError, JsonError, WidgetError };
 use chrono::{ DateTime, Utc };
 use std::fs;
 use std::path::PathBuf;
@@ -18,7 +18,37 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
     // If it does, load the schedule from the file
     // handle errors appropriately
     println!("Loading schedule from {}", SCHEDULE_FILE_PATH);
-    return Err(VestaboardError::Other("load_schedule() not implemented.".to_string()));
+    match fs::read_to_string(&path) {
+        Ok(content) => {
+            if content.trim().is_empty() {
+                println!("Schedule is empty. Creating a new schedule.");
+                Ok(Schedule::default())
+            } else {
+                match serde_json::from_str::<Schedule>(&content) {
+                    Ok(schedule) => {
+                        println!(
+                            "Successfully loaded {} tasks from schedule {}.",
+                            schedule.tasks.len(),
+                            path.display()
+                        );
+                        Ok(schedule)
+                    }
+                    Err(e) => {
+                        println!("Failed to parse schedule from {} : {}", path.display(), e);
+                        Err(JsonError(e))
+                    }
+                }
+            }
+        }
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            println!("Schedule file not found. Creating a new schedule.");
+            Ok(Schedule::default())
+        }
+        Err(e) => {
+            eprintln!("Error reading schedule file {} : {}", path.display(), e);
+            Err(ScheduleError(format!("Failed to parse schedule: {}", e)))
+        }
+    }
 }
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {

@@ -21,3 +21,6 @@ ctrlc = "3.4.6"
 [[bin]]
 name = "vbl"
 path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3.19.1"
