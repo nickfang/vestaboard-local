@@ -8,16 +8,27 @@ use std::thread;
 use std::time::{ Duration, SystemTime };
 
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
+const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
+const CHECK_INTERVAL_SECONDS: u64 = 3;
 
-const SCHEDULE_FILE_PATH: &str = "schedule.json";
-const CHECK_INTERVAL_SECONDS: u64 = 1;
+pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), VestaboardError> {
+    // Save the schedule to the file
+    // handle errors appropriately
+    println!("Saving schedule to {}", path.display());
+    match fs::write(path, serde_json::to_string(schedule).unwrap()) {
+        Ok(_) => {
+            println!("Schedule saved successfully.");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Error saving schedule: {}", e);
+            Err(IOError(e))
+        }
+    }
+}
 
 pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
-    // Check if the schedule file exists
-    // If it doesn't, create an empty schedule
-    // If it does, load the schedule from the file
-    // handle errors appropriately
-    println!("Loading schedule from {}", SCHEDULE_FILE_PATH);
+    println!("Loading schedule from {}", path.display());
     match fs::read_to_string(&path) {
         Ok(content) => {
             if content.trim().is_empty() {
@@ -42,7 +53,16 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
         }
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
             println!("Schedule file not found. Creating a new schedule.");
-            Ok(Schedule::default())
+            let schedule = Schedule::default();
+            match save_schedule(&schedule, path) {
+                Ok(_) => {
+                    println!("New schedule created and saved.");
+                }
+                Err(e) => {
+                    eprintln!("Error saving new schedule: {:?}", e);
+                }
+            }
+            Ok(schedule)
         }
         Err(e) => {
             eprintln!("Error reading schedule file {} : {}", path.display(), e);
@@ -56,7 +76,12 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
     // If the file doesn't exist, return an error
     // handle errors appropriately
     println!("Getting file modification time for {}", path.display());
-    return Err(VestaboardError::Other("get_file_mod_time() not implemented".to_string()));
+    fs::metadata(path)
+        .and_then(|meta| meta.modified())
+        .map_err(|e| {
+            eprintln!("Error getting mod time for {}: {}", path.display(), e);
+            IOError(e)
+        })
 }
 
 pub fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
@@ -65,28 +90,33 @@ pub fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
     // Send the message to the Vestaboard
     // handle errors appropriately
     println!("Executing task: {:?}", task);
-    return Err(VestaboardError::Other("execute_task() not implemented".to_string()));
+    Ok(())
+    // Err(VestaboardError::Other("execute_task() not implemented".to_string()));
 }
 
 pub fn run_daemon() -> Result<(), VestaboardError> {
     println!("Starting daemon...");
     println!("Press Ctrl+C to stop the daemon.");
 
+    // handle ctrl+c
     ctrlc
         ::set_handler(move || {
             println!("\nCtrl+C received, shutting down...");
             SHUTDOWN_FLAG.store(true, Ordering::SeqCst);
         })
         .expect("Error setting Ctrl-C handler");
+
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let check_interval = Duration::from_secs(CHECK_INTERVAL_SECONDS);
 
     let mut current_schedule = load_schedule(&schedule_path).unwrap_or_else(|e| {
-        eprintln!("Error loading initial schedule: {:?}.  Starting with empty schedule.", e);
+        // schedule not found is handled in load_schedule
+        eprintln!("Error loading initial schedule: {:?}.", e);
         Schedule::default()
     });
-    let mut last_mod_time = get_file_mod_time(&schedule_path).unwrap_or(SystemTime::UNIX_EPOCH);
+    println!("Initial schedule loaded with {} tasks.", current_schedule.tasks.len());
 
+    let mut last_mod_time = get_file_mod_time(&schedule_path).unwrap_or(SystemTime::UNIX_EPOCH);
     let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     println!("Daemon started. Monitoring schedule...");
@@ -97,6 +127,7 @@ pub fn run_daemon() -> Result<(), VestaboardError> {
             break;
         }
 
+        // Reload schedule if the file has been modified
         match get_file_mod_time(&schedule_path) {
             Ok(current_mod_time) => {
                 if current_mod_time > last_mod_time {
@@ -112,12 +143,15 @@ pub fn run_daemon() -> Result<(), VestaboardError> {
                             eprintln!("Error reloading schedule: {:?}", e);
                         }
                     }
+                } else {
+                    println!("Schedule file not updated.");
                 }
             }
             Err(e) => {
                 eprintln!("Error getting file modification time: {:?}", e);
             }
         }
+
         let now = Utc::now();
         let mut tasks_to_execute = Vec::new();
 
@@ -128,7 +162,6 @@ pub fn run_daemon() -> Result<(), VestaboardError> {
         }
 
         for task in tasks_to_execute {
-            println!("Executing task: {:?}", task);
             match execute_task(&task) {
                 Ok(_) => {
                     executed_task_ids.insert(task.id.clone());

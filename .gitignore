@@ -27,6 +27,9 @@ Cargo.lock
 .env
 .DS_Store
 
+# folder for generated runtime files
+data/
+
 *.txt
 text.txt
 .codegpt
