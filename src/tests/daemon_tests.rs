@@ -179,10 +179,7 @@ mod tests {
             input: serde_json::Value::String("test_input".to_string()),
         };
         let result = execute_task(&task);
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert_eq!(e, VestaboardError::Other("execute_task() not implemented".to_string()));
-        }
+        assert!(result.is_ok());
     }
 
     #[test]
