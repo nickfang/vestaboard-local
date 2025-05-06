@@ -112,15 +112,18 @@ mod tests {
 
     #[test]
     fn test_get_file_mod_time() {
-        let path = PathBuf::from("non_existent_file.json");
+        let earlier_time = std::time::SystemTime::now() - std::time::Duration::from_secs(60);
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        write!(temp_file, "test content").expect("Failed to write to temp file");
+        temp_file.as_file_mut().flush().expect("Failed to flush temp file");
+
+        let path = temp_file.path().to_path_buf();
         let result = get_file_mod_time(&path);
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert_eq!(
-                e,
-                VestaboardError::Other("get_file_mod_time() not implemented".to_string())
-            );
-        }
+
+        assert!(result.is_ok());
+        let mod_time = result.unwrap();
+        assert!(mod_time <= std::time::SystemTime::now());
+        assert!(mod_time > earlier_time);
     }
 
     #[test]

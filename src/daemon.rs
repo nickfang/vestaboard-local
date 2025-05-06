@@ -10,7 +10,7 @@ use std::time::{ Duration, SystemTime };
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
 
 const SCHEDULE_FILE_PATH: &str = "schedule.json";
-const CHECK_INTERVAL_SECONDS: u64 = 1;
+const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
     // Check if the schedule file exists
@@ -56,7 +56,12 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
     // If the file doesn't exist, return an error
     // handle errors appropriately
     println!("Getting file modification time for {}", path.display());
-    return Err(VestaboardError::Other("get_file_mod_time() not implemented".to_string()));
+    fs::metadata(path)
+        .and_then(|meta| meta.modified())
+        .map_err(|e| {
+            eprintln!("Error getting mod time for {}: {}", path.display(), e);
+            IOError(e)
+        })
 }
 
 pub fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
