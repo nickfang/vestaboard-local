@@ -12,7 +12,7 @@ mod tests {
     use tempfile::NamedTempFile;
     use std::path::PathBuf;
     use serde_json::json;
-    use std::io::Write;
+    use std::io::{ Write, Seek };
 
     fn create_valid_json_content() -> (String, DateTime<Utc>, String) {
         let task_time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
@@ -27,6 +27,50 @@ mod tests {
         };
         let json_string = serde_json::to_string_pretty(&schedule).unwrap();
         (json_string, task_time, task_id)
+    }
+
+    #[test]
+    fn save_schedule_test() {
+        use daemon::save_schedule;
+        use std::io::Read;
+
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let path = temp_file.path().to_path_buf();
+
+        // Test saving an empty schedule
+        let empty_schedule = Schedule::default();
+        let result = save_schedule(&empty_schedule, &path);
+        assert!(result.is_ok());
+
+        // Verify the saved content is an empty schedule
+        let mut file_content = String::new();
+        temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
+        assert_eq!(file_content, "{\"tasks\":[]}");
+
+        // Test saving a schedule with tasks
+        let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
+        let task1 = ScheduledTask::new(task1_time, "Weather".to_string(), json!({}));
+        let task2_time = Utc.with_ymd_and_hms(2025, 5, 1, 17, 30, 0).unwrap();
+        let task2 = ScheduledTask::new(
+            task2_time,
+            "text".to_string(),
+            json!({"message": "Hello, world!"})
+        );
+
+        let mut schedule = Schedule::default();
+        schedule.add_task(task1);
+        schedule.add_task(task2);
+
+        let result = save_schedule(&schedule, &path);
+        assert!(result.is_ok());
+
+        // Verify the saved content matches the schedule with tasks
+        temp_file.seek(std::io::SeekFrom::Start(0)).expect("Failed to seek to start of file");
+        file_content.clear();
+        temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
+
+        let expected_json = serde_json::to_string(&schedule).unwrap();
+        assert_eq!(file_content, expected_json);
     }
 
     #[test]
