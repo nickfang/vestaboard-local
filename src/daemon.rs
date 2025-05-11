@@ -1,5 +1,11 @@
 use crate::scheduler::{ Schedule, ScheduledTask };
 use crate::errors::VestaboardError::{ self, IOError, ScheduleError, JsonError, WidgetError };
+use crate::widgets::text::{ get_text, get_text_from_file };
+use crate::widgets::weather::get_weather;
+use crate::widgets::sat_words::get_sat_word;
+use crate::api_broker::display_message;
+use crate::api::send_codes;
+
 use chrono::{ DateTime, Utc };
 use std::fs;
 use std::path::PathBuf;
@@ -84,17 +90,38 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
         })
 }
 
-pub fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
+pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
     // Find widget based on task
     // Execute widget with task.widget_input
     // Send the message to the Vestaboard
     // handle errors appropriately
     println!("Executing task: {:?}", task);
+    let message: Vec<String> = match task.widget.as_str() {
+        "weather" => {
+            // Execute weather widget
+            println!("Executing Weather widget");
+            get_weather().await
+        }
+        "text" => {
+            // Execute text widget
+            println!("Executing Text widget with input: {:?}", task.input);
+            get_text(task.input.as_str().unwrap_or(""))
+        }
+        "sat-word" => {
+            // Execute SAT word widget
+            println!("Executing SAT Word widget");
+            get_sat_word()
+        }
+        _ => {
+            return Err(WidgetError(format!("Unknown widget type: {}", task.widget)));
+        }
+    };
+    display_message(message).await;
     Ok(())
-    // Err(VestaboardError::Other("execute_task() not implemented".to_string()));
 }
+// Err(VestaboardError::Other("execute_task() not implemented".to_string()));
 
-pub fn run_daemon() -> Result<(), VestaboardError> {
+pub async fn run_daemon() -> Result<(), VestaboardError> {
     println!("Starting daemon...");
     println!("Press Ctrl+C to stop the daemon.");
 
@@ -161,10 +188,12 @@ pub fn run_daemon() -> Result<(), VestaboardError> {
             }
         }
 
-        for task in tasks_to_execute {
-            match execute_task(&task) {
+        if let Some(task) = tasks_to_execute.last() {
+            match execute_task(task).await {
                 Ok(_) => {
-                    executed_task_ids.insert(task.id.clone());
+                    for task in &tasks_to_execute {
+                        executed_task_ids.insert(task.id.clone());
+                    }
                 }
                 Err(e) => {
                     eprintln!("Error executing task: {:?}", e);

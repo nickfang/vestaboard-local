@@ -1,11 +1,11 @@
 #[path = "../api.rs"]
 mod api;
-use api::{ send_message, clear_board, blank_board, get_message };
+use api::{ send_codes, clear_board, blank_board, get_message };
 // TODO: figure out how to test the api functions
 #[cfg(test)]
 #[tokio::test]
 #[ignore]
-async fn test_send_message() {
+async fn test_send_codes() {
     let message = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -14,7 +14,7 @@ async fn test_send_message() {
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    let result = send_message(message);
+    let result = send_codes(message);
     assert!(result.await.is_ok());
 }
 

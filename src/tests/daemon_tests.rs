@@ -170,19 +170,22 @@ mod tests {
         assert!(mod_time > earlier_time);
     }
 
-    #[test]
-    fn test_execute_task() {
+    #[tokio::test]
+    #[ignore]
+    // figure out how to test without sending to vestaboard
+    async fn test_execute_task() {
         let task = ScheduledTask {
             id: "test_task".to_string(),
             time: chrono::Utc::now(),
-            widget: "TestWidget".to_string(),
-            input: serde_json::Value::String("test_input".to_string()),
+            widget: "weather".to_string(),
+            input: serde_json::Value::String("".to_string()),
         };
         let result = execute_task(&task);
-        assert!(result.is_ok());
+        assert!(result.await.is_ok());
     }
 
     #[test]
+    #[ignore]
     fn test_run_daemon() {
         // this currently cannot be tested because it runs indefinitely and requires a Ctrl+C signal to stop
         // TODO: refactor to allow testing, or mock the Ctrl+C signal

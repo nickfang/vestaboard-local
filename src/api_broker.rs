@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
+use crate::api::send_codes;
+
 static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
     let characters = [
         (' ', 0),
@@ -93,8 +95,8 @@ pub fn to_codes(message: &str) -> Option<Vec<u8>> {
     Some(codes)
 }
 
-pub fn display_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
-    let mut formatted_message: [[u8; 22]; 6] = [[0; 22]; 6];
+pub async fn display_message(message: Vec<String>) {
+    let mut codes: [[u8; 22]; 6] = [[0; 22]; 6];
     let mut current_line = [0; 22];
     let mut line_num = 0;
 
@@ -102,7 +104,10 @@ pub fn display_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
         if line_num == 6 {
             break;
         }
-        let line_codes = to_codes(&line)?;
+        let line_codes = to_codes(&line).unwrap_or_else(|| {
+            eprintln!("Error converting line to codes: {:?}", line);
+            vec![]
+        });
         if line_codes.len() > 22 {
             eprintln!("Too many characters on line {:?}", line_num);
         }
@@ -114,9 +119,11 @@ pub fn display_message(message: Vec<String>) -> Option<[[u8; 22]; 6]> {
                 current_line[i] = 0;
             }
         }
-        formatted_message[line_num] = current_line;
+        codes[line_num] = current_line;
         line_num += 1;
     }
 
-    Some(formatted_message)
+    send_codes(codes).await.unwrap_or_else(|_| {
+        eprintln!("Error sending codes to Vestaboard.");
+    });
 }
