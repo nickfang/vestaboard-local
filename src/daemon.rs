@@ -1,12 +1,11 @@
-use crate::scheduler::{ Schedule, ScheduledTask };
+use crate::scheduler::{ load_schedule, Schedule, ScheduledTask, SCHEDULE_FILE_PATH };
 use crate::errors::VestaboardError::{ self, IOError, ScheduleError, JsonError, WidgetError };
 use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
 use crate::api_broker::display_message;
-use crate::api::send_codes;
 
-use chrono::{ DateTime, Utc };
+use chrono::{ Utc };
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{ AtomicBool, Ordering };
@@ -14,68 +13,7 @@ use std::thread;
 use std::time::{ Duration, SystemTime };
 
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
-const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
 const CHECK_INTERVAL_SECONDS: u64 = 3;
-
-pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), VestaboardError> {
-    // Save the schedule to the file
-    // handle errors appropriately
-    println!("Saving schedule to {}", path.display());
-    match fs::write(path, serde_json::to_string(schedule).unwrap()) {
-        Ok(_) => {
-            println!("Schedule saved successfully.");
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Error saving schedule: {}", e);
-            Err(IOError(e))
-        }
-    }
-}
-
-pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
-    println!("Loading schedule from {}", path.display());
-    match fs::read_to_string(&path) {
-        Ok(content) => {
-            if content.trim().is_empty() {
-                println!("Schedule is empty. Creating a new schedule.");
-                Ok(Schedule::default())
-            } else {
-                match serde_json::from_str::<Schedule>(&content) {
-                    Ok(schedule) => {
-                        println!(
-                            "Successfully loaded {} tasks from schedule {}.",
-                            schedule.tasks.len(),
-                            path.display()
-                        );
-                        Ok(schedule)
-                    }
-                    Err(e) => {
-                        println!("Failed to parse schedule from {} : {}", path.display(), e);
-                        Err(JsonError(e))
-                    }
-                }
-            }
-        }
-        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-            println!("Schedule file not found. Creating a new schedule.");
-            let schedule = Schedule::default();
-            match save_schedule(&schedule, path) {
-                Ok(_) => {
-                    println!("New schedule created and saved.");
-                }
-                Err(e) => {
-                    eprintln!("Error saving new schedule: {:?}", e);
-                }
-            }
-            Ok(schedule)
-        }
-        Err(e) => {
-            eprintln!("Error reading schedule file {} : {}", path.display(), e);
-            Err(ScheduleError(format!("Failed to parse schedule: {}", e)))
-        }
-    }
-}
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
     // Get the last modified time of the file

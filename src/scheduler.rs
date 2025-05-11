@@ -1,7 +1,13 @@
-use chrono::{ DateTime, Utc };
+use std::{ fs, path::PathBuf };
+
+use chrono::{ DateTime, Utc, Local };
 use nanoid::nanoid;
 use serde::{ Deserialize, Serialize };
 use serde_json::Value;
+
+use crate::{ errors::VestaboardError };
+
+pub const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
 
 pub const CUSTOM_ALPHABET: &[char] = &[
     'a',
@@ -101,4 +107,88 @@ impl Schedule {
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }
+}
+
+pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), VestaboardError> {
+    // Save the schedule to the file
+    // handle errors appropriately
+    println!("Saving schedule to {}", path.display());
+    match fs::write(path, serde_json::to_string(schedule).unwrap()) {
+        Ok(_) => {
+            println!("Schedule saved successfully.");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Error saving schedule: {}", e);
+            Err(VestaboardError::IOError(e))
+        }
+    }
+}
+
+pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
+    println!("Loading schedule from {}", path.display());
+    match fs::read_to_string(&path) {
+        Ok(content) => {
+            if content.trim().is_empty() {
+                println!("Schedule is empty. Creating a new schedule.");
+                Ok(Schedule::default())
+            } else {
+                match serde_json::from_str::<Schedule>(&content) {
+                    Ok(schedule) => {
+                        println!(
+                            "Successfully loaded {} tasks from schedule {}.",
+                            schedule.tasks.len(),
+                            path.display()
+                        );
+                        Ok(schedule)
+                    }
+                    Err(e) => {
+                        println!("Failed to parse schedule from {} : {}", path.display(), e);
+                        Err(VestaboardError::JsonError(e))
+                    }
+                }
+            }
+        }
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            println!("Schedule file not found. Creating a new schedule.");
+            let schedule = Schedule::default();
+            match save_schedule(&schedule, path) {
+                Ok(_) => {
+                    println!("New schedule created and saved.");
+                }
+                Err(e) => {
+                    eprintln!("Error saving new schedule: {:?}", e);
+                }
+            }
+            Ok(schedule)
+        }
+        Err(e) => {
+            eprintln!("Error reading schedule file {} : {}", path.display(), e);
+            Err(VestaboardError::ScheduleError(format!("Failed to parse schedule: {}", e)))
+        }
+    }
+}
+
+pub fn print_scheduled_tasks() -> Result<(), VestaboardError> {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let schedule = load_schedule(&schedule_path)?;
+
+    if schedule.tasks.is_empty() {
+        println!("No tasks scheduled.");
+        return Ok(());
+    }
+
+    println!("\nScheduled Tasks:");
+    println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
+    println!("{:-<80}", ""); // Separator line
+    for task in schedule.tasks {
+        let local_time = task.time.with_timezone(&Local::now().timezone());
+        let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+        let input_str = serde_json
+            ::to_string(&task.input)
+            .unwrap_or_else(|_| "Invalid JSON".to_string());
+        println!("{:<6} | {:<22} | {:<15} | {}", task.id, formatted_time, task.widget, input_str);
+    }
+    println!("{:-<80}", ""); // Footer separator line
+    Ok(())
 }
