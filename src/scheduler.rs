@@ -169,6 +169,19 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
     }
 }
 
+pub fn add_task_to_schedule(
+    time: DateTime<Utc>,
+    widget: String,
+    input: Value
+) -> Result<(), VestaboardError> {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let mut schedule = load_schedule(&schedule_path)?;
+
+    let task = ScheduledTask::new(time, widget, input);
+    schedule.add_task(task);
+    save_schedule(&schedule, &schedule_path)
+}
+
 pub fn print_scheduled_tasks() -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let schedule = load_schedule(&schedule_path)?;

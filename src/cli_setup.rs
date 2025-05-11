@@ -34,12 +34,17 @@ pub struct SendArgs {
 pub enum ScheduleArgs {
     #[command(name = "list", about = "List all scheduled messages")]
     List,
-    #[command(name = "add", about = "Add a new scheduled message")] Add {
-        #[clap(help = "The time to schedule the message", required = true)]
+    #[command(
+        name = "add",
+        about = "Add a new scheduled message.  Message must be in lowercase letters.",
+        arg_required_else_help = true,
+        after_help = "Example:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Don\\'t panic!\"\n  vbl schedule add \"2025-05-01 20:00:30\" weather"
+    )] Add {
+        #[clap(help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.", required = true)]
         time: String,
-        #[clap(help = "The widget to use", required = true)]
+        #[clap(help = "The widget to use (text, file, weather, sat-word).", required = true)]
         widget: String,
-        #[clap(help = "The message to display", required = true)]
+        #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
         input: Vec<String>,
     },
     #[command(name = "remove", about = "Remove a scheduled message")] Remove {

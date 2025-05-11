@@ -5,7 +5,7 @@ use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
 use crate::api_broker::display_message;
 
-use chrono::{ Utc };
+use chrono::Utc;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{ AtomicBool, Ordering };
@@ -19,7 +19,6 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
     // Get the last modified time of the file
     // If the file doesn't exist, return an error
     // handle errors appropriately
-    println!("Getting file modification time for {}", path.display());
     fs::metadata(path)
         .and_then(|meta| meta.modified())
         .map_err(|e| {
@@ -108,8 +107,6 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
                             eprintln!("Error reloading schedule: {:?}", e);
                         }
                     }
-                } else {
-                    println!("Schedule file not updated.");
                 }
             }
             Err(e) => {
