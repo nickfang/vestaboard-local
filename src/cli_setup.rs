@@ -47,7 +47,10 @@ pub enum ScheduleArgs {
         #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
         input: Vec<String>,
     },
-    #[command(name = "remove", about = "Remove a scheduled message")] Remove {
+    #[command(
+        name = "remove",
+        about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's"
+    )] Remove {
         #[clap(help = "The ID of the scheduled task", required = true)]
         id: String,
     },
