@@ -35,7 +35,11 @@ async fn main() {
                 WidgetCommand::Jokes => { get_joke() }
                 WidgetCommand::SATWord => { get_sat_word() }
                 WidgetCommand::Clear => {
-                    api::clear_board().await.unwrap();
+                    if test_mode {
+                        print_message(vec![String::from("")]);
+                    } else {
+                        api::clear_board().await.unwrap();
+                    }
                     return;
                 }
             };
