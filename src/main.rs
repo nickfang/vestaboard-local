@@ -12,6 +12,7 @@ mod daemon;
 use api_broker::display_message;
 use cli_display::print_message;
 use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
+use scheduler::print_scheduled_tasks;
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
@@ -59,6 +60,7 @@ async fn main() {
                 }
                 ScheduleArgs::List => {
                     println!("Listing tasks...");
+                    print_scheduled_tasks().unwrap();
                 }
                 ScheduleArgs::Clear => {
                     println!("Clearing schedule...");

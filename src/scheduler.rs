@@ -1,7 +1,11 @@
-use chrono::{ DateTime, Utc };
+use std::path::PathBuf;
+
+use chrono::{ DateTime, Utc, Local };
 use nanoid::nanoid;
 use serde::{ Deserialize, Serialize };
 use serde_json::Value;
+
+use crate::{ daemon::{ load_schedule, SCHEDULE_FILE_PATH }, errors::VestaboardError };
 
 pub const CUSTOM_ALPHABET: &[char] = &[
     'a',
@@ -101,4 +105,28 @@ impl Schedule {
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }
+}
+
+pub fn print_scheduled_tasks() -> Result<(), VestaboardError> {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let schedule = load_schedule(&schedule_path)?;
+
+    if schedule.tasks.is_empty() {
+        println!("No tasks scheduled.");
+        return Ok(());
+    }
+
+    println!("\nScheduled Tasks:");
+    println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
+    println!("{:-<80}", ""); // Separator line
+    for task in schedule.tasks {
+        let local_time = task.time.with_timezone(&Local::now().timezone());
+        let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+        let input_str = serde_json
+            ::to_string(&task.input)
+            .unwrap_or_else(|_| "Invalid JSON".to_string());
+        println!("{:<6} | {:<22} | {:<15} | {}", task.id, formatted_time, task.widget, input_str);
+    }
+    println!("{:-<80}", ""); // Footer separator line
+    Ok(())
 }

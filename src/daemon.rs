@@ -14,7 +14,7 @@ use std::thread;
 use std::time::{ Duration, SystemTime };
 
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
-const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
+pub const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
 const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), VestaboardError> {
