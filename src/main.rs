@@ -39,19 +39,11 @@ async fn main() {
                     return;
                 }
             };
-            match display_message(message.clone()) {
-                None => {
-                    eprintln!("Error: message contains invalid characters.");
-                    // TODO: get formatted error message to send to vestaboard
-                }
-                Some(code) => {
-                    if test_mode {
-                        print_message(message);
-                        return;
-                    }
-                    api::send_message(code).await.unwrap();
-                }
+            if test_mode {
+                print_message(message.clone());
+                return;
             }
+            display_message(message.clone()).await;
         }
         Command::Schedule { action } => {
             match action {
@@ -73,7 +65,7 @@ async fn main() {
             }
         }
         Command::Daemon => {
-            run_daemon().unwrap();
+            run_daemon().await.unwrap();
         }
     }
 }
