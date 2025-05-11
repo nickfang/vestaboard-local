@@ -13,7 +13,7 @@ use serde_json::json;
 use api_broker::display_message;
 use cli_display::print_message;
 use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
-use scheduler::{ add_task_to_schedule, print_scheduled_tasks };
+use scheduler::{ add_task_to_schedule, print_scheduled_tasks, remove_task_from_schedule };
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
@@ -91,6 +91,18 @@ async fn main() {
                 }
                 ScheduleArgs::Remove { id } => {
                     println!("Removing task...");
+                    match remove_task_from_schedule(&id) {
+                        Ok(removed) => {
+                            if removed {
+                                println!("Task with ID {} removed successfully.", id);
+                            } else {
+                                println!("No task found with ID {}.", id);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error removing task: {:?}", e);
+                        }
+                    }
                 }
                 ScheduleArgs::List => {
                     println!("Listing tasks...");

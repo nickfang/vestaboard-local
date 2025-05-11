@@ -182,6 +182,20 @@ pub fn add_task_to_schedule(
     save_schedule(&schedule, &schedule_path)
 }
 
+pub fn remove_task_from_schedule(id: &str) -> Result<bool, VestaboardError> {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let mut schedule = load_schedule(&schedule_path)?;
+    if schedule.get_task(id).is_none() {
+        return Ok(false);
+    }
+    if schedule.remove_task(id) {
+        save_schedule(&schedule, &schedule_path)?;
+        Ok(true)
+    } else {
+        Err(VestaboardError::ScheduleError(format!("Task with ID {} not found.", id)))
+    }
+}
+
 pub fn print_scheduled_tasks() -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let schedule = load_schedule(&schedule_path)?;
