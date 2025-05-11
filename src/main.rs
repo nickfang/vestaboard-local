@@ -1,6 +1,5 @@
-use clap::{ Parser };
-
 mod errors;
+mod datetime;
 mod api;
 mod api_broker;
 mod cli_display;
@@ -9,15 +8,18 @@ mod widgets;
 mod scheduler;
 mod daemon;
 
+use clap::Parser;
+use serde_json::json;
 use api_broker::display_message;
 use cli_display::print_message;
 use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
-use scheduler::print_scheduled_tasks;
+use scheduler::{ add_task_to_schedule, print_scheduled_tasks };
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
 use widgets::sat_words::get_sat_word;
 use daemon::run_daemon;
+use datetime::datetime_to_utc;
 
 #[tokio::main]
 async fn main() {
@@ -54,6 +56,38 @@ async fn main() {
             match action {
                 ScheduleArgs::Add { time, widget, input } => {
                     println!("Scheduling task...");
+                    let datetime_utc = match datetime_to_utc(&time) {
+                        Ok(dt) => dt,
+                        Err(e) => {
+                            println!("datetime: {}", time);
+                            eprintln!("Error invalid datetime format: {}", e);
+                            return;
+                        }
+                    };
+                    let input_json: serde_json::Value;
+                    let widget_lower = widget.to_lowercase();
+                    match widget_lower.as_str() {
+                        "weather" | "sat-word" | "jokes" => {
+                            input_json = json!(null);
+                        }
+                        "text" | "file" => {
+                            if let input = input {
+                                if input.is_empty() {
+                                    eprintln!("Error: Input cannot be empty.");
+                                    return;
+                                }
+                                input_json = serde_json::to_value(input).unwrap();
+                            } else {
+                                eprintln!("Error: Input is required for text and file widgets.");
+                                return;
+                            }
+                        }
+                        _ => {
+                            eprintln!("Error: Unsupported widget type {}.", widget_lower);
+                            return;
+                        }
+                    }
+                    add_task_to_schedule(datetime_utc, widget_lower, input_json).unwrap();
                 }
                 ScheduleArgs::Remove { id } => {
                     println!("Removing task...");

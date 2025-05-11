@@ -58,7 +58,7 @@ fn test_command_variants() {
         action: ScheduleArgs::Add {
             time: "2025-05-01T09:00:00Z".to_string(),
             widget: "Weather".to_string(),
-            input: vec!["Sunny".to_string()],
+            input: vec!["".to_string()],
         },
     });
     assert_command(Command::Daemon);
