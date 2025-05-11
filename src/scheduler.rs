@@ -176,6 +176,7 @@ pub fn add_task_to_schedule(
 ) -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let mut schedule = load_schedule(&schedule_path)?;
+
     let task = ScheduledTask::new(time, widget, input);
     schedule.add_task(task);
     save_schedule(&schedule, &schedule_path)

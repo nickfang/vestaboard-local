@@ -76,7 +76,7 @@ async fn main() {
                                     eprintln!("Error: Input cannot be empty.");
                                     return;
                                 }
-                                input_json = serde_json::to_value(input).unwrap();
+                                input_json = serde_json::to_value(input.join(" ")).unwrap();
                             } else {
                                 eprintln!("Error: Input is required for text and file widgets.");
                                 return;
