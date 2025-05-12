@@ -134,12 +134,13 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
                 Ok(Schedule::default())
             } else {
                 match serde_json::from_str::<Schedule>(&content) {
-                    Ok(schedule) => {
+                    Ok(mut schedule) => {
                         println!(
                             "Successfully loaded {} tasks from schedule {}.",
                             schedule.tasks.len(),
                             path.display()
                         );
+                        schedule.tasks.sort_by_key(|task| task.time);
                         Ok(schedule)
                     }
                     Err(e) => {
