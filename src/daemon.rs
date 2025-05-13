@@ -34,15 +34,20 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
     // handle errors appropriately
     println!("Executing task: {:?}", task);
     let message: Vec<String> = match task.widget.as_str() {
-        "weather" => {
-            // Execute weather widget
-            println!("Executing Weather widget");
-            get_weather().await
-        }
         "text" => {
             // Execute text widget
             println!("Executing Text widget with input: {:?}", task.input);
             get_text(task.input.as_str().unwrap_or(""))
+        }
+        "file" => {
+            // Execute file widget
+            println!("Executing File widget with input: {:?}", task.input);
+            get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or("")))
+        }
+        "weather" => {
+            // Execute weather widget
+            println!("Executing Weather widget");
+            get_weather().await
         }
         "sat-word" => {
             // Execute SAT word widget
