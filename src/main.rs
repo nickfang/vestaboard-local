@@ -71,11 +71,7 @@ async fn main() {
                             input_json = json!(null);
                         }
                         "text" | "file" => {
-                            if let input = input {
-                                if input.is_empty() {
-                                    eprintln!("Error: Input cannot be empty.");
-                                    return;
-                                }
+                            if !input.is_empty() {
                                 input_json = serde_json::to_value(input.join(" ")).unwrap();
                             } else {
                                 eprintln!("Error: Input is required for text and file widgets.");

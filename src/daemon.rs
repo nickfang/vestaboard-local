@@ -1,5 +1,6 @@
+use crate::datetime::is_or_before;
 use crate::scheduler::{ load_schedule, Schedule, ScheduledTask, SCHEDULE_FILE_PATH };
-use crate::errors::VestaboardError::{ self, IOError, ScheduleError, JsonError, WidgetError };
+use crate::errors::VestaboardError::{ self, IOError, WidgetError };
 use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
@@ -123,7 +124,7 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
         let mut tasks_to_execute = Vec::new();
 
         for task in &current_schedule.tasks {
-            if task.time <= now && !executed_task_ids.contains(&task.id) {
+            if is_or_before(task.time, now) && !executed_task_ids.contains(&task.id) {
                 tasks_to_execute.push(task.clone());
             }
         }
