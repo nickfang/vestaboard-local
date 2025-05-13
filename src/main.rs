@@ -13,7 +13,7 @@ use serde_json::json;
 use api_broker::display_message;
 use cli_display::print_message;
 use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
-use scheduler::{ add_task_to_schedule, print_scheduled_tasks, remove_task_from_schedule };
+use scheduler::{ add_task_to_schedule, print_schedule, remove_task_from_schedule, clear_schedule };
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
@@ -102,10 +102,11 @@ async fn main() {
                 }
                 ScheduleArgs::List => {
                     println!("Listing tasks...");
-                    print_scheduled_tasks().unwrap();
+                    print_schedule().unwrap();
                 }
                 ScheduleArgs::Clear => {
                     println!("Clearing schedule...");
+                    clear_schedule().unwrap();
                 }
                 ScheduleArgs::Dryrun => {
                     println!("Dry run...");

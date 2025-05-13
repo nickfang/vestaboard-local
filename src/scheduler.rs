@@ -113,7 +113,7 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
     // Save the schedule to the file
     // handle errors appropriately
     println!("Saving schedule to {}", path.display());
-    match fs::write(path, serde_json::to_string(schedule).unwrap()) {
+    match fs::write(path, serde_json::to_string_pretty(schedule).unwrap()) {
         Ok(_) => {
             println!("Schedule saved successfully.");
             Ok(())
@@ -197,18 +197,25 @@ pub fn remove_task_from_schedule(id: &str) -> Result<bool, VestaboardError> {
     }
 }
 
-pub fn print_scheduled_tasks() -> Result<(), VestaboardError> {
+pub fn clear_schedule() -> Result<(), VestaboardError> {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let mut schedule = load_schedule(&schedule_path)?;
+    println!("Clearing schedule...");
+    schedule.clear();
+    save_schedule(&schedule, &schedule_path)
+}
+
+pub fn print_schedule() -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let schedule = load_schedule(&schedule_path)?;
-
-    if schedule.tasks.is_empty() {
-        println!("No tasks scheduled.");
-        return Ok(());
-    }
 
     println!("\nScheduled Tasks:");
     println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
     println!("{:-<80}", ""); // Separator line
+    if schedule.tasks.is_empty() {
+        println!("");
+        return Ok(());
+    }
     for task in schedule.tasks {
         let local_time = task.time.with_timezone(&Local::now().timezone());
         let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
