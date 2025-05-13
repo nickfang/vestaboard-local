@@ -5,6 +5,14 @@ use nanoid::nanoid;
 use serde::{ Deserialize, Serialize };
 use serde_json::Value;
 
+use crate::datetime::datetime_to_local;
+use crate::widgets::{
+    text::get_text,
+    text::get_text_from_file,
+    weather::get_weather,
+    sat_words::get_sat_word,
+};
+use crate::cli_display::print_message;
 use crate::{ errors::VestaboardError };
 
 pub const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
@@ -183,18 +191,18 @@ pub fn add_task_to_schedule(
     save_schedule(&schedule, &schedule_path)
 }
 
-pub fn remove_task_from_schedule(id: &str) -> Result<bool, VestaboardError> {
+pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let mut schedule = load_schedule(&schedule_path)?;
     if schedule.get_task(id).is_none() {
-        return Ok(false);
+        println!("Task with ID {} not found.", id);
+        return Ok(());
     }
     if schedule.remove_task(id) {
         save_schedule(&schedule, &schedule_path)?;
-        Ok(true)
-    } else {
-        Err(VestaboardError::ScheduleError(format!("Task with ID {} not found.", id)))
+        println!("Task with ID {} removed successfully.", id);
     }
+    Ok(())
 }
 
 pub fn clear_schedule() -> Result<(), VestaboardError> {
@@ -205,7 +213,7 @@ pub fn clear_schedule() -> Result<(), VestaboardError> {
     save_schedule(&schedule, &schedule_path)
 }
 
-pub fn print_schedule() -> Result<(), VestaboardError> {
+pub fn list_schedule() -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let schedule = load_schedule(&schedule_path)?;
 
@@ -226,4 +234,24 @@ pub fn print_schedule() -> Result<(), VestaboardError> {
     }
     println!("{:-<80}", ""); // Footer separator line
     Ok(())
+}
+
+pub async fn print_schedule() {
+    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let schedule = load_schedule(&schedule_path).unwrap_or_else(|_| Schedule::default());
+    for task in schedule.tasks.iter() {
+        let message = match task.widget.as_str() {
+            "text" => { get_text(task.input.as_str().unwrap_or("")) }
+            "file" => { get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or(""))) }
+            "weather" => { get_weather().await }
+            "sat-word" => { get_sat_word() }
+            _ => {
+                println!("Unknown widget type: {}", task.widget);
+                vec![String::from("Unknown widget type")]
+            }
+        };
+        println!("{}", datetime_to_local(task.time));
+        print_message(message);
+        println!("");
+    }
 }

@@ -49,7 +49,7 @@ fn save_schedule_test() {
     // Verify the saved content is an empty schedule
     let mut file_content = String::new();
     temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
-    assert_eq!(file_content, "{\"tasks\":[]}");
+    assert_eq!(file_content, "{\n  \"tasks\": []\n}");
 
     // Test saving a schedule with tasks
     let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
@@ -73,7 +73,7 @@ fn save_schedule_test() {
     file_content.clear();
     temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
 
-    let expected_json = serde_json::to_string(&schedule).unwrap();
+    let expected_json = serde_json::to_string_pretty(&schedule).unwrap();
     assert_eq!(file_content, expected_json);
 }
 
