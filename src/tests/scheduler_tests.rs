@@ -301,3 +301,57 @@ fn test_schedule_is_empty() {
     assert!(schedule_with_task.is_empty());
     assert_eq!(schedule_with_task.tasks.len(), 0);
 }
+
+#[test]
+fn test_schedule_remove_task() {
+    let mut schedule = Schedule::default();
+
+    let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
+    let task1 = ScheduledTask::new(task1_time, "Weather".to_string(), json!({}));
+    let task2_time = Utc.with_ymd_and_hms(2025, 5, 1, 17, 30, 0).unwrap();
+    let task2 = ScheduledTask::new(
+        task2_time,
+        "text".to_string(),
+        json!({"message": "Hello, world!"})
+    );
+
+    schedule.add_task(task1.clone());
+    schedule.add_task(task2.clone());
+
+    assert_eq!(schedule.tasks.len(), 2);
+    assert_eq!(schedule.tasks[0].id, task1.id);
+    assert_eq!(schedule.tasks[1].id, task2.id);
+
+    let removed = schedule.remove_task(&task1.id);
+    assert!(removed);
+    assert_eq!(schedule.tasks.len(), 1);
+    assert_eq!(schedule.tasks[0].id, task2.id);
+
+    let not_removed = schedule.remove_task(&task1.id); // Try removing again
+    assert!(!not_removed);
+}
+
+#[test]
+fn test_schedule_clear() {
+    let mut schedule = Schedule::default();
+
+    let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
+    let task1 = ScheduledTask::new(task1_time, "Weather".to_string(), json!({}));
+    let task2_time = Utc.with_ymd_and_hms(2025, 5, 1, 17, 30, 0).unwrap();
+    let task2 = ScheduledTask::new(
+        task2_time,
+        "text".to_string(),
+        json!({"message": "Hello, world!"})
+    );
+
+    schedule.add_task(task1.clone());
+    schedule.add_task(task2.clone());
+
+    assert_eq!(schedule.tasks.len(), 2);
+    assert_eq!(schedule.tasks[0].id, task1.id);
+    assert_eq!(schedule.tasks[1].id, task2.id);
+
+    schedule.clear();
+    assert_eq!(schedule.tasks.len(), 0);
+    assert!(schedule.is_empty());
+}
