@@ -11,7 +11,7 @@ fn print_message_test() {
         "!@#$()-+&=;:'\"%,./?D".to_string()
     ];
 
-    let output = cli_display::print_message(message);
+    let output = cli_display::print_message(message, "");
 
     assert_eq!(output, [
         "Vestaboard Display:",
@@ -36,7 +36,7 @@ fn print_message_with_colors_test() {
         "V".to_string()
     ];
 
-    let output = cli_display::print_message(message);
+    let output = cli_display::print_message(message, "");
 
     assert_eq!(output, [
         "Vestaboard Display:",
@@ -59,7 +59,7 @@ fn print_message_with_degree_character() {
         "but even worse".to_string(),
         "in metric.".to_string()
     ];
-    let output = cli_display::print_message(message);
+    let output = cli_display::print_message(message, "");
     assert_eq!(output, [
         "Vestaboard Display:",
         "|----------------------|",
@@ -67,6 +67,28 @@ fn print_message_with_degree_character() {
         "|0° is really cold     |",
         "|but even worse        |",
         "|in metric.            |",
+        "|                      |",
+        "|                      |",
+        "|----------------------|",
+    ])
+}
+
+#[test]
+fn print_message_with_title() {
+    let message = vec![
+        "".to_string(),
+        "".to_string(),
+        "     don't panic!     ".to_string(),
+        "".to_string()
+    ];
+    let output = cli_display::print_message(message, "Hitchhiker's Guide to the Galaxy");
+    assert_eq!(output, [
+        "Hitchhiker's Guide to the Galaxy",
+        "|----------------------|",
+        "|                      |",
+        "|                      |",
+        "|     don't panic!     |",
+        "|                      |",
         "|                      |",
         "|                      |",
         "|----------------------|",
