@@ -16,6 +16,12 @@ pub fn datetime_to_utc(time_str: &str) -> Result<DateTime<Utc>, String> {
     Ok(local_datetime.with_timezone(&Utc))
 }
 
+pub fn datetime_to_local(dt: DateTime<Utc>) -> String {
+    let local_time = dt.with_timezone(&Local::now().timezone());
+    let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+    formatted_time
+}
+
 pub fn is_or_before(dt1: DateTime<Utc>, dt2: DateTime<Utc>) -> bool {
     dt1 <= dt2
 }

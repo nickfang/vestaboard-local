@@ -1,6 +1,10 @@
-pub fn print_message(message: Vec<String>) -> Vec<String> {
+pub fn print_message(message: Vec<String>, title: &str) -> Vec<String> {
     let mut output = Vec::new();
-    output.push("Vestaboard Display:".to_string());
+    if title == "" {
+        output.push("Vestaboard Display:".to_string());
+    } else {
+        output.push(format!("{}", title));
+    }
     output.push("|----------------------|".to_string());
     message
         .iter()

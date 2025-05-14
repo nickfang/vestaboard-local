@@ -49,7 +49,7 @@ fn save_schedule_test() {
     // Verify the saved content is an empty schedule
     let mut file_content = String::new();
     temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
-    assert_eq!(file_content, "{\"tasks\":[]}");
+    assert_eq!(file_content, "{\n  \"tasks\": []\n}");
 
     // Test saving a schedule with tasks
     let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
@@ -73,7 +73,7 @@ fn save_schedule_test() {
     file_content.clear();
     temp_file.read_to_string(&mut file_content).expect("Failed to read from temp file");
 
-    let expected_json = serde_json::to_string(&schedule).unwrap();
+    let expected_json = serde_json::to_string_pretty(&schedule).unwrap();
     assert_eq!(file_content, expected_json);
 }
 
@@ -300,4 +300,58 @@ fn test_schedule_is_empty() {
     schedule_with_task.clear();
     assert!(schedule_with_task.is_empty());
     assert_eq!(schedule_with_task.tasks.len(), 0);
+}
+
+#[test]
+fn test_schedule_remove_task() {
+    let mut schedule = Schedule::default();
+
+    let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
+    let task1 = ScheduledTask::new(task1_time, "Weather".to_string(), json!({}));
+    let task2_time = Utc.with_ymd_and_hms(2025, 5, 1, 17, 30, 0).unwrap();
+    let task2 = ScheduledTask::new(
+        task2_time,
+        "text".to_string(),
+        json!({"message": "Hello, world!"})
+    );
+
+    schedule.add_task(task1.clone());
+    schedule.add_task(task2.clone());
+
+    assert_eq!(schedule.tasks.len(), 2);
+    assert_eq!(schedule.tasks[0].id, task1.id);
+    assert_eq!(schedule.tasks[1].id, task2.id);
+
+    let removed = schedule.remove_task(&task1.id);
+    assert!(removed);
+    assert_eq!(schedule.tasks.len(), 1);
+    assert_eq!(schedule.tasks[0].id, task2.id);
+
+    let not_removed = schedule.remove_task(&task1.id); // Try removing again
+    assert!(!not_removed);
+}
+
+#[test]
+fn test_schedule_clear() {
+    let mut schedule = Schedule::default();
+
+    let task1_time = Utc.with_ymd_and_hms(2025, 5, 1, 9, 0, 0).unwrap();
+    let task1 = ScheduledTask::new(task1_time, "Weather".to_string(), json!({}));
+    let task2_time = Utc.with_ymd_and_hms(2025, 5, 1, 17, 30, 0).unwrap();
+    let task2 = ScheduledTask::new(
+        task2_time,
+        "text".to_string(),
+        json!({"message": "Hello, world!"})
+    );
+
+    schedule.add_task(task1.clone());
+    schedule.add_task(task2.clone());
+
+    assert_eq!(schedule.tasks.len(), 2);
+    assert_eq!(schedule.tasks[0].id, task1.id);
+    assert_eq!(schedule.tasks[1].id, task2.id);
+
+    schedule.clear();
+    assert_eq!(schedule.tasks.len(), 0);
+    assert!(schedule.is_empty());
 }

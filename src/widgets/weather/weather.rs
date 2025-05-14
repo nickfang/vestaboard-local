@@ -284,7 +284,6 @@ pub async fn get_weather() -> WidgetOutput {
             };
             match status_code {
                 200 => {
-                    println!("Success");
                     match response_text {
                         text => {
                             // Try to parse the text as JSON

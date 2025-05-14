@@ -13,7 +13,13 @@ use serde_json::json;
 use api_broker::display_message;
 use cli_display::print_message;
 use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
-use scheduler::{ add_task_to_schedule, print_scheduled_tasks, remove_task_from_schedule };
+use scheduler::{
+    add_task_to_schedule,
+    remove_task_from_schedule,
+    clear_schedule,
+    list_schedule,
+    print_schedule,
+};
 use widgets::text::{ get_text, get_text_from_file };
 use widgets::weather::get_weather;
 use widgets::jokes::get_joke;
@@ -39,7 +45,7 @@ async fn main() {
                 WidgetCommand::SATWord => { get_sat_word() }
                 WidgetCommand::Clear => {
                     if test_mode {
-                        print_message(vec![String::from("")]);
+                        print_message(vec![String::from("")], "");
                     } else {
                         api::clear_board().await.unwrap();
                     }
@@ -47,7 +53,7 @@ async fn main() {
                 }
             };
             if test_mode {
-                print_message(message.clone());
+                print_message(message, "");
                 return;
             }
             display_message(message.clone()).await;
@@ -87,28 +93,19 @@ async fn main() {
                 }
                 ScheduleArgs::Remove { id } => {
                     println!("Removing task...");
-                    match remove_task_from_schedule(&id) {
-                        Ok(removed) => {
-                            if removed {
-                                println!("Task with ID {} removed successfully.", id);
-                            } else {
-                                println!("No task found with ID {}.", id);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Error removing task: {:?}", e);
-                        }
-                    }
+                    remove_task_from_schedule(&id).unwrap()
                 }
                 ScheduleArgs::List => {
                     println!("Listing tasks...");
-                    print_scheduled_tasks().unwrap();
+                    list_schedule().unwrap();
                 }
                 ScheduleArgs::Clear => {
                     println!("Clearing schedule...");
+                    clear_schedule().unwrap();
                 }
                 ScheduleArgs::Dryrun => {
                     println!("Dry run...");
+                    print_schedule().await
                 }
             }
         }
