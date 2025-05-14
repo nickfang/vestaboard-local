@@ -250,8 +250,7 @@ pub async fn print_schedule() {
                 vec![String::from("Unknown widget type")]
             }
         };
-        println!("{}", datetime_to_local(task.time));
-        print_message(message);
+        print_message(message, &datetime_to_local(task.time));
         println!("");
     }
 }

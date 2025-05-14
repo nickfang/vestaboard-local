@@ -45,7 +45,7 @@ async fn main() {
                 WidgetCommand::SATWord => { get_sat_word() }
                 WidgetCommand::Clear => {
                     if test_mode {
-                        print_message(vec![String::from("")]);
+                        print_message(vec![String::from("")], "");
                     } else {
                         api::clear_board().await.unwrap();
                     }
@@ -53,7 +53,7 @@ async fn main() {
                 }
             };
             if test_mode {
-                print_message(message.clone());
+                print_message(message, "");
                 return;
             }
             display_message(message.clone()).await;
