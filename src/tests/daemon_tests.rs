@@ -32,10 +32,10 @@ mod tests {
     fn test_get_file_mod_time_error_context() {
         let non_existent_path = PathBuf::from("/this/path/does/not/exist");
         let result = get_file_mod_time(&non_existent_path);
-        
+
         assert!(result.is_err());
         let error = result.unwrap_err();
-        
+
         // Check that it's an IO error with proper context
         let error_msg = format!("{}", error);
         match error {
@@ -45,7 +45,7 @@ mod tests {
             }
             _ => panic!("Expected IOError with context"),
         }
-        
+
         // Check display formatting includes context
         assert!(error_msg.contains("IO Error"));
         assert!(error_msg.contains("getting mod time for"));
@@ -73,10 +73,10 @@ mod tests {
             widget: "unknown_widget".to_string(),
             input: serde_json::Value::String("test".to_string()),
         };
-        
+
         let result = execute_task(&task).await;
         assert!(result.is_err());
-        
+
         let error = result.unwrap_err();
         match error {
             VestaboardError::WidgetError { widget, message } => {

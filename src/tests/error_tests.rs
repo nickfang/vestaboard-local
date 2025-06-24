@@ -2,7 +2,7 @@
 mod tests {
     use crate::errors::VestaboardError;
     use std::error::Error;
-    use std::io::{Error as IoError, ErrorKind};
+    use std::io::{ Error as IoError, ErrorKind };
 
     #[test]
     fn test_io_error_constructor() {
@@ -175,7 +175,10 @@ mod tests {
         let io_err2 = IoError::new(ErrorKind::NotFound, "file2");
         let vb_error1 = VestaboardError::io_error(io_err1, "context1");
         let vb_error2 = VestaboardError::io_error(io_err2, "context1");
-        let vb_error3 = VestaboardError::io_error(IoError::new(ErrorKind::NotFound, "file1"), "context2");
+        let vb_error3 = VestaboardError::io_error(
+            IoError::new(ErrorKind::NotFound, "file1"),
+            "context2"
+        );
 
         assert_eq!(vb_error1, vb_error2); // Same context
         assert_ne!(vb_error1, vb_error3); // Different context
@@ -199,7 +202,7 @@ mod tests {
     fn test_error_context_preservation() {
         let original_msg = "original error message";
         let context = "specific operation context";
-        
+
         let io_err = IoError::new(ErrorKind::PermissionDenied, original_msg);
         let vb_error = VestaboardError::io_error(io_err, context);
 

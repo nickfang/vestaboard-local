@@ -1,30 +1,27 @@
 use std::{ fs, path::PathBuf };
 use crate::widgets::widget_utils;
+use crate::errors::VestaboardError;
 
-pub fn get_text(text: &str) -> Vec<String> {
+pub fn get_text(text: &str) -> Result<Vec<String>, VestaboardError> {
     match widget_utils::format_message(text) {
-        Some(lines) => lines,
-        None => {
-            let error = vec![
-                "Error:".to_string(),
-                "message contains invalid characters.".to_string()
-            ];
-            error
-        }
+        Some(lines) => Ok(lines),
+        None => Err(VestaboardError::widget_error("text", "Message contains invalid characters")),
     }
 }
 
-pub fn get_text_from_file(file: PathBuf) -> Vec<String> {
-    match fs::read_to_string(file) {
+pub fn get_text_from_file(file: PathBuf) -> Result<Vec<String>, VestaboardError> {
+    match fs::read_to_string(&file) {
         Ok(text) => {
-            text.lines()
-                .map(|line| line.to_string())
-                .collect()
+            Ok(
+                text
+                    .lines()
+                    .map(|line| line.to_string())
+                    .collect()
+            )
         }
         Err(e) => {
             eprintln!("Error reading file: {:?}", e);
-            let error = vec!["Error:".to_string(), "could not read file.".to_string()];
-            error
+            Err(VestaboardError::io_error(e, &format!("reading text file {}", file.display())))
         }
     }
 }

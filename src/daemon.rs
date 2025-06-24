@@ -5,6 +5,7 @@ use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
 use crate::api_broker::display_message;
+use crate::widgets::widget_utils::error_to_display_message;
 
 use chrono::Utc;
 use std::fs;
@@ -34,7 +35,8 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
     // Send the message to the Vestaboard
     // handle errors appropriately
     println!("Executing task: {:?}", task);
-    let message: Vec<String> = match task.widget.as_str() {
+
+    let message_result = match task.widget.as_str() {
         "text" => {
             // Execute text widget
             println!("Executing Text widget with input: {:?}", task.input);
@@ -56,9 +58,23 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
             get_sat_word()
         }
         _ => {
-            return Err(VestaboardError::widget_error(&task.widget, &format!("Unknown widget type: {}", task.widget)));
+            return Err(
+                VestaboardError::widget_error(
+                    &task.widget,
+                    &format!("Unknown widget type: {}", task.widget)
+                )
+            );
         }
     };
+
+    let message = match message_result {
+        Ok(msg) => msg,
+        Err(e) => {
+            eprintln!("Widget error: {}", e);
+            error_to_display_message(&e)
+        }
+    };
+
     display_message(message).await;
     Ok(())
 }

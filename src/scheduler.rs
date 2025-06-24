@@ -173,7 +173,12 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
         }
         Err(e) => {
             eprintln!("Error reading schedule file {} : {}", path.display(), e);
-            Err(VestaboardError::schedule_error("load_schedule", &format!("Failed to read schedule file: {}", e)))
+            Err(
+                VestaboardError::schedule_error(
+                    "load_schedule",
+                    &format!("Failed to read schedule file: {}", e)
+                )
+            )
         }
     }
 }
@@ -240,16 +245,25 @@ pub async fn print_schedule() {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let schedule = load_schedule(&schedule_path).unwrap_or_else(|_| Schedule::default());
     for task in schedule.tasks.iter() {
-        let message = match task.widget.as_str() {
+        let message_result = match task.widget.as_str() {
             "text" => { get_text(task.input.as_str().unwrap_or("")) }
             "file" => { get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or(""))) }
             "weather" => { get_weather().await }
             "sat-word" => { get_sat_word() }
             _ => {
                 println!("Unknown widget type: {}", task.widget);
-                vec![String::from("Unknown widget type")]
+                Err(VestaboardError::widget_error(&task.widget, "Unknown widget type"))
             }
         };
+
+        let message = match message_result {
+            Ok(msg) => msg,
+            Err(e) => {
+                use crate::widgets::widget_utils::error_to_display_message;
+                error_to_display_message(&e)
+            }
+        };
+
         print_message(message, &datetime_to_local(task.time));
         println!("");
     }

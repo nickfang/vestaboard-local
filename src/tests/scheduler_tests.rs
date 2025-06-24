@@ -362,19 +362,19 @@ fn test_schedule_error_context() {
     let path = PathBuf::from("/root/cannot_write_here.json");
     let schedule = Schedule::default();
     let result = save_schedule(&schedule, &path);
-    
+
     assert!(result.is_err());
     let error = result.unwrap_err();
-    
+
     // Test display formatting first
     let error_msg = format!("{}", error);
-    
+
     match error {
         VestaboardError::IOError { context, .. } => {
             assert_eq!(context, "saving schedule to file");
         }
         _ => panic!("Expected IOError with context"),
     }
-    
+
     assert!(error_msg.contains("IO Error in saving schedule to file"));
 }
