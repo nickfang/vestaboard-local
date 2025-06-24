@@ -64,9 +64,17 @@ mod tests {
 
     #[test]
     fn test_format_message_full_colors() {
-        let message = "DDDDDDDDDDDDDDDDDDDDDD";
+        let message =
+            "ROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYGBVWKROYG";
         let formatted = format_message(message).unwrap();
-        let expected = vec!["", "", "                      ", "DDDDDDDDDDDDDDDDDDDDDD", "", ""];
+        let expected = vec![
+            "ROYGBVWKROYGBVWKROYGBV",
+            "WKROYGBVWKROYGBVWKROYG",
+            "BVWKROYGBVWKROYGBVWKRO",
+            "YGBVWKROYGBVWKROYGBVWK",
+            "ROYGBVWKROYGBVWKROYGBV",
+            "WKROYGBVWKROYGBVWKROYG"
+        ];
         assert_eq!(formatted, expected);
     }
 
