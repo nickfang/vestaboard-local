@@ -1,6 +1,6 @@
 use crate::datetime::is_or_before;
 use crate::scheduler::{ load_schedule, Schedule, ScheduledTask, SCHEDULE_FILE_PATH };
-use crate::errors::VestaboardError::{ self, IOError, WidgetError };
+use crate::errors::VestaboardError;
 use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
@@ -24,7 +24,7 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
         .and_then(|meta| meta.modified())
         .map_err(|e| {
             eprintln!("Error getting mod time for {}: {}", path.display(), e);
-            IOError(e)
+            VestaboardError::io_error(e, &format!("getting mod time for {}", path.display()))
         })
 }
 
@@ -56,7 +56,7 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
             get_sat_word()
         }
         _ => {
-            return Err(WidgetError(format!("Unknown widget type: {}", task.widget)));
+            return Err(VestaboardError::widget_error(&task.widget, &format!("Unknown widget type: {}", task.widget)));
         }
     };
     display_message(message).await;

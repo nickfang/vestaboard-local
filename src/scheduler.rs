@@ -128,7 +128,7 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
         }
         Err(e) => {
             eprintln!("Error saving schedule: {}", e);
-            Err(VestaboardError::IOError(e))
+            Err(VestaboardError::io_error(e, "saving schedule to file"))
         }
     }
 }
@@ -153,7 +153,7 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
                     }
                     Err(e) => {
                         println!("Failed to parse schedule from {} : {}", path.display(), e);
-                        Err(VestaboardError::JsonError(e))
+                        Err(VestaboardError::json_error(e, "parsing schedule JSON"))
                     }
                 }
             }
@@ -173,7 +173,7 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
         }
         Err(e) => {
             eprintln!("Error reading schedule file {} : {}", path.display(), e);
-            Err(VestaboardError::ScheduleError(format!("Failed to parse schedule: {}", e)))
+            Err(VestaboardError::schedule_error("load_schedule", &format!("Failed to read schedule file: {}", e)))
         }
     }
 }
