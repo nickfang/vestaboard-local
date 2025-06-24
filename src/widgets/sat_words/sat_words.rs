@@ -5,7 +5,8 @@ use std::path::Path;
 use serde::{ Deserialize, Serialize };
 use rand::{ thread_rng, Rng };
 
-use crate::widgets::widget_utils::{ format_error, split_into_lines, WidgetOutput };
+use crate::widgets::widget_utils::{ split_into_lines, WidgetOutput };
+use crate::errors::VestaboardError;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UsedWord {
@@ -13,18 +14,12 @@ struct UsedWord {
     timestamp: String,
 }
 
-pub fn get_sat_word() -> WidgetOutput {
+pub fn get_sat_word() -> Result<WidgetOutput, VestaboardError> {
     let path = "./src/widgets/sat_words/words.txt";
-    let words_map = match create_words_map(path) {
-        Ok(map) => map,
-        Err(e) => {
-            eprintln!("Error reading file: {:?}", e);
-            return format_error("could not read file.");
-        }
-    };
-    // let used_words_path = "./src/widgets/sat_words/used_words.json";
-    // let mut used_words = load_used_words(used_words_path);
-    // let used_words = match used_words {
+    let words_map = create_words_map(path).map_err(|e|
+        VestaboardError::io_error(e, "reading SAT words dictionary")
+    )?;
+
     let mut rng = thread_rng();
     if let Some((key, value)) = words_map.iter().nth(rng.gen_range(0..words_map.len())) {
         let mut message = vec![format!("{} ({}):", key.to_string(), value[0].0.clone())];
@@ -33,12 +28,15 @@ pub fn get_sat_word() -> WidgetOutput {
         for line in lines {
             message.push(line);
         }
-        return message;
+        Ok(message)
+    } else {
+        Err(VestaboardError::widget_error("sat-word", "No words available in dictionary"))
     }
-    vec!["".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string()]
 }
 
-fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
+pub fn create_words_map<P>(
+    filename: P
+) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
     where P: AsRef<Path>
 {
     let file = File::open(filename)?;

@@ -1,10 +1,11 @@
 use crate::datetime::is_or_before;
 use crate::scheduler::{ load_schedule, Schedule, ScheduledTask, SCHEDULE_FILE_PATH };
-use crate::errors::VestaboardError::{ self, IOError, WidgetError };
+use crate::errors::VestaboardError;
 use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
 use crate::api_broker::display_message;
+use crate::widgets::widget_utils::error_to_display_message;
 
 use chrono::Utc;
 use std::fs;
@@ -24,7 +25,7 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
         .and_then(|meta| meta.modified())
         .map_err(|e| {
             eprintln!("Error getting mod time for {}: {}", path.display(), e);
-            IOError(e)
+            VestaboardError::io_error(e, &format!("getting mod time for {}", path.display()))
         })
 }
 
@@ -34,7 +35,8 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
     // Send the message to the Vestaboard
     // handle errors appropriately
     println!("Executing task: {:?}", task);
-    let message: Vec<String> = match task.widget.as_str() {
+
+    let message_result = match task.widget.as_str() {
         "text" => {
             // Execute text widget
             println!("Executing Text widget with input: {:?}", task.input);
@@ -56,9 +58,23 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
             get_sat_word()
         }
         _ => {
-            return Err(WidgetError(format!("Unknown widget type: {}", task.widget)));
+            return Err(
+                VestaboardError::widget_error(
+                    &task.widget,
+                    &format!("Unknown widget type: {}", task.widget)
+                )
+            );
         }
     };
+
+    let message = match message_result {
+        Ok(msg) => msg,
+        Err(e) => {
+            eprintln!("Widget error: {}", e);
+            error_to_display_message(&e)
+        }
+    };
+
     display_message(message).await;
     Ok(())
 }

@@ -14,6 +14,7 @@ use chrono::{ DateTime, TimeZone, Utc };
 use tempfile::NamedTempFile;
 use serde_json::json;
 use std::io::{ Write, Seek };
+use std::path::PathBuf;
 
 fn create_valid_json_content() -> (String, DateTime<Utc>, String) {
     let task_time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
@@ -151,7 +152,7 @@ fn test_load_schedule_invalid_json() {
 
     assert!(result.is_err());
     let err = result.unwrap_err();
-    if let VestaboardError::JsonError(_) = err {
+    if let VestaboardError::JsonError { .. } = err {
         assert!(true);
     } else {
         panic!("Expected VestaboardError::JsonError");
@@ -354,4 +355,26 @@ fn test_schedule_clear() {
     schedule.clear();
     assert_eq!(schedule.tasks.len(), 0);
     assert!(schedule.is_empty());
+}
+
+#[test]
+fn test_schedule_error_context() {
+    let path = PathBuf::from("/root/cannot_write_here.json");
+    let schedule = Schedule::default();
+    let result = save_schedule(&schedule, &path);
+
+    assert!(result.is_err());
+    let error = result.unwrap_err();
+
+    // Test display formatting first
+    let error_msg = format!("{}", error);
+
+    match error {
+        VestaboardError::IOError { context, .. } => {
+            assert_eq!(context, "saving schedule to file");
+        }
+        _ => panic!("Expected IOError with context"),
+    }
+
+    assert!(error_msg.contains("IO Error in saving schedule to file"));
 }

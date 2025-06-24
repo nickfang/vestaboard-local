@@ -37,21 +37,34 @@ async fn main() {
             if send_args.dry_run {
                 test_mode = true;
             }
-            let message: Vec<String> = match send_args.widget_command {
-                WidgetCommand::Text(args) => { get_text(&args.message) }
-                WidgetCommand::File(args) => { get_text_from_file(args.name) }
-                WidgetCommand::Weather => { get_weather().await }
-                WidgetCommand::Jokes => { get_joke() }
-                WidgetCommand::SATWord => { get_sat_word() }
+            let message_result = match send_args.widget_command {
+                WidgetCommand::Text(args) => get_text(&args.message),
+                WidgetCommand::File(args) => get_text_from_file(args.name),
+                WidgetCommand::Weather => get_weather().await,
+                WidgetCommand::Jokes => get_joke(),
+                WidgetCommand::SATWord => get_sat_word(),
                 WidgetCommand::Clear => {
                     if test_mode {
                         print_message(vec![String::from("")], "");
                     } else {
-                        api::clear_board().await.unwrap();
+                        if let Err(e) = api::clear_board().await {
+                            eprintln!("Error clearing board: {}", e);
+                            std::process::exit(1);
+                        }
                     }
                     return;
                 }
             };
+
+            let message: Vec<String> = match message_result {
+                Ok(msg) => msg,
+                Err(e) => {
+                    eprintln!("Widget error: {}", e);
+                    // For CLI usage, we'll exit with error rather than show on Vestaboard
+                    std::process::exit(1);
+                }
+            };
+
             if test_mode {
                 print_message(message, "");
                 return;

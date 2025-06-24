@@ -1,3 +1,5 @@
+use crate::errors::VestaboardError;
+
 pub type WidgetOutput = Vec<String>;
 pub const MAX_MESSAGE_LENGTH: usize = 22;
 pub const MAX_MESSAGE_HEIGHT: usize = 6;
@@ -76,6 +78,21 @@ pub fn center_message(mut message: Vec<String>, height: usize) -> WidgetOutput {
 }
 
 pub fn format_message(message: &str) -> Option<WidgetOutput> {
+    // Validate that all characters in the message are valid for Vestaboard
+    // Valid characters: a-z, 0-9, space, punctuation, and the color letters D,R,O,Y,G,B,V,W,K,F
+    for c in message.chars() {
+        let is_valid =
+            c.is_ascii_lowercase() ||
+            c.is_ascii_digit() ||
+            c == ' ' ||
+            "!@#$()-+&=;:'\"%,./?".contains(c) ||
+            "DROYGBVWKF".contains(c);
+
+        if !is_valid {
+            return None; // Invalid character found
+        }
+    }
+
     let mut formatted_message: Vec<String> = Vec::new();
     split_into_lines(message)
         .iter()
@@ -109,4 +126,56 @@ pub fn format_error(error: &str) -> WidgetOutput {
         formatted_message.push(center_line(current_line));
     }
     formatted_message
+}
+
+/// Converts a VestaboardError to a display message for the Vestaboard
+pub fn error_to_display_message(error: &VestaboardError) -> Vec<String> {
+    match error {
+        VestaboardError::IOError { context, .. } => {
+            format_error(&format!("File error: {}", context.split(' ').last().unwrap_or("unknown")))
+        }
+        VestaboardError::JsonError { context, .. } => {
+            if context.contains("parsing") {
+                format_error("Invalid data format")
+            } else {
+                format_error("Data processing error")
+            }
+        }
+        VestaboardError::ReqwestError { context, .. } => {
+            if context.contains("weather") {
+                format_error("Weather service unavailable")
+            } else {
+                format_error("Network error")
+            }
+        }
+        VestaboardError::WidgetError { widget, message: _ } => {
+            match widget.as_str() {
+                "weather" => format_error("Weather data unavailable"),
+                "text" => format_error("Text processing error"),
+                "sat-word" => format_error("Dictionary unavailable"),
+                _ => format_error(&format!("{} error", widget)),
+            }
+        }
+        VestaboardError::ScheduleError { .. } => { format_error("Schedule error") }
+        VestaboardError::ApiError { code, .. } => {
+            match code {
+                Some(404) => format_error("Service not found"),
+                Some(401) | Some(403) => format_error("Access denied"),
+                Some(500..=599) => format_error("Service temporarily down"),
+                _ => format_error("Service error"),
+            }
+        }
+        VestaboardError::ConfigError { field, .. } => {
+            format_error(&format!("Config: {} missing", field))
+        }
+        VestaboardError::Other { message } => {
+            // Truncate long messages for display
+            let display_msg = if message.len() > 40 {
+                message[..37].to_string() + "..."
+            } else {
+                message.clone()
+            };
+            format_error(&display_msg)
+        }
+    }
 }
