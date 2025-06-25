@@ -88,7 +88,9 @@ pub fn to_codes(message: &str) -> Vec<u8> {
     codes
 }
 
-pub async fn display_message(message: Vec<String>) {
+/// Converts message lines to Vestaboard codes array for testing
+/// This function is similar to display_message but returns the codes instead of sending them
+pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
     let mut codes: [[u8; 22]; 6] = [[0; 22]; 6];
     let mut current_line = [0; 22];
     let mut line_num = 0;
@@ -113,6 +115,11 @@ pub async fn display_message(message: Vec<String>) {
         line_num += 1;
     }
 
+    codes
+}
+
+pub async fn display_message(message: Vec<String>) {
+    let codes = message_to_codes(message);
     send_codes(codes).await.unwrap_or_else(|_| {
         eprintln!("Error sending codes to Vestaboard.");
     });

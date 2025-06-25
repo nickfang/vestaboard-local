@@ -14,7 +14,9 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 use std::thread;
 use std::time::{ Duration, SystemTime };
 
+#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
 const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
