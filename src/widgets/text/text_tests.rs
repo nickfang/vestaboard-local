@@ -21,20 +21,19 @@ mod tests {
     }
 
     #[test]
-    fn test_get_text_invalid_characters() {
+    fn test_get_text_with_invalid_characters() {
         // Test with uppercase letters which are invalid for Vestaboard
+        // The widget should format the message successfully - validation happens at main level
         let text = "Hello World"; // "H" and "W" are invalid uppercase characters
         let result = get_text(text);
 
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            VestaboardError::WidgetError { widget, message } => {
-                assert_eq!(widget, "text");
-                assert!(message.contains("invalid characters"));
-            }
-            _ => panic!("Expected WidgetError, got: {:?}", error),
-        }
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert!(!lines.is_empty());
+
+        // The formatted message should contain the original text (even with invalid chars)
+        let combined = lines.join("");
+        assert!(combined.contains("Hello World"));
     }
 
     #[test]

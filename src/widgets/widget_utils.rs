@@ -77,29 +77,15 @@ pub fn center_message(mut message: Vec<String>, height: usize) -> WidgetOutput {
     message
 }
 
-pub fn format_message(message: &str) -> Option<WidgetOutput> {
-    // Validate that all characters in the message are valid for Vestaboard
-    // Valid characters: a-z, 0-9, space, punctuation, and the color letters D,R,O,Y,G,B,V,W,K,F
-    for c in message.chars() {
-        let is_valid =
-            c.is_ascii_lowercase() ||
-            c.is_ascii_digit() ||
-            c == ' ' ||
-            "!@#$()-+&=;:'\"%,./?".contains(c) ||
-            "DROYGBVWKF".contains(c);
-
-        if !is_valid {
-            return None; // Invalid character found
-        }
-    }
-
+pub fn format_message(message: &str) -> WidgetOutput {
+    // Widget just formats the message - validation happens at the main level
     let mut formatted_message: Vec<String> = Vec::new();
     split_into_lines(message)
         .iter()
         .for_each(|line| {
             formatted_message.push(center_line(line.to_string()));
         });
-    Some(center_message(formatted_message, MAX_MESSAGE_HEIGHT))
+    center_message(formatted_message, MAX_MESSAGE_HEIGHT)
 }
 
 // There is only room for 4 lines of error message on the Vestaboard
