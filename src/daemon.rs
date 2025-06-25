@@ -4,7 +4,7 @@ use crate::errors::VestaboardError;
 use crate::widgets::text::{ get_text, get_text_from_file };
 use crate::widgets::weather::get_weather;
 use crate::widgets::sat_words::get_sat_word;
-use crate::api_broker::display_message;
+use crate::api_broker::{ display_message, validate_message_content };
 use crate::widgets::widget_utils::error_to_display_message;
 
 use chrono::Utc;
@@ -14,7 +14,9 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 use std::thread;
 use std::time::{ Duration, SystemTime };
 
+#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
 static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
 const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
@@ -74,6 +76,13 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
             error_to_display_message(&e)
         }
     };
+
+    // Validate message content before sending
+    if let Err(validation_error) = validate_message_content(&message) {
+        eprintln!("Validation error: {}", validation_error);
+        display_message(error_to_display_message(&VestaboardError::other(&validation_error))).await;
+        return Ok(());
+    }
 
     display_message(message).await;
     Ok(())

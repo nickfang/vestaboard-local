@@ -4,12 +4,12 @@ mod daemon;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduler::{ Schedule, ScheduledTask };
+    use crate::scheduler::ScheduledTask;
     use crate::errors::VestaboardError;
 
     use daemon::{ get_file_mod_time, execute_task, run_daemon };
     use tempfile::NamedTempFile;
-    use std::io::{ Write, Seek };
+    use std::io::Write;
     use std::path::PathBuf;
 
     #[test]
@@ -92,6 +92,7 @@ mod tests {
     fn test_run_daemon() {
         // this currently cannot be tested because it runs indefinitely and requires a Ctrl+C signal to stop
         // TODO: refactor to allow testing, or mock the Ctrl+C signal
+        let _ = run_daemon();
         assert!(true)
     }
 }

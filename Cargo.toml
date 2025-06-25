@@ -23,4 +23,5 @@ name = "vbl"
 path = "src/main.rs"
 
 [dev-dependencies]
+serial_test = "3.2.0"
 tempfile = "3.19.1"

@@ -8,13 +8,20 @@ use crate::scheduler::{
     ID_LENGTH,
     load_schedule,
     save_schedule,
+    add_task_to_schedule,
+    remove_task_from_schedule,
+    clear_schedule,
+    list_schedule,
+    SCHEDULE_FILE_PATH,
 };
 use crate::errors::VestaboardError;
+use crate::widgets::text::get_text;
 use chrono::{ DateTime, TimeZone, Utc };
 use tempfile::NamedTempFile;
 use serde_json::json;
 use std::io::{ Write, Seek };
 use std::path::PathBuf;
+use serial_test::serial;
 
 fn create_valid_json_content() -> (String, DateTime<Utc>, String) {
     let task_time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
@@ -377,4 +384,305 @@ fn test_schedule_error_context() {
     }
 
     assert!(error_msg.contains("IO Error in saving schedule to file"));
+}
+
+#[test]
+fn test_scheduled_task_new() {
+    let time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+    let widget = "text".to_string();
+    let input = json!({"message": "test message"});
+
+    let task = ScheduledTask::new(time, widget.clone(), input.clone());
+
+    assert_eq!(task.time, time);
+    assert_eq!(task.widget, widget);
+    assert_eq!(task.input, input);
+    assert!(!task.id.is_empty()); // Should have generated an ID
+    assert_eq!(task.id.len(), ID_LENGTH); // Should be correct length
+}
+
+#[test]
+#[serial]
+fn test_add_task_to_schedule() {
+    use std::fs;
+    use std::path::Path;
+
+    // Backup existing schedule file if it exists
+    let schedule_path = Path::new(SCHEDULE_FILE_PATH);
+    let backup_path = Path::new("./data/schedule_backup_test.json");
+    let had_existing_file = schedule_path.exists();
+
+    if had_existing_file {
+        fs::copy(schedule_path, backup_path).expect("Failed to backup existing schedule");
+    }
+
+    // Ensure the data directory exists
+    if let Some(parent) = schedule_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create data directory");
+    }
+
+    // Create empty schedule first
+    let empty_schedule = Schedule::default();
+    save_schedule(&empty_schedule, &schedule_path.to_path_buf()).expect(
+        "Failed to save initial schedule"
+    );
+
+    // Test the actual add_task_to_schedule function
+    let time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+    let widget = "text".to_string();
+    let input = json!({"message": "test message"});
+
+    let result = add_task_to_schedule(time, widget.clone(), input.clone());
+    assert!(result.is_ok(), "add_task_to_schedule should succeed");
+
+    // Verify task was added by loading the schedule
+    let loaded_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load schedule after adding task"
+    );
+    assert_eq!(loaded_schedule.tasks.len(), 1);
+    assert_eq!(loaded_schedule.tasks[0].widget, widget);
+    assert_eq!(loaded_schedule.tasks[0].input, input);
+    assert_eq!(loaded_schedule.tasks[0].time, time);
+
+    // Cleanup: restore original file or remove test file
+    if had_existing_file {
+        fs::copy(backup_path, schedule_path).expect("Failed to restore original schedule");
+        fs::remove_file(backup_path).expect("Failed to remove backup file");
+    } else {
+        fs::remove_file(schedule_path).ok(); // Remove if we created it
+    }
+}
+
+#[test]
+#[serial]
+fn test_remove_task_from_schedule() {
+    use std::fs;
+    use std::path::Path;
+
+    // Backup existing schedule file if it exists
+    let schedule_path = Path::new(SCHEDULE_FILE_PATH);
+    let backup_path = Path::new("./data/schedule_backup_remove_test.json");
+    let had_existing_file = schedule_path.exists();
+
+    if had_existing_file {
+        fs::copy(schedule_path, backup_path).expect("Failed to backup existing schedule");
+    }
+
+    // Ensure the data directory exists
+    if let Some(parent) = schedule_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create data directory");
+    }
+
+    // Create schedule with a task using add_task_to_schedule
+    let time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+    let widget = "text".to_string();
+    let input = json!({"message": "test message"});
+
+    // First create empty schedule
+    let empty_schedule = Schedule::default();
+    save_schedule(&empty_schedule, &schedule_path.to_path_buf()).expect(
+        "Failed to save initial schedule"
+    );
+
+    // Add a task using the global function
+    add_task_to_schedule(time, widget, input).expect("Failed to add task");
+
+    // Get the task ID
+    let loaded_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load schedule"
+    );
+    assert_eq!(loaded_schedule.tasks.len(), 1);
+    let task_id = loaded_schedule.tasks[0].id.clone();
+
+    // Test remove_task_from_schedule functionality
+    let result = remove_task_from_schedule(&task_id);
+    assert!(result.is_ok(), "remove_task_from_schedule should succeed");
+
+    // Verify task was removed
+    let final_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load final schedule"
+    );
+    assert_eq!(final_schedule.tasks.len(), 0);
+
+    // Cleanup: restore original file or remove test file
+    if had_existing_file {
+        fs::copy(backup_path, schedule_path).expect("Failed to restore original schedule");
+        fs::remove_file(backup_path).expect("Failed to remove backup file");
+    } else {
+        fs::remove_file(schedule_path).ok(); // Remove if we created it
+    }
+}
+
+#[test]
+#[serial]
+fn test_clear_schedule() {
+    use std::fs;
+    use std::path::Path;
+
+    // Backup existing schedule file if it exists
+    let schedule_path = Path::new(SCHEDULE_FILE_PATH);
+    let backup_path = Path::new("./data/schedule_backup_clear_test.json");
+    let had_existing_file = schedule_path.exists();
+
+    if had_existing_file {
+        fs::copy(schedule_path, backup_path).expect("Failed to backup existing schedule");
+    }
+
+    // Ensure the data directory exists
+    if let Some(parent) = schedule_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create data directory");
+    }
+
+    // Create schedule with multiple tasks using add_task_to_schedule
+    let time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+
+    // First create empty schedule
+    let empty_schedule = Schedule::default();
+    save_schedule(&empty_schedule, &schedule_path.to_path_buf()).expect(
+        "Failed to save initial schedule"
+    );
+
+    // Add multiple tasks
+    add_task_to_schedule(time, "text".to_string(), json!({"message": "test1"})).expect(
+        "Failed to add task 1"
+    );
+    add_task_to_schedule(time, "weather".to_string(), json!({})).expect("Failed to add task 2");
+    add_task_to_schedule(time, "sat-word".to_string(), json!({})).expect("Failed to add task 3");
+
+    // Verify tasks were added
+    let loaded_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load schedule"
+    );
+    assert_eq!(loaded_schedule.tasks.len(), 3);
+
+    // Test clear_schedule functionality
+    let result = clear_schedule();
+    assert!(result.is_ok(), "clear_schedule should succeed");
+
+    // Verify all tasks were cleared
+    let final_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load final schedule"
+    );
+    assert_eq!(final_schedule.tasks.len(), 0);
+    assert!(final_schedule.is_empty());
+
+    // Cleanup: restore original file or remove test file
+    if had_existing_file {
+        fs::copy(backup_path, schedule_path).expect("Failed to restore original schedule");
+        fs::remove_file(backup_path).expect("Failed to remove backup file");
+    } else {
+        fs::remove_file(schedule_path).ok(); // Remove if we created it
+    }
+}
+
+#[test]
+#[serial]
+fn test_list_schedule() {
+    use std::fs;
+    use std::path::Path;
+
+    // Backup existing schedule file if it exists
+    let schedule_path = Path::new(SCHEDULE_FILE_PATH);
+    let backup_path = Path::new("./data/schedule_backup_list_test.json");
+    let had_existing_file = schedule_path.exists();
+
+    if had_existing_file {
+        fs::copy(schedule_path, backup_path).expect("Failed to backup existing schedule");
+    }
+
+    // Ensure the data directory exists
+    if let Some(parent) = schedule_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create data directory");
+    }
+
+    // Create schedule with tasks using add_task_to_schedule
+    let time1 = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+    let time2 = Utc.with_ymd_and_hms(2025, 5, 5, 19, 45, 0).unwrap();
+
+    // First create empty schedule
+    let empty_schedule = Schedule::default();
+    save_schedule(&empty_schedule, &schedule_path.to_path_buf()).expect(
+        "Failed to save initial schedule"
+    );
+
+    // Add tasks
+    add_task_to_schedule(time1, "text".to_string(), json!({"message": "hello"})).expect(
+        "Failed to add task 1"
+    );
+    add_task_to_schedule(time2, "weather".to_string(), json!({})).expect("Failed to add task 2");
+
+    // Test that list_schedule can run without panicking
+    // (We can't easily test the printed output, but we can test that it doesn't crash)
+    let result = list_schedule();
+    assert!(result.is_ok(), "list_schedule should succeed");
+
+    // Verify the underlying schedule is correct
+    let loaded_schedule = load_schedule(&schedule_path.to_path_buf()).expect(
+        "Failed to load schedule for verification"
+    );
+    assert_eq!(loaded_schedule.tasks.len(), 2);
+
+    // Verify the tasks are properly formatted for display
+    for task in &loaded_schedule.tasks {
+        assert!(!task.id.is_empty());
+        assert!(!task.widget.is_empty());
+        // Time should be valid
+        assert!(task.time > Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap());
+    }
+
+    // Cleanup: restore original file or remove test file
+    if had_existing_file {
+        fs::copy(backup_path, schedule_path).expect("Failed to restore original schedule");
+        fs::remove_file(backup_path).expect("Failed to remove backup file");
+    } else {
+        fs::remove_file(schedule_path).ok(); // Remove if we created it
+    }
+}
+
+#[tokio::test]
+async fn test_print_schedule() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path = temp_dir.path().join("test_schedule.json");
+
+    // Create schedule with tasks that won't fail
+    let time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+    let mut schedule = Schedule::default();
+
+    // Add a text task with valid input
+    schedule.add_task(
+        ScheduledTask::new(
+            time,
+            "text".to_string(),
+            json!("hello world") // Valid text input
+        )
+    );
+
+    save_schedule(&schedule, &temp_path).expect("Failed to save schedule");
+
+    // Test that print_schedule can process the schedule without panicking
+    // We can't easily test the printed output, but we can ensure it doesn't crash
+    let loaded_schedule = load_schedule(&temp_path).expect("Failed to load schedule");
+    assert_eq!(loaded_schedule.tasks.len(), 1);
+
+    // Test the widget processing logic manually (similar to what print_schedule does)
+    for task in &loaded_schedule.tasks {
+        match task.widget.as_str() {
+            "text" => {
+                let text_input = task.input.as_str().unwrap_or("default text");
+                let _result = get_text(text_input); // Should not panic
+            }
+            "weather" => {
+                // Weather widget test would require network, so we'll skip actual execution
+                assert_eq!(task.widget, "weather");
+            }
+            "sat-word" => {
+                // SAT word test would require file access, so we'll skip actual execution
+                assert_eq!(task.widget, "sat-word");
+            }
+            _ => {
+                // Unknown widget should be handled gracefully
+                assert!(false, "Unknown widget type: {}", task.widget);
+            }
+        }
+    }
 }

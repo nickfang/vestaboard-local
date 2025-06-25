@@ -61,41 +61,36 @@ static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
         ('.', 56),
         ('/', 59),
         ('?', 60),
-        ('D', 62),
-        ('R', 63),
-        ('O', 64),
-        ('Y', 65),
-        ('G', 66),
-        ('B', 67),
-        ('V', 68),
-        ('W', 69),
-        ('K', 70),
-        ('F', 71),
+        ('D', 62), // Degree symbol
+        ('R', 63), // Red
+        ('O', 64), // Orange
+        ('Y', 65), // Yellow
+        ('G', 66), // Green
+        ('B', 67), // Blue
+        ('V', 68), // Violet
+        ('W', 69), // White
+        ('K', 70), // Black
     ];
     characters.iter().cloned().collect()
 });
 
-pub fn to_codes(message: &str) -> Option<Vec<u8>> {
+pub fn to_codes(message: &str) -> Vec<u8> {
     let mut codes = Vec::new();
-    let mut invalid_chars = Vec::new();
 
     for c in message.chars() {
-        match CHARACTER_CODES.get(&c) {
-            Some(&code) => codes.push(code),
-            None => invalid_chars.push(c),
+        if let Some(&code) = CHARACTER_CODES.get(&c) {
+            codes.push(code);
         }
+        // Note: Invalid characters should have been caught during validation
+        // If we reach here with invalid chars, it's a programming error
     }
 
-    if !invalid_chars.is_empty() {
-        eprintln!("Invalid characters found: {:?}", invalid_chars);
-        // eprintln!("These characters have been removed from the message.");
-        return None;
-    }
-
-    Some(codes)
+    codes
 }
 
-pub async fn display_message(message: Vec<String>) {
+/// Converts message lines to Vestaboard codes array for testing
+/// This function is similar to display_message but returns the codes instead of sending them
+pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
     let mut codes: [[u8; 22]; 6] = [[0; 22]; 6];
     let mut current_line = [0; 22];
     let mut line_num = 0;
@@ -104,10 +99,7 @@ pub async fn display_message(message: Vec<String>) {
         if line_num == 6 {
             break;
         }
-        let line_codes = to_codes(&line).unwrap_or_else(|| {
-            eprintln!("Error converting line to codes: {:?}", line);
-            vec![]
-        });
+        let line_codes = to_codes(&line);
         if line_codes.len() > 22 {
             eprintln!("Too many characters on line {:?}", line_num);
         }
@@ -123,7 +115,54 @@ pub async fn display_message(message: Vec<String>) {
         line_num += 1;
     }
 
+    codes
+}
+
+pub async fn display_message(message: Vec<String>) {
+    let codes = message_to_codes(message);
     send_codes(codes).await.unwrap_or_else(|_| {
         eprintln!("Error sending codes to Vestaboard.");
     });
+}
+
+/// Checks if a character is valid for Vestaboard display
+/// This is the single source of truth for valid characters
+pub fn is_valid_character(c: char) -> bool {
+    CHARACTER_CODES.contains_key(&c)
+}
+
+/// Gets all valid characters as a formatted string for error messages
+pub fn get_valid_characters_description() -> String {
+    "a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK)".to_string()
+}
+
+/// Validates that all characters in the message are valid for Vestaboard
+pub fn validate_message_content(message: &[String]) -> Result<(), String> {
+    let mut invalid_chars = std::collections::HashSet::new();
+
+    for line in message {
+        for c in line.chars() {
+            if !is_valid_character(c) {
+                invalid_chars.insert(c);
+            }
+        }
+    }
+
+    if !invalid_chars.is_empty() {
+        let mut chars: Vec<char> = invalid_chars.into_iter().collect();
+        chars.sort();
+        return Err(
+            format!(
+                "Invalid characters found: {}. Valid characters are: {}.",
+                chars
+                    .iter()
+                    .map(|c| format!("'{}'", c))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                get_valid_characters_description()
+            )
+        );
+    }
+
+    Ok(())
 }

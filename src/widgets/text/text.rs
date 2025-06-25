@@ -3,10 +3,8 @@ use crate::widgets::widget_utils;
 use crate::errors::VestaboardError;
 
 pub fn get_text(text: &str) -> Result<Vec<String>, VestaboardError> {
-    match widget_utils::format_message(text) {
-        Some(lines) => Ok(lines),
-        None => Err(VestaboardError::widget_error("text", "Message contains invalid characters")),
-    }
+    // Widget just formats the message - validation happens at the main level
+    Ok(widget_utils::format_message(text))
 }
 
 pub fn get_text_from_file(file: PathBuf) -> Result<Vec<String>, VestaboardError> {
