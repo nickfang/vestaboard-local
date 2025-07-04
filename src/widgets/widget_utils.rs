@@ -80,9 +80,11 @@ pub fn center_message(mut message: Vec<String>, height: usize) -> WidgetOutput {
 pub fn format_message(message: &str) -> WidgetOutput {
     // Widget just formats the message - validation happens at the main level
     let mut formatted_message: Vec<String> = Vec::new();
-    split_into_lines(message).iter().for_each(|line| {
-        formatted_message.push(center_line(line.to_string()));
-    });
+    split_into_lines(message)
+        .iter()
+        .for_each(|line| {
+            formatted_message.push(center_line(line.to_string()));
+        });
     center_message(formatted_message, MAX_MESSAGE_HEIGHT)
 }
 
@@ -130,53 +132,65 @@ pub fn format_error_with_header(error: &str, header: &str) -> WidgetOutput {
 /// Converts a VestaboardError to a display message for the Vestaboard
 pub fn error_to_display_message(error: &VestaboardError) -> Vec<String> {
     match error {
-        VestaboardError::IOError { context, .. } => format_error_with_header(
-            &format!(
-                "File error: {}",
-                context.split(' ').last().unwrap_or("unknown"),
-            ),
-            "file error",
-        ),
+        VestaboardError::IOError { context, .. } => {
+            // Extract more meaningful info from the context
+            if context.contains("reading") && context.contains("file") {
+                // Try to extract filename
+                let parts: Vec<&str> = context.split(' ').collect();
+                if let Some(filename) = parts.last() {
+                    format_error_with_header(&format!("'{}' not found", filename), "file error")
+                } else {
+                    format_error_with_header("File not found", "file error")
+                }
+            } else if context.contains("creating") || context.contains("writing") {
+                format_error_with_header("Cannot write file", "file error")
+            } else {
+                format_error_with_header("File operation failed", "file error")
+            }
+        }
         VestaboardError::JsonError { context, .. } => {
             if context.contains("parsing") {
                 format_error_with_header("Invalid data format", "data error")
             } else {
                 format_error_with_header("Data processing error", "data error")
             }
-        },
+        }
         VestaboardError::ReqwestError { context, .. } => {
             if context.contains("weather") {
                 format_error_with_header("Weather service unavailable", "network error")
             } else {
                 format_error_with_header("Network error", "network error")
             }
-        },
-        VestaboardError::WidgetError { widget, message: _ } => match widget.as_str() {
-            "weather" => format_error_with_header("Weather data unavailable", "widget error"),
-            "text" => format_error_with_header("Text processing error", "widget error"),
-            "sat-word" => format_error_with_header("Dictionary unavailable", "widget error"),
-            _ => format_error_with_header(&format!("{} error", widget), "widget error"),
-        },
+        }
+        VestaboardError::WidgetError { widget, message: _ } =>
+            match widget.as_str() {
+                "weather" => format_error_with_header("Weather data unavailable", "widget error"),
+                "text" => format_error_with_header("Text processing error", "widget error"),
+                "sat-word" => format_error_with_header("Dictionary unavailable", "widget error"),
+                _ => format_error_with_header(&format!("{} error", widget), "widget error"),
+            }
         VestaboardError::ScheduleError { .. } => {
             format_error_with_header("Schedule error", "schedule error")
-        },
-        VestaboardError::ApiError { code, .. } => match code {
-            Some(404) => format_error_with_header("Service not found", "api error"),
-            Some(401) | Some(403) => format_error_with_header("Access denied", "api error"),
-            Some(500..=599) => format_error_with_header("Service temporarily down", "api error"),
-            _ => format_error_with_header("Service error", "api error"),
-        },
+        }
+        VestaboardError::ApiError { code, .. } =>
+            match code {
+                Some(404) => format_error_with_header("Service not found", "api error"),
+                Some(401) | Some(403) => format_error_with_header("Access denied", "api error"),
+                Some(500..=599) =>
+                    format_error_with_header("Service temporarily down", "api error"),
+                _ => format_error_with_header("Service error", "api error"),
+            }
         VestaboardError::ConfigError { field, .. } => {
             format_error_with_header(&format!("Config: {} missing", field), "config error")
-        },
+        }
         VestaboardError::Other { message } => {
-            // Truncate long messages for display
-            let display_msg = if message.len() > 40 {
-                message[..37].to_string() + "..."
+            // Truncate long messages for display, but be more generous
+            let display_msg = if message.len() > 60 {
+                message[..57].to_string() + "..."
             } else {
                 message.clone()
             };
             format_error_with_header(&display_msg, "error")
-        },
+        }
     }
 }

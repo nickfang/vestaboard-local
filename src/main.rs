@@ -16,6 +16,7 @@ use cli_display::print_message;
 use cli_setup::{Cli, Command, ScheduleArgs, WidgetCommand};
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
+use errors::VestaboardError;
 use scheduler::{
     add_task_to_schedule, clear_schedule, list_schedule, print_schedule, remove_task_from_schedule,
 };
@@ -29,7 +30,7 @@ use widgets::weather::get_weather;
 /// This ensures all messages are validated before any output method
 async fn process_and_validate_widget(
     widget_command: &WidgetCommand,
-) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+) -> Result<Vec<String>, VestaboardError> {
     let start_time = std::time::Instant::now();
     let widget_name = match widget_command {
         WidgetCommand::Text(_) => "text",
@@ -60,7 +61,7 @@ async fn process_and_validate_widget(
         },
         Err(e) => {
             log_widget_error!(widget_name, e, duration);
-            return Err(format!("Widget error: {}", e).into());
+            return Err(e);
         },
     };
 
@@ -71,7 +72,7 @@ async fn process_and_validate_widget(
             widget_name,
             validation_error
         );
-        return Err(validation_error.into());
+        return Err(VestaboardError::other(&validation_error));
     }
 
     log::debug!(
@@ -131,8 +132,10 @@ async fn main() {
                 },
                 Err(e) => {
                     log::error!("Widget processing failed: {}", e);
-                    eprintln!("{}", e);
-                    std::process::exit(1);
+                    eprintln!("Widget error: {}", e);
+                    // Convert VestaboardError directly to display message
+                    use crate::widgets::widget_utils::error_to_display_message;
+                    error_to_display_message(&e)
                 },
             };
 
