@@ -119,9 +119,15 @@ pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
 }
 
 pub async fn display_message(message: Vec<String>) {
+    log::info!("Processing message for display, {} lines", message.len());
+    log::debug!("Message content: {:?}", message);
+    
     let codes = message_to_codes(message);
-    send_codes(codes).await.unwrap_or_else(|_| {
-        eprintln!("Error sending codes to Vestaboard.");
+    log::debug!("Converted message to character codes");
+    
+    send_codes(codes).await.unwrap_or_else(|e| {
+        log::error!("Failed to send message to Vestaboard: {}", e);
+        eprintln!("Error sending codes to Vestaboard: {}", e);
     });
 }
 

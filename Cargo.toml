@@ -17,6 +17,9 @@ chrono = { version = "0.4.39", features = ["serde"] }
 rand = "0.8.5"
 nanoid = "0.4.0"
 ctrlc = "3.4.6"
+log = "0.4.22"
+env_logger = "0.11.5"
+toml = "0.8.19"
 
 [[bin]]
 name = "vbl"
@@ -25,3 +28,4 @@ path = "src/main.rs"
 [dev-dependencies]
 serial_test = "3.2.0"
 tempfile = "3.19.1"
+regex = "1.10.2"

@@ -261,37 +261,59 @@ struct Hour {
 }
 
 pub async fn get_weather() -> Result<WidgetOutput, VestaboardError> {
+    let start_time = std::time::Instant::now();
+    log::info!("Weather widget starting");
+    
     dotenv().ok();
     let weather_api_key = env
         ::var("WEATHER_API_KEY")
-        .map_err(|_|
+        .map_err(|e| {
+            log::error!("WEATHER_API_KEY environment variable not set: {}", e);
             VestaboardError::config_error("WEATHER_API_KEY", "Environment variable not set")
-        )?;
+        })?;
+
+    log::debug!("Weather API key found");
 
     let client = Client::new();
     #[allow(unused_variables)]
     let url_current =
         format!("https://api.weatherapi.com/v1/current.json?key={}&q=austin", weather_api_key);
-    // format!("https://api.weatherapi.com/v1/current.json?key={}", weather_api_key);
     let url_forecast =
         format!("https://api.weatherapi.com/v1/forecast.json?key={}&q=austin&days=3&aqi=no&alerts=no", weather_api_key);
+
+    log::debug!("Making weather API request to: {}", 
+                url_forecast.replace(&weather_api_key, "***")); // Hide API key in logs
 
     let response = client
         .get(&url_forecast)
         .send().await
-        .map_err(|e| VestaboardError::reqwest_error(e, "requesting weather forecast"))?;
+        .map_err(|e| {
+            log::error!("Weather API request failed: {}", e);
+            VestaboardError::reqwest_error(e, "requesting weather forecast")
+        })?;
 
     let status_code = response.status().as_u16();
+    log::debug!("Weather API response status: {}", status_code);
+    
     let response_text = response
         .text().await
-        .map_err(|e| VestaboardError::reqwest_error(e, "reading weather response"))?;
+        .map_err(|e| {
+            log::error!("Failed to read weather response: {}", e);
+            VestaboardError::reqwest_error(e, "reading weather response")
+        })?;
 
     match status_code {
         200 => {
+            log::debug!("Processing successful weather response");
             // Try to parse the text as JSON
             let json: WeatherResponse = serde_json
                 ::from_str(&response_text)
-                .map_err(|e| VestaboardError::json_error(e, "parsing weather API response"))?;
+                .map_err(|e| {
+                    log::error!("Failed to parse weather JSON response: {}", e);
+                    VestaboardError::json_error(e, "parsing weather API response")
+                })?;
+
+            log::debug!("Weather data parsed successfully");
 
             let localtime = json.location.localtime.to_lowercase();
             let temps = format!(
@@ -332,19 +354,25 @@ pub async fn get_weather() -> Result<WidgetOutput, VestaboardError> {
             }
             weather_description.push(full_justify_line(pressure_in, future_pressure_in));
 
+            let duration = start_time.elapsed();
+            log::info!("Weather widget completed successfully in {:?}", duration);
+            log::debug!("Weather output: {} lines", weather_description.len());
             Ok(weather_description)
         }
         400 | 401 | 403 => {
+            log::warn!("Weather API authentication/authorization error ({})", status_code);
             // Parse error response
             let error: serde_json::Value = serde_json
                 ::from_str(&response_text)
-                .map_err(|_|
+                .map_err(|_| {
+                    log::error!("Invalid error response format from weather API");
                     VestaboardError::api_error(Some(status_code), "Invalid API response format")
-                )?;
+                })?;
 
             let error_code = error["error"]["code"].as_i64();
             let error_message = error["error"]["message"].as_str().unwrap_or("Unknown error");
-
+            
+            log::error!("Weather API error {}: {}", error_code.unwrap_or(-1), error_message);
             Err(
                 VestaboardError::api_error(
                     error_code.map(|c| c as u16),
@@ -353,6 +381,7 @@ pub async fn get_weather() -> Result<WidgetOutput, VestaboardError> {
             )
         }
         502 | 504 => {
+            log::warn!("Weather service temporarily unavailable ({})", status_code);
             Err(
                 VestaboardError::api_error(
                     Some(status_code),
@@ -361,6 +390,7 @@ pub async fn get_weather() -> Result<WidgetOutput, VestaboardError> {
             )
         }
         _ => {
+            log::error!("Unexpected weather API response status: {}", status_code);
             Err(
                 VestaboardError::api_error(
                     Some(status_code),

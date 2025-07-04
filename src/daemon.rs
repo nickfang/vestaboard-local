@@ -20,58 +20,63 @@ static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
 const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
-    // Get the last modified time of the file
-    // If the file doesn't exist, return an error
-    // handle errors appropriately
+    log::trace!("Getting file modification time for: {}", path.display());
+    
     fs::metadata(path)
         .and_then(|meta| meta.modified())
         .map_err(|e| {
+            log::error!("Error getting mod time for {}: {}", path.display(), e);
             eprintln!("Error getting mod time for {}: {}", path.display(), e);
             VestaboardError::io_error(e, &format!("getting mod time for {}", path.display()))
         })
 }
 
 pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
-    // Find widget based on task
-    // Execute widget with task.widget_input
-    // Send the message to the Vestaboard
-    // handle errors appropriately
+    let start_time = std::time::Instant::now();
+    log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
+    log::debug!("Task details: {:?}", task);
+    
     println!("Executing task: {:?}", task);
 
     let message_result = match task.widget.as_str() {
         "text" => {
-            // Execute text widget
+            log::info!("Executing Text widget with input: {:?}", task.input);
             println!("Executing Text widget with input: {:?}", task.input);
             get_text(task.input.as_str().unwrap_or(""))
         }
         "file" => {
-            // Execute file widget
+            log::info!("Executing File widget with input: {:?}", task.input);
             println!("Executing File widget with input: {:?}", task.input);
             get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or("")))
         }
         "weather" => {
-            // Execute weather widget
+            log::info!("Executing Weather widget");
             println!("Executing Weather widget");
             get_weather().await
         }
         "sat-word" => {
-            // Execute SAT word widget
+            log::info!("Executing SAT Word widget");
             println!("Executing SAT Word widget");
             get_sat_word()
         }
         _ => {
-            return Err(
-                VestaboardError::widget_error(
-                    &task.widget,
-                    &format!("Unknown widget type: {}", task.widget)
-                )
+            let error = VestaboardError::widget_error(
+                &task.widget,
+                &format!("Unknown widget type: {}", task.widget)
             );
+            log::error!("Unknown widget type '{}' in task {}", task.widget, task.id);
+            return Err(error);
         }
     };
 
+    let duration = start_time.elapsed();
     let message = match message_result {
-        Ok(msg) => msg,
+        Ok(msg) => {
+            log::info!("Widget '{}' completed successfully in {:?}", task.widget, duration);
+            msg
+        },
         Err(e) => {
+            log::error!("Widget '{}' failed after {:?}: {}", task.widget, duration, e);
             eprintln!("Widget error: {}", e);
             error_to_display_message(&e)
         }
@@ -79,23 +84,28 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
 
     // Validate message content before sending
     if let Err(validation_error) = validate_message_content(&message) {
+        log::error!("Message validation failed for task {}: {}", task.id, validation_error);
         eprintln!("Validation error: {}", validation_error);
         display_message(error_to_display_message(&VestaboardError::other(&validation_error))).await;
-        return Ok(());
+        return Ok(()); // Continue daemon operation even after validation error
     }
 
+    log::info!("Sending message to Vestaboard for task {}", task.id);
     display_message(message).await;
+    log::info!("Task {} completed successfully", task.id);
     Ok(())
 }
 // Err(VestaboardError::Other("execute_task() not implemented".to_string()));
 
 pub async fn run_daemon() -> Result<(), VestaboardError> {
+    log::info!("Starting Vestaboard daemon");
     println!("Starting daemon...");
     println!("Press Ctrl+C to stop the daemon.");
 
     // handle ctrl+c
     ctrlc
         ::set_handler(move || {
+            log::info!("Ctrl+C received, initiating shutdown");
             println!("\nCtrl+C received, shutting down...");
             SHUTDOWN_FLAG.store(true, Ordering::SeqCst);
         })
@@ -104,43 +114,60 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
     let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
     let check_interval = Duration::from_secs(CHECK_INTERVAL_SECONDS);
 
+    log::info!("Using schedule file: {}", schedule_path.display());
+    log::info!("Check interval: {} seconds", CHECK_INTERVAL_SECONDS);
+
     let mut current_schedule = load_schedule(&schedule_path).unwrap_or_else(|e| {
-        // schedule not found is handled in load_schedule
+        log::warn!("Error loading initial schedule: {:?}, using empty schedule", e);
         eprintln!("Error loading initial schedule: {:?}.", e);
         Schedule::default()
     });
+    
+    log::info!("Initial schedule loaded with {} tasks", current_schedule.tasks.len());
     println!("Initial schedule loaded with {} tasks.", current_schedule.tasks.len());
 
-    let mut last_mod_time = get_file_mod_time(&schedule_path).unwrap_or(SystemTime::UNIX_EPOCH);
+    let mut last_mod_time = get_file_mod_time(&schedule_path).unwrap_or_else(|e| {
+        log::debug!("Could not get initial file mod time: {}, using UNIX_EPOCH", e);
+        SystemTime::UNIX_EPOCH
+    });
     let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
+    log::info!("Daemon started successfully, monitoring schedule");
     println!("Daemon started. Monitoring schedule...");
 
     loop {
         if SHUTDOWN_FLAG.load(Ordering::SeqCst) {
+            log::info!("Shutdown flag detected, stopping daemon");
             println!("Daemon shutting down...");
             break;
         }
+
+        log::trace!("Daemon loop iteration starting");
 
         // Reload schedule if the file has been modified
         match get_file_mod_time(&schedule_path) {
             Ok(current_mod_time) => {
                 if current_mod_time > last_mod_time {
+                    log::info!("Schedule file modified, reloading schedule");
                     println!("Schedule file modified. Reloading schedule...");
                     match load_schedule(&schedule_path) {
                         Ok(new_schedule) => {
+                            let old_count = current_schedule.tasks.len();
+                            let new_count = new_schedule.tasks.len();
                             current_schedule = new_schedule;
                             last_mod_time = current_mod_time;
-                            // executed_task_ids.clear();
+                            log::info!("Successfully reloaded schedule (tasks: {} -> {})", old_count, new_count);
                             println!("Successfully reloaded schedule.");
                         }
                         Err(e) => {
+                            log::error!("Error reloading schedule: {:?}", e);
                             eprintln!("Error reloading schedule: {:?}", e);
                         }
                     }
                 }
             }
             Err(e) => {
+                log::debug!("Error getting file modification time: {:?}", e);
                 eprintln!("Error getting file modification time: {:?}", e);
             }
         }
@@ -155,19 +182,30 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
         }
 
         if let Some(task) = tasks_to_execute.last() {
+            log::info!("Found {} task(s) ready for execution", tasks_to_execute.len());
             match execute_task(task).await {
                 Ok(_) => {
+                    log::info!("Task execution successful, marking {} task(s) as executed", tasks_to_execute.len());
                     for task in &tasks_to_execute {
                         executed_task_ids.insert(task.id.clone());
                     }
                 }
                 Err(e) => {
+                    log::error!("Error executing task {}: {:?}", task.id, e);
                     eprintln!("Error executing task: {:?}", e);
+                    // In daemon mode, we continue running even after task execution errors
+                    // The error should have been displayed on the Vestaboard by execute_task
                 }
             }
+        } else {
+            log::trace!("No tasks ready for execution");
         }
+        
+        log::trace!("Daemon sleeping for {:?}", check_interval);
         thread::sleep(check_interval);
     }
+    
+    log::info!("Daemon shutdown complete");
     println!("Shutdown complete.");
     Ok(())
 }
