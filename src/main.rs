@@ -1,38 +1,34 @@
-mod errors;
-mod datetime;
 mod api;
 mod api_broker;
 mod cli_display;
 mod cli_setup;
-mod widgets;
-mod scheduler;
 mod daemon;
-mod vblconfig;
+mod datetime;
+mod errors;
 mod logging;
+mod scheduler;
+mod vblconfig;
+mod widgets;
 
+use api_broker::{display_message, validate_message_content};
 use clap::Parser;
-use serde_json::json;
-use api_broker::{ display_message, validate_message_content };
 use cli_display::print_message;
-use cli_setup::{ Cli, Command, ScheduleArgs, WidgetCommand };
-use scheduler::{
-    add_task_to_schedule,
-    remove_task_from_schedule,
-    clear_schedule,
-    list_schedule,
-    print_schedule,
-};
-use widgets::text::{ get_text, get_text_from_file };
-use widgets::weather::get_weather;
-use widgets::jokes::get_joke;
-use widgets::sat_words::get_sat_word;
+use cli_setup::{Cli, Command, ScheduleArgs, WidgetCommand};
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
+use scheduler::{
+    add_task_to_schedule, clear_schedule, list_schedule, print_schedule, remove_task_from_schedule,
+};
+use serde_json::json;
+use widgets::jokes::get_joke;
+use widgets::sat_words::get_sat_word;
+use widgets::text::{get_text, get_text_from_file};
+use widgets::weather::get_weather;
 
 /// Processes a widget command and validates the resulting message
 /// This ensures all messages are validated before any output method
 async fn process_and_validate_widget(
-    widget_command: &WidgetCommand
+    widget_command: &WidgetCommand,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let start_time = std::time::Instant::now();
     let widget_name = match widget_command {
@@ -43,7 +39,7 @@ async fn process_and_validate_widget(
         WidgetCommand::SATWord => "sat-word",
         WidgetCommand::Clear => "clear",
     };
-    
+
     log_widget_start!(widget_name, widget_command);
 
     let message_result = match widget_command {
@@ -65,16 +61,24 @@ async fn process_and_validate_widget(
         Err(e) => {
             log_widget_error!(widget_name, e, duration);
             return Err(format!("Widget error: {}", e).into());
-        }
+        },
     };
 
     // Single validation point for all messages
     if let Err(validation_error) = validate_message_content(&message) {
-        log::error!("Message validation failed for widget '{}': {}", widget_name, validation_error);
+        log::error!(
+            "Message validation failed for widget '{}': {}",
+            widget_name,
+            validation_error
+        );
         return Err(validation_error.into());
     }
 
-    log::debug!("Widget '{}' validation successful, message length: {} lines", widget_name, message.len());
+    log::debug!(
+        "Widget '{}' validation successful, message length: {} lines",
+        widget_name,
+        message.len()
+    );
     Ok(message)
 }
 
@@ -87,14 +91,17 @@ async fn main() {
     }
 
     log::info!("Vestaboard Local starting up");
-    
+
     let cli = Cli::parse();
     let mut test_mode = false;
 
     match cli.command {
         Command::Send(send_args) => {
-            log::info!("Processing send command with dry_run: {}", send_args.dry_run);
-            
+            log::info!(
+                "Processing send command with dry_run: {}",
+                send_args.dry_run
+            );
+
             if send_args.dry_run {
                 test_mode = true;
                 log::debug!("Running in test mode (dry run)");
@@ -126,7 +133,7 @@ async fn main() {
                     log::error!("Widget processing failed: {}", e);
                     eprintln!("{}", e);
                     std::process::exit(1);
-                }
+                },
             };
 
             if test_mode {
@@ -134,15 +141,24 @@ async fn main() {
                 print_message(message, "");
                 return;
             }
-            
+
             log::info!("Sending message to Vestaboard");
             display_message(message).await;
-        }
+        },
         Command::Schedule { action } => {
             log::info!("Processing schedule command");
             match action {
-                ScheduleArgs::Add { time, widget, input } => {
-                    log::info!("Adding scheduled task - time: {}, widget: {}, input: {:?}", time, widget, input);
+                ScheduleArgs::Add {
+                    time,
+                    widget,
+                    input,
+                } => {
+                    log::info!(
+                        "Adding scheduled task - time: {}, widget: {}, input: {:?}",
+                        time,
+                        widget,
+                        input
+                    );
                     println!("Scheduling task...");
                     let datetime_utc = match datetime_to_utc(&time) {
                         Ok(dt) => {
@@ -154,7 +170,7 @@ async fn main() {
                             println!("datetime: {}", time);
                             eprintln!("Error invalid datetime format: {}", e);
                             return;
-                        }
+                        },
                     };
 
                     // Convert the schedule widget args to a WidgetCommand for validation
@@ -172,7 +188,7 @@ async fn main() {
                                 eprintln!("Error: Input is required for text widgets.");
                                 return;
                             }
-                        }
+                        },
                         "file" => {
                             if !input.is_empty() {
                                 WidgetCommand::File(cli_setup::FileArgs {
@@ -182,11 +198,11 @@ async fn main() {
                                 eprintln!("Error: Input is required for file widgets.");
                                 return;
                             }
-                        }
+                        },
                         _ => {
                             eprintln!("Error: Unsupported widget type {}.", widget);
                             return;
-                        }
+                        },
                     };
 
                     // Validate the widget can produce a valid message
@@ -195,7 +211,7 @@ async fn main() {
                         eprintln!("Error validating scheduled widget: {}", e);
                         return;
                     }
-                    
+
                     log::debug!("Scheduled widget validation successful");
 
                     // Convert back to the format expected by the scheduler
@@ -204,17 +220,17 @@ async fn main() {
                     match widget_lower.as_str() {
                         "weather" | "sat-word" | "jokes" | "clear" => {
                             input_json = json!(null);
-                        }
+                        },
                         "text" | "file" => {
                             input_json = serde_json::to_value(input.join(" ")).unwrap();
-                        }
+                        },
                         _ => {
                             log::error!("Unsupported widget type: {}", widget_lower);
                             eprintln!("Error: Unsupported widget type {}.", widget_lower);
                             return;
-                        }
+                        },
                     }
-                    
+
                     match add_task_to_schedule(datetime_utc, widget_lower, input_json) {
                         Ok(_) => {
                             log::info!("Successfully added task to schedule");
@@ -222,9 +238,9 @@ async fn main() {
                         Err(e) => {
                             log::error!("Failed to add task to schedule: {}", e);
                             eprintln!("Error adding task to schedule: {}", e);
-                        }
+                        },
                     }
-                }
+                },
                 ScheduleArgs::Remove { id } => {
                     log::info!("Removing scheduled task with id: {}", id);
                     println!("Removing task...");
@@ -233,9 +249,9 @@ async fn main() {
                         Err(e) => {
                             log::error!("Failed to remove task: {}", e);
                             eprintln!("Error removing task: {}", e);
-                        }
+                        },
                     }
-                }
+                },
                 ScheduleArgs::List => {
                     log::info!("Listing scheduled tasks");
                     println!("Listing tasks...");
@@ -244,9 +260,9 @@ async fn main() {
                         Err(e) => {
                             log::error!("Failed to list tasks: {}", e);
                             eprintln!("Error listing tasks: {}", e);
-                        }
+                        },
                     }
-                }
+                },
                 ScheduleArgs::Clear => {
                     log::info!("Clearing all scheduled tasks");
                     println!("Clearing schedule...");
@@ -255,16 +271,16 @@ async fn main() {
                         Err(e) => {
                             log::error!("Failed to clear schedule: {}", e);
                             eprintln!("Error clearing schedule: {}", e);
-                        }
+                        },
                     }
-                }
+                },
                 ScheduleArgs::Dryrun => {
                     log::info!("Running schedule dry run");
                     println!("Dry run...");
                     print_schedule().await
-                }
+                },
             }
-        }
+        },
         Command::Daemon => {
             log::info!("Starting daemon mode");
             match run_daemon().await {
@@ -272,9 +288,9 @@ async fn main() {
                 Err(e) => {
                     log::error!("Daemon failed: {}", e);
                     eprintln!("Daemon error: {}", e);
-                }
+                },
             }
-        }
+        },
     }
 }
 

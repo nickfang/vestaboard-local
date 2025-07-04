@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::widgets::sat_words::sat_words::{ get_sat_word, create_words_map };
     use crate::errors::VestaboardError;
+    use crate::widgets::sat_words::sat_words::{create_words_map, get_sat_word};
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -18,10 +18,10 @@ mod tests {
                 // First line should contain the word and part of speech
                 assert!(lines[0].contains("("));
                 assert!(lines[0].contains(")"));
-            }
+            },
             Err(VestaboardError::IOError { context, .. }) => {
                 assert!(context.contains("reading SAT words dictionary"));
-            }
+            },
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
     }
@@ -32,11 +32,13 @@ mod tests {
         write!(
             temp_file,
             "abhor (verb) to hate strongly (I abhor reality television shows)\n"
-        ).expect("Failed to write");
+        )
+        .expect("Failed to write");
         write!(
             temp_file,
             "bigot (noun) a person who is intolerant (My uncle is a bigot who refuses to listen)\n"
-        ).expect("Failed to write");
+        )
+        .expect("Failed to write");
         temp_file.flush().expect("Failed to flush");
 
         let result = create_words_map(temp_file.path());
@@ -102,16 +104,16 @@ mod tests {
                 assert!(!lines2.is_empty());
                 // Both should have the same structure but content may differ
                 // (we can't assert exact line count since different words may have different lengths)
-            }
+            },
             (Err(e1), Err(e2)) => {
                 // Both failed - should be the same type of error
                 assert_eq!(std::mem::discriminant(&e1), std::mem::discriminant(&e2));
-            }
+            },
             _ => {
                 // One succeeded, one failed - this is acceptable for SAT words
                 // since file access or content could vary between calls
                 // We'll just ensure both results are valid
-            }
+            },
         }
     }
 
@@ -134,10 +136,10 @@ mod tests {
             for line in &lines {
                 for ch in line.chars() {
                     assert!(
-                        ch.is_ascii() &&
-                            (ch.is_alphanumeric() ||
-                                ch.is_whitespace() ||
-                                "!\"#$%&'()*+,-./:;?@()".contains(ch)),
+                        ch.is_ascii()
+                            && (ch.is_alphanumeric()
+                                || ch.is_whitespace()
+                                || "!\"#$%&'()*+,-./:;?@()".contains(ch)),
                         "Invalid character '{}' found in line '{}'",
                         ch,
                         line
@@ -158,11 +160,11 @@ mod tests {
             match error {
                 VestaboardError::IOError { context, .. } => {
                     assert!(context.contains("reading SAT words dictionary"));
-                }
+                },
                 VestaboardError::WidgetError { widget, message } => {
                     assert_eq!(widget, "sat-word");
                     assert!(message.contains("No words available"));
-                }
+                },
                 _ => panic!("Unexpected error type: {:?}", error),
             }
         }

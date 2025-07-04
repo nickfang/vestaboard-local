@@ -1,59 +1,20 @@
-use std::{ fs, path::PathBuf };
+use std::{fs, path::PathBuf};
 
-use chrono::{ DateTime, Utc, Local };
+use chrono::{DateTime, Local, Utc};
 use nanoid::nanoid;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::cli_display::print_message;
 use crate::datetime::datetime_to_local;
 use crate::widgets::{
-    text::get_text,
-    text::get_text_from_file,
-    weather::get_weather,
-    sat_words::get_sat_word,
+    sat_words::get_sat_word, text::get_text, text::get_text_from_file, weather::get_weather,
 };
-use crate::cli_display::print_message;
-use crate::{ errors::VestaboardError };
-
-pub const SCHEDULE_FILE_PATH: &str = "./data/schedule.json";
+use crate::{errors::VestaboardError, vblconfig::VblConfig};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
-    'a',
-    'b',
-    'c',
-    'd',
-    'e',
-    'f',
-    'g',
-    'h',
-    'i',
-    'j',
-    'k',
-    'l',
-    'm',
-    'n',
-    'o',
-    'p',
-    'q',
-    'r',
-    's',
-    't',
-    'u',
-    'v',
-    'w',
-    'x',
-    'y',
-    'z',
-    '0',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ];
 pub const ID_LENGTH: usize = 4;
 
@@ -89,7 +50,8 @@ impl ScheduledTask {
 
 impl Schedule {
     pub fn add_task(&mut self, task: ScheduledTask) {
-        let position = self.tasks
+        let position = self
+            .tasks
             .iter()
             .position(|t| t.time > task.time)
             .unwrap_or(self.tasks.len());
@@ -125,11 +87,11 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
         Ok(_) => {
             println!("Schedule saved successfully.");
             Ok(())
-        }
+        },
         Err(e) => {
             eprintln!("Error saving schedule: {}", e);
             Err(VestaboardError::io_error(e, "saving schedule to file"))
-        }
+        },
     }
 }
 
@@ -150,45 +112,44 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
                         );
                         schedule.tasks.sort_by_key(|task| task.time);
                         Ok(schedule)
-                    }
+                    },
                     Err(e) => {
                         println!("Failed to parse schedule from {} : {}", path.display(), e);
                         Err(VestaboardError::json_error(e, "parsing schedule JSON"))
-                    }
+                    },
                 }
             }
-        }
+        },
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
             println!("Schedule file not found. Creating a new schedule.");
             let schedule = Schedule::default();
             match save_schedule(&schedule, path) {
                 Ok(_) => {
                     println!("New schedule created and saved.");
-                }
+                },
                 Err(e) => {
                     eprintln!("Error saving new schedule: {:?}", e);
-                }
+                },
             }
             Ok(schedule)
-        }
+        },
         Err(e) => {
             eprintln!("Error reading schedule file {} : {}", path.display(), e);
-            Err(
-                VestaboardError::schedule_error(
-                    "load_schedule",
-                    &format!("Failed to read schedule file: {}", e)
-                )
-            )
-        }
+            Err(VestaboardError::schedule_error(
+                "load_schedule",
+                &format!("Failed to read schedule file: {}", e),
+            ))
+        },
     }
 }
 
 pub fn add_task_to_schedule(
     time: DateTime<Utc>,
     widget: String,
-    input: Value
+    input: Value,
 ) -> Result<(), VestaboardError> {
-    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let config = VblConfig::load()?;
+    let schedule_path = config.get_schedule_file_path();
     let mut schedule = load_schedule(&schedule_path)?;
 
     let task = ScheduledTask::new(time, widget, input);
@@ -197,7 +158,8 @@ pub fn add_task_to_schedule(
 }
 
 pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
-    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let config = VblConfig::load()?;
+    let schedule_path = config.get_schedule_file_path();
     let mut schedule = load_schedule(&schedule_path)?;
     if schedule.get_task(id).is_none() {
         println!("Task with ID {} not found.", id);
@@ -211,7 +173,8 @@ pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
 }
 
 pub fn clear_schedule() -> Result<(), VestaboardError> {
-    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let config = VblConfig::load()?;
+    let schedule_path = config.get_schedule_file_path();
     let mut schedule = load_schedule(&schedule_path)?;
     println!("Clearing schedule...");
     schedule.clear();
@@ -219,11 +182,15 @@ pub fn clear_schedule() -> Result<(), VestaboardError> {
 }
 
 pub fn list_schedule() -> Result<(), VestaboardError> {
-    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let config = VblConfig::load()?;
+    let schedule_path = config.get_schedule_file_path();
     let schedule = load_schedule(&schedule_path)?;
 
     println!("\nScheduled Tasks:");
-    println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
+    println!(
+        "{:<6} | {:<22} | {:<15} | {}",
+        "ID", "Time (Local)", "Widget", "Input"
+    );
     println!("{:-<80}", ""); // Separator line
     if schedule.tasks.is_empty() {
         println!("");
@@ -232,28 +199,37 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
     for task in schedule.tasks {
         let local_time = task.time.with_timezone(&Local::now().timezone());
         let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
-        let input_str = serde_json
-            ::to_string(&task.input)
-            .unwrap_or_else(|_| "Invalid JSON".to_string());
-        println!("{:<6} | {:<22} | {:<15} | {}", task.id, formatted_time, task.widget, input_str);
+        let input_str =
+            serde_json::to_string(&task.input).unwrap_or_else(|_| "Invalid JSON".to_string());
+        println!(
+            "{:<6} | {:<22} | {:<15} | {}",
+            task.id, formatted_time, task.widget, input_str
+        );
     }
     println!("{:-<80}", ""); // Footer separator line
     Ok(())
 }
 
 pub async fn print_schedule() {
-    let schedule_path = PathBuf::from(SCHEDULE_FILE_PATH);
+    let config = match VblConfig::load() {
+        Ok(c) => c,
+        Err(_) => VblConfig::default(), // Fall back to default config
+    };
+    let schedule_path = config.get_schedule_file_path();
     let schedule = load_schedule(&schedule_path).unwrap_or_else(|_| Schedule::default());
     for task in schedule.tasks.iter() {
         let message_result = match task.widget.as_str() {
-            "text" => { get_text(task.input.as_str().unwrap_or("")) }
-            "file" => { get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or(""))) }
-            "weather" => { get_weather().await }
-            "sat-word" => { get_sat_word() }
+            "text" => get_text(task.input.as_str().unwrap_or("")),
+            "file" => get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or(""))),
+            "weather" => get_weather().await,
+            "sat-word" => get_sat_word(),
             _ => {
                 println!("Unknown widget type: {}", task.widget);
-                Err(VestaboardError::widget_error(&task.widget, "Unknown widget type"))
-            }
+                Err(VestaboardError::widget_error(
+                    &task.widget,
+                    "Unknown widget type",
+                ))
+            },
         };
 
         let message = match message_result {
@@ -261,7 +237,7 @@ pub async fn print_schedule() {
             Err(e) => {
                 use crate::widgets::widget_utils::error_to_display_message;
                 error_to_display_message(&e)
-            }
+            },
         };
 
         print_message(message, &datetime_to_local(task.time));

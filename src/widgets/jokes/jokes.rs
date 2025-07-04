@@ -1,5 +1,5 @@
-use crate::widgets::widget_utils;
 use crate::errors::VestaboardError;
+use crate::widgets::widget_utils;
 
 pub fn get_joke() -> Result<Vec<String>, VestaboardError> {
     let joke = "what did the janitor say when he jumped out of the closet? \"supplies!\"";
