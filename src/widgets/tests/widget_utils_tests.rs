@@ -1,9 +1,13 @@
 #[path = "../widget_utils.rs"]
 mod widget_utils;
 use crate::errors::VestaboardError;
-use std::io::{Error as IoError, ErrorKind};
+use std::io::{ Error as IoError, ErrorKind };
 use widget_utils::{
-    center_line, error_to_display_message, format_error, format_message, full_justify_line,
+    center_line,
+    error_to_display_message,
+    format_error,
+    format_message,
+    full_justify_line,
 };
 
 #[cfg(test)]
@@ -31,14 +35,7 @@ mod tests {
     fn test_format_message_long_word() {
         let message = "thisisaverylongwordthatshouldwrap";
         let formatted = format_message(message);
-        let expected = vec![
-            "",
-            "",
-            "thisisaverylongwordtha",
-            "     tshouldwrap      ",
-            "",
-            "",
-        ];
+        let expected = vec!["", "", "thisisaverylongwordtha", "     tshouldwrap      ", "", ""];
         assert_eq!(formatted, expected);
     }
 
@@ -52,7 +49,7 @@ mod tests {
             "          3           ",
             "1234567890123456789012",
             "   1234567890 12345   ",
-            "",
+            ""
         ];
         assert_eq!(formatted, expected);
     }
@@ -76,7 +73,7 @@ mod tests {
             "BVWKROYGBVWKROYGBVWKRO",
             "YGBVWKROYGBVWKROYGBVWK",
             "ROYGBVWKROYGBVWKROYGBV",
-            "WKROYGBVWKROYGBVWKROYG",
+            "WKROYGBVWKROYGBVWKROYG"
         ];
         assert_eq!(formatted, expected);
     }
@@ -91,7 +88,7 @@ mod tests {
             "   this is an error   ".to_string(),
             "message to display on ".to_string(),
             "   the vestaboard.    ".to_string(),
-            "".to_string(),
+            "".to_string()
         ];
         assert_eq!(formatted, expected);
     }
@@ -144,7 +141,7 @@ mod tests {
         assert_eq!(display[1], "R R R R R R R R R R R");
         // With vertical centering, 1-line content should be on line 3 (middle of 4 available lines)
         assert_eq!(display[2], ""); // Empty padding line
-        assert_eq!(display[3], "   file error: file   ");
+        assert_eq!(display[3], "   'file' not found   ");
         assert_eq!(display[4], ""); // Empty padding line
         assert_eq!(display[5], ""); // Empty padding line
     }
