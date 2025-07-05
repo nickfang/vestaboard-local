@@ -89,7 +89,6 @@ pub fn format_message(message: &str) -> WidgetOutput {
 }
 
 // There is only room for 4 lines of error message on the Vestaboard
-#[allow(dead_code)]
 pub fn format_error(error: &str) -> WidgetOutput {
     format_error_with_header(error, "error")
 }
