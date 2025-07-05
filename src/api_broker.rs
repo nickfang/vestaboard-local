@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 use crate::api::send_codes;
 
@@ -119,9 +119,15 @@ pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
 }
 
 pub async fn display_message(message: Vec<String>) {
+    log::info!("Processing message for display, {} lines", message.len());
+    log::debug!("Message content: {:?}", message);
+
     let codes = message_to_codes(message);
-    send_codes(codes).await.unwrap_or_else(|_| {
-        eprintln!("Error sending codes to Vestaboard.");
+    log::debug!("Converted message to character codes");
+
+    send_codes(codes).await.unwrap_or_else(|e| {
+        log::error!("Failed to send message to Vestaboard: {}", e);
+        eprintln!("Error sending codes to Vestaboard: {}", e);
     });
 }
 
@@ -133,7 +139,8 @@ pub fn is_valid_character(c: char) -> bool {
 
 /// Gets all valid characters as a formatted string for error messages
 pub fn get_valid_characters_description() -> String {
-    "a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK)".to_string()
+    "a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK)"
+        .to_string()
 }
 
 /// Validates that all characters in the message are valid for Vestaboard
@@ -151,17 +158,15 @@ pub fn validate_message_content(message: &[String]) -> Result<(), String> {
     if !invalid_chars.is_empty() {
         let mut chars: Vec<char> = invalid_chars.into_iter().collect();
         chars.sort();
-        return Err(
-            format!(
-                "Invalid characters found: {}. Valid characters are: {}.",
-                chars
-                    .iter()
-                    .map(|c| format!("'{}'", c))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                get_valid_characters_description()
-            )
-        );
+        return Err(format!(
+            "Invalid characters found: {}. Valid characters are: {}.",
+            chars
+                .iter()
+                .map(|c| format!("'{}'", c))
+                .collect::<Vec<_>>()
+                .join(", "),
+            get_valid_characters_description()
+        ));
     }
 
     Ok(())

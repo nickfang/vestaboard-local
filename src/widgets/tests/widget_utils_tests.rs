@@ -1,14 +1,14 @@
 #[path = "../widget_utils.rs"]
 mod widget_utils;
-use widget_utils::{
-    format_message,
-    format_error,
-    center_line,
-    full_justify_line,
-    error_to_display_message,
-};
 use crate::errors::VestaboardError;
 use std::io::{ Error as IoError, ErrorKind };
+use widget_utils::{
+    center_line,
+    error_to_display_message,
+    format_error,
+    format_message,
+    full_justify_line,
+};
 
 #[cfg(test)]
 mod tests {
@@ -83,11 +83,12 @@ mod tests {
         let message = "This is an error message to display on the Vestaboard.";
         let formatted = format_error(message);
         let expected = vec![
-            "R R R R error: R R R R".to_string(),
-            "".to_string(),
+            "        error         ".to_string(),
+            "R R R R R R R R R R R".to_string(),
             "   this is an error   ".to_string(),
             "message to display on ".to_string(),
-            "   the vestaboard.    ".to_string()
+            "   the vestaboard.    ".to_string(),
+            "".to_string()
         ];
         assert_eq!(formatted, expected);
     }
@@ -136,9 +137,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "   file error: file   ");
+        assert_eq!(display[0], "      file error      ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // With vertical centering, 1-line content should be on line 3 (middle of 4 available lines)
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "   'file' not found   ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -148,9 +153,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], " invalid data format  ");
+        assert_eq!(display[0], "      data error      ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // With vertical centering, 1-line content should be on line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], " invalid data format  ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     // We'll skip the reqwest error test as it's complex to create reqwest::Error in tests
@@ -162,7 +171,8 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert!(display[0].contains("error:"));
+        assert_eq!(display[0], "     widget error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
         // The message might be split across multiple lines, so check the combined text without spaces
         let combined_message = display[2..].join("").replace(" ", "");
         assert!(combined_message.contains("weatherdataunavailable"));
@@ -174,9 +184,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "text processing error ");
+        assert_eq!(display[0], "     widget error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "text processing error ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -185,9 +199,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "dictionary unavailable");
+        assert_eq!(display[0], "     widget error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "dictionary unavailable");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -196,9 +214,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "    unknown error     ");
+        assert_eq!(display[0], "     widget error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "    unknown error     ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -207,9 +229,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "    schedule error    ");
+        assert_eq!(display[0], "    schedule error    ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "    schedule error    ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -218,9 +244,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "  service not found   ");
+        assert_eq!(display[0], "      api error       ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "  service not found   ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -229,9 +259,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "    access denied     ");
+        assert_eq!(display[0], "      api error       ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // 1-line content is vertically centered at line 3
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "    access denied     ");
+        assert_eq!(display[4], ""); // Empty padding line
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -240,10 +274,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], " service temporarily  ");
-        assert_eq!(display[3], "         down         ");
+        assert_eq!(display[0], "      api error       ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // This message spans 2 lines and is vertically centered in 4 available lines
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], " service temporarily  ");
+        assert_eq!(display[4], "         down         ");
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -252,10 +289,13 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "   config: api_key    ");
-        assert_eq!(display[3], "       missing        ");
+        assert_eq!(display[0], "     config error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // This message spans 2 lines and is vertically centered in 4 available lines
+        assert_eq!(display[2], ""); // Empty padding line
+        assert_eq!(display[3], "   config: api_key    ");
+        assert_eq!(display[4], "       missing        ");
+        assert_eq!(display[5], ""); // Empty padding line
     }
 
     #[test]
@@ -264,9 +304,12 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
-        assert_eq!(display[2], "    short message     ");
+        assert_eq!(display[0], "        error         ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        assert_eq!(display[2], ""); // Empty line for vertical centering
+        assert_eq!(display[3], "    short message     ");
+        assert_eq!(display[4], ""); // Empty line for vertical centering
+        assert_eq!(display[5], ""); // Empty line for vertical centering
     }
 
     #[test]
@@ -277,9 +320,9 @@ mod tests {
         let display = error_to_display_message(&error);
 
         assert!(!display.is_empty());
-        assert!(display[0].contains("error:"));
-        assert!(display[1].len() <= 45); // Should be truncated with "..."
-        // Replace this with combined message check
+        assert_eq!(display[0], "        error         ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
+        // Check that the content contains truncated message
         let combined_message = display[2..].join("").replace(" ", "");
         assert!(combined_message.contains("..."));
     }
@@ -292,8 +335,8 @@ mod tests {
 
         // Should follow the same format as format_error()
         assert!(!display.is_empty());
-        assert_eq!(display[0], "R R R R error: R R R R");
-        assert_eq!(display[1], "");
+        assert_eq!(display[0], "     widget error     ");
+        assert_eq!(display[1], "R R R R R R R R R R R");
         // Should have at least one content line
         assert!(display.len() >= 3);
     }

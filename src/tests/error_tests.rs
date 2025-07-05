@@ -2,7 +2,7 @@
 mod tests {
     use crate::errors::VestaboardError;
     use std::error::Error;
-    use std::io::{ Error as IoError, ErrorKind };
+    use std::io::{Error as IoError, ErrorKind};
 
     #[test]
     fn test_io_error_constructor() {
@@ -13,7 +13,7 @@ mod tests {
         match vb_error {
             VestaboardError::IOError { context: ctx, .. } => {
                 assert_eq!(ctx, "reading config file");
-            }
+            },
             _ => panic!("Expected IOError variant"),
         }
     }
@@ -28,7 +28,7 @@ mod tests {
         match vb_error {
             VestaboardError::JsonError { context: ctx, .. } => {
                 assert_eq!(ctx, "parsing schedule file");
-            }
+            },
             _ => panic!("Expected JsonError variant"),
         }
     }
@@ -40,10 +40,13 @@ mod tests {
         let vb_error = VestaboardError::widget_error(widget, message);
 
         match vb_error {
-            VestaboardError::WidgetError { widget: w, message: m } => {
+            VestaboardError::WidgetError {
+                widget: w,
+                message: m,
+            } => {
                 assert_eq!(w, "weather");
                 assert_eq!(m, "API key not found");
-            }
+            },
             _ => panic!("Expected WidgetError variant"),
         }
     }
@@ -55,10 +58,13 @@ mod tests {
         let vb_error = VestaboardError::schedule_error(operation, message);
 
         match vb_error {
-            VestaboardError::ScheduleError { operation: op, message: msg } => {
+            VestaboardError::ScheduleError {
+                operation: op,
+                message: msg,
+            } => {
                 assert_eq!(op, "save_schedule");
                 assert_eq!(msg, "disk full");
-            }
+            },
             _ => panic!("Expected ScheduleError variant"),
         }
     }
@@ -70,10 +76,13 @@ mod tests {
         let vb_error = VestaboardError::api_error(code, message);
 
         match vb_error {
-            VestaboardError::ApiError { code: c, message: msg } => {
+            VestaboardError::ApiError {
+                code: c,
+                message: msg,
+            } => {
                 assert_eq!(c, Some(404));
                 assert_eq!(msg, "Not found");
-            }
+            },
             _ => panic!("Expected ApiError variant"),
         }
     }
@@ -85,10 +94,13 @@ mod tests {
         let vb_error = VestaboardError::config_error(field, message);
 
         match vb_error {
-            VestaboardError::ConfigError { field: f, message: msg } => {
+            VestaboardError::ConfigError {
+                field: f,
+                message: msg,
+            } => {
                 assert_eq!(f, "api_key");
                 assert_eq!(msg, "missing required field");
-            }
+            },
             _ => panic!("Expected ConfigError variant"),
         }
     }
@@ -101,7 +113,7 @@ mod tests {
         match vb_error {
             VestaboardError::Other { message: msg } => {
                 assert_eq!(msg, "unexpected error");
-            }
+            },
             _ => panic!("Expected Other variant"),
         }
     }
@@ -135,7 +147,7 @@ mod tests {
         match vb_error {
             VestaboardError::IOError { context, .. } => {
                 assert_eq!(context, "unknown context");
-            }
+            },
             _ => panic!("Expected IOError variant"),
         }
     }
@@ -149,7 +161,7 @@ mod tests {
         match vb_error {
             VestaboardError::JsonError { context, .. } => {
                 assert_eq!(context, "unknown context");
-            }
+            },
             _ => panic!("Expected JsonError variant"),
         }
     }
@@ -175,10 +187,8 @@ mod tests {
         let io_err2 = IoError::new(ErrorKind::NotFound, "file2");
         let vb_error1 = VestaboardError::io_error(io_err1, "context1");
         let vb_error2 = VestaboardError::io_error(io_err2, "context1");
-        let vb_error3 = VestaboardError::io_error(
-            IoError::new(ErrorKind::NotFound, "file1"),
-            "context2"
-        );
+        let vb_error3 =
+            VestaboardError::io_error(IoError::new(ErrorKind::NotFound, "file1"), "context2");
 
         assert_eq!(vb_error1, vb_error2); // Same context
         assert_ne!(vb_error1, vb_error3); // Different context

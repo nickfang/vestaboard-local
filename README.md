@@ -13,7 +13,8 @@ This project allows a user to connect to their vesta board locally
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-  - [Usage](#usage)
+- [Configuration](#configuration)
+- [Usage](#usage)
 - [Examples](#examples)
 - [Contributing](#contributing)
 - [License](#license)
@@ -58,6 +59,53 @@ Optional environment variables for widgets:
     ```
     ./target/debug/vbl
     ```
+
+## Configuration
+
+The application uses a configuration file located at `data/vblconfig.toml`. This file is automatically created with default values when you first run the application.
+
+### Configuration Options
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `log_level` | String | `"info"` | Controls the verbosity of file logging. Options: `"off"`, `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"` |
+| `log_file_path` | String | `"data/vestaboard.log"` | Path to the log file (relative to application directory) |
+| `console_log_level` | String (optional) | Same as `log_level` | Controls console output verbosity. If not specified, uses `log_level` |
+| `schedule_file_path` | String | `"data/schedule.json"` | Path to the schedule file for storing scheduled tasks |
+| `schedule_backup_path` | String | `"data/schedule_backup.json"` | Path to the schedule backup file |
+
+### Example Configuration
+
+```toml
+# Vestaboard Local Configuration File
+# This file controls logging and file paths for the vestaboard-local application
+
+# Log level for file logging
+# Options: "off", "error", "warn", "info", "debug", "trace"
+# Default: "info"
+log_level = "debug"
+
+# Path to the log file (relative to the application directory)
+# Default: "data/vestaboard.log"
+log_file_path = "data/vestaboard.log"
+
+# Log level for console output (optional)
+# If not specified, uses the same level as log_level
+# Options: "off", "error", "warn", "info", "debug", "trace"
+console_log_level = "info"
+
+# Schedule file paths
+# These control where schedule data is stored and backed up
+# Default: "data/schedule.json" and "data/schedule_backup.json"
+schedule_file_path = "data/schedule.json"
+schedule_backup_path = "data/schedule_backup.json"
+```
+
+### Configuration Notes
+
+- **Backward Compatibility**: If you have an existing configuration file missing the newer options (like schedule paths), the application will use the default values.
+- **Relative Paths**: All file paths are relative to the application's working directory.
+- **Automatic Creation**: If no configuration file exists, the application creates one with default values on first run.
 
 ### Usage
 

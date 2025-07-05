@@ -90,16 +90,21 @@ pub fn format_message(message: &str) -> WidgetOutput {
 
 // There is only room for 4 lines of error message on the Vestaboard
 pub fn format_error(error: &str) -> WidgetOutput {
+    format_error_with_header(error, "error")
+}
+
+pub fn format_error_with_header(error: &str, header: &str) -> WidgetOutput {
     let mut formatted_message: Vec<String> = Vec::new();
     let lowercase_error = error.to_lowercase();
     let words: Vec<&str> = lowercase_error.split_whitespace().collect();
     let mut current_line = String::new();
-    formatted_message.push("R R R R error: R R R R".to_string());
-    formatted_message.push("".to_string());
+    let mut content_lines: Vec<String> = Vec::new();
+
+    // Build content lines first
     for word in words {
         if current_line.len() + word.len() + 1 > MAX_MESSAGE_LENGTH {
             let padded_line = center_line(current_line);
-            formatted_message.push(padded_line);
+            content_lines.push(padded_line);
             current_line = String::new();
         }
         if !current_line.is_empty() {
@@ -109,8 +114,17 @@ pub fn format_error(error: &str) -> WidgetOutput {
     }
 
     if !current_line.is_empty() {
-        formatted_message.push(center_line(current_line));
+        content_lines.push(center_line(current_line));
     }
+
+    // Center content within 4 available lines (6 total - 2 header lines)
+    let centered_content = center_message(content_lines, 4);
+
+    // Create final message: header + red line + centered content
+    formatted_message.push(center_line(header.to_lowercase()));
+    formatted_message.push("R R R R R R R R R R R".to_string());
+    formatted_message.extend(centered_content);
+
     formatted_message
 }
 
@@ -118,50 +132,64 @@ pub fn format_error(error: &str) -> WidgetOutput {
 pub fn error_to_display_message(error: &VestaboardError) -> Vec<String> {
     match error {
         VestaboardError::IOError { context, .. } => {
-            format_error(&format!("File error: {}", context.split(' ').last().unwrap_or("unknown")))
+            // Extract more meaningful info from the context
+            if context.contains("reading") && context.contains("file") {
+                // Try to extract filename
+                let parts: Vec<&str> = context.split(' ').collect();
+                if let Some(filename) = parts.last() {
+                    format_error_with_header(&format!("'{}' not found", filename), "file error")
+                } else {
+                    format_error_with_header("File not found", "file error")
+                }
+            } else if context.contains("creating") || context.contains("writing") {
+                format_error_with_header("Cannot write file", "file error")
+            } else {
+                format_error_with_header("File operation failed", "file error")
+            }
         }
         VestaboardError::JsonError { context, .. } => {
             if context.contains("parsing") {
-                format_error("Invalid data format")
+                format_error_with_header("Invalid data format", "data error")
             } else {
-                format_error("Data processing error")
+                format_error_with_header("Data processing error", "data error")
             }
         }
         VestaboardError::ReqwestError { context, .. } => {
             if context.contains("weather") {
-                format_error("Weather service unavailable")
+                format_error_with_header("Weather service unavailable", "network error")
             } else {
-                format_error("Network error")
+                format_error_with_header("Network error", "network error")
             }
         }
-        VestaboardError::WidgetError { widget, message: _ } => {
+        VestaboardError::WidgetError { widget, message: _ } =>
             match widget.as_str() {
-                "weather" => format_error("Weather data unavailable"),
-                "text" => format_error("Text processing error"),
-                "sat-word" => format_error("Dictionary unavailable"),
-                _ => format_error(&format!("{} error", widget)),
+                "weather" => format_error_with_header("Weather data unavailable", "widget error"),
+                "text" => format_error_with_header("Text processing error", "widget error"),
+                "sat-word" => format_error_with_header("Dictionary unavailable", "widget error"),
+                _ => format_error_with_header(&format!("{} error", widget), "widget error"),
             }
+        VestaboardError::ScheduleError { .. } => {
+            format_error_with_header("Schedule error", "schedule error")
         }
-        VestaboardError::ScheduleError { .. } => { format_error("Schedule error") }
-        VestaboardError::ApiError { code, .. } => {
+        VestaboardError::ApiError { code, .. } =>
             match code {
-                Some(404) => format_error("Service not found"),
-                Some(401) | Some(403) => format_error("Access denied"),
-                Some(500..=599) => format_error("Service temporarily down"),
-                _ => format_error("Service error"),
+                Some(404) => format_error_with_header("Service not found", "api error"),
+                Some(401) | Some(403) => format_error_with_header("Access denied", "api error"),
+                Some(500..=599) =>
+                    format_error_with_header("Service temporarily down", "api error"),
+                _ => format_error_with_header("Service error", "api error"),
             }
-        }
         VestaboardError::ConfigError { field, .. } => {
-            format_error(&format!("Config: {} missing", field))
+            format_error_with_header(&format!("Config: {} missing", field), "config error")
         }
         VestaboardError::Other { message } => {
-            // Truncate long messages for display
-            let display_msg = if message.len() > 40 {
-                message[..37].to_string() + "..."
+            // Truncate long messages for display, but be more generous
+            let display_msg = if message.len() > 60 {
+                message[..57].to_string() + "..."
             } else {
                 message.clone()
             };
-            format_error(&display_msg)
+            format_error_with_header(&display_msg, "error")
         }
     }
 }

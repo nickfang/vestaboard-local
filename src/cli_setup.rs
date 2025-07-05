@@ -1,9 +1,12 @@
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
-use clap::{ Args, Parser, Subcommand };
 
 #[derive(Args, Debug)]
 pub struct TextArgs {
-    #[arg(required = true, help = "The message to display (use quotes if there are spaces)")]
+    #[arg(
+        required = true,
+        help = "The message to display (use quotes if there are spaces)"
+    )]
     pub message: String,
 }
 
@@ -14,19 +17,29 @@ pub struct FileArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum WidgetCommand {
-    #[command(name = "text", about = "Display a text message")] Text(TextArgs),
-    #[command(name = "file", about = "Display a message from a file")] File(FileArgs),
-    #[command(name = "weather", about = "Display the weather")] Weather,
-    #[command(name = "jokes", about = "Display a random joke")] Jokes,
-    #[command(name = "clear", about = "Clear the Vestaboard")] Clear,
-    #[command(name = "sat-word", about = "Display a random SAT word")] SATWord,
+    #[command(name = "text", about = "Display a text message")]
+    Text(TextArgs),
+    #[command(name = "file", about = "Display a message from a file")]
+    File(FileArgs),
+    #[command(name = "weather", about = "Display the weather")]
+    Weather,
+    #[command(name = "jokes", about = "Display a random joke")]
+    Jokes,
+    #[command(name = "clear", about = "Clear the Vestaboard")]
+    Clear,
+    #[command(name = "sat-word", about = "Display a random SAT word")]
+    SATWord,
 }
 
 #[derive(Args, Debug)]
 pub struct SendArgs {
     #[command(subcommand)]
     pub widget_command: WidgetCommand,
-    #[arg(short = 'd', long = "dry-run", help = "Show message content without updating Vestaboard")]
+    #[arg(
+        short = 'd',
+        long = "dry-run",
+        help = "Show message content without updating Vestaboard"
+    )]
     pub dry_run: bool,
 }
 
@@ -39,10 +52,17 @@ pub enum ScheduleArgs {
         about = "Add a new scheduled message.  Message must be in lowercase letters.",
         arg_required_else_help = true,
         after_help = "Example:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Don\\'t panic!\"\n  vbl schedule add \"2025-05-01 20:00:30\" weather"
-    )] Add {
-        #[clap(help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.", required = true)]
+    )]
+    Add {
+        #[clap(
+            help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.",
+            required = true
+        )]
         time: String,
-        #[clap(help = "The widget to use (text, file, weather, sat-word).", required = true)]
+        #[clap(
+            help = "The widget to use (text, file, weather, sat-word).",
+            required = true
+        )]
         widget: String,
         #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
         input: Vec<String>,
@@ -50,13 +70,17 @@ pub enum ScheduleArgs {
     #[command(
         name = "remove",
         about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's"
-    )] Remove {
+    )]
+    Remove {
         #[clap(help = "The ID of the scheduled task", required = true)]
         id: String,
     },
     #[command(name = "clear", about = "Clear all scheduled messages")]
     Clear,
-    #[command(name = "dry-run", about = "Test the schedule without updating the Vestaboard")]
+    #[command(
+        name = "dry-run",
+        about = "Test the schedule without updating the Vestaboard"
+    )]
     Dryrun,
 }
 

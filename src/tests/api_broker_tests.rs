@@ -1,12 +1,8 @@
 #[path = "../api_broker.rs"]
 mod api_broker;
 use api_broker::{
-    to_codes,
-    is_valid_character,
-    get_valid_characters_description,
-    validate_message_content,
-    message_to_codes,
-    display_message,
+    display_message, get_valid_characters_description, is_valid_character, message_to_codes,
+    to_codes, validate_message_content,
 };
 
 #[cfg(test)]
@@ -133,7 +129,11 @@ fn test_get_valid_characters_description() {
 
 #[test]
 fn test_validate_message_content_valid() {
-    let message = vec!["hello world".to_string(), "123 test!".to_string(), "ROYGBVWK".to_string()];
+    let message = vec![
+        "hello world".to_string(),
+        "123 test!".to_string(),
+        "ROYGBVWK".to_string(),
+    ];
     assert!(validate_message_content(&message).is_ok());
 }
 
@@ -164,7 +164,7 @@ fn test_validate_message_content_multiple_invalid() {
     let message = vec![
         "hello~world".to_string(),
         "test*string".to_string(),
-        "more[chars]".to_string()
+        "more[chars]".to_string(),
     ];
     let result = validate_message_content(&message);
     assert!(result.is_err());
@@ -191,7 +191,10 @@ fn test_validate_message_content_duplicate_invalid() {
 
 #[test]
 fn test_validate_message_content_with_degree_symbol() {
-    let message = vec!["temp is 72D today".to_string(), "it feels like 75D".to_string()];
+    let message = vec![
+        "temp is 72D today".to_string(),
+        "it feels like 75D".to_string(),
+    ];
     assert!(validate_message_content(&message).is_ok());
 }
 
@@ -211,14 +214,17 @@ fn test_validate_message_content_with_colors() {
 fn test_message_to_code() {
     let message = vec!["hello".to_string(), "world".to_string()];
     let codes = message_to_codes(message);
-    assert_eq!(codes, [
-        [8, 5, 12, 12, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [23, 15, 18, 12, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ]);
+    assert_eq!(
+        codes,
+        [
+            [8, 5, 12, 12, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [23, 15, 18, 12, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ]
+    );
 }
 
 #[test]
@@ -227,17 +233,23 @@ fn test_message_to_code_all_characters() {
         "ROYGBVKW".to_string(),
         "abcdefghijklmnopqrstuv".to_string(),
         "wxyz1234567890".to_string(),
-        "!@#$()-+&=;:'\"%,./?D".to_string()
+        "!@#$()-+&=;:'\"%,./?D".to_string(),
     ];
     let codes = message_to_codes(message);
-    assert_eq!(codes, [
-        [63, 64, 65, 66, 67, 68, 70, 69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
-        [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 0, 0, 0, 0, 0, 0, 0, 0],
-        [37, 38, 39, 40, 41, 42, 44, 46, 47, 48, 49, 50, 52, 53, 54, 55, 56, 59, 60, 62, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ]);
+    assert_eq!(
+        codes,
+        [
+            [63, 64, 65, 66, 67, 68, 70, 69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+            [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 0, 0, 0, 0, 0, 0, 0, 0],
+            [
+                37, 38, 39, 40, 41, 42, 44, 46, 47, 48, 49, 50, 52, 53, 54, 55, 56, 59, 60, 62, 0,
+                0
+            ],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ]
+    );
 }
 
 #[test]

@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use crate::widgets::text::{ get_text, get_text_from_file };
     use crate::errors::VestaboardError;
+    use crate::widgets::text::{get_text, get_text_from_file};
+    use std::io::Write;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
-    use std::io::Write;
 
     #[test]
     fn test_get_text_success() {
@@ -64,7 +64,7 @@ mod tests {
             VestaboardError::IOError { context, .. } => {
                 assert!(context.contains("reading text file"));
                 assert!(context.contains("/this/file/does/not/exist.txt"));
-            }
+            },
             _ => panic!("Expected IOError"),
         }
     }

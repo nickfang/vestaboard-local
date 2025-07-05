@@ -49,23 +49,48 @@ impl PartialEq for VestaboardError {
                 VestaboardError::ReqwestError { context: c2, .. },
             ) => c1 == c2,
             (
-                VestaboardError::WidgetError { widget: w1, message: m1 },
-                VestaboardError::WidgetError { widget: w2, message: m2 },
+                VestaboardError::WidgetError {
+                    widget: w1,
+                    message: m1,
+                },
+                VestaboardError::WidgetError {
+                    widget: w2,
+                    message: m2,
+                },
             ) => w1 == w2 && m1 == m2,
             (
-                VestaboardError::ScheduleError { operation: o1, message: m1 },
-                VestaboardError::ScheduleError { operation: o2, message: m2 },
+                VestaboardError::ScheduleError {
+                    operation: o1,
+                    message: m1,
+                },
+                VestaboardError::ScheduleError {
+                    operation: o2,
+                    message: m2,
+                },
             ) => o1 == o2 && m1 == m2,
             (
-                VestaboardError::ApiError { code: c1, message: m1 },
-                VestaboardError::ApiError { code: c2, message: m2 },
+                VestaboardError::ApiError {
+                    code: c1,
+                    message: m1,
+                },
+                VestaboardError::ApiError {
+                    code: c2,
+                    message: m2,
+                },
             ) => c1 == c2 && m1 == m2,
             (
-                VestaboardError::ConfigError { field: f1, message: m1 },
-                VestaboardError::ConfigError { field: f2, message: m2 },
+                VestaboardError::ConfigError {
+                    field: f1,
+                    message: m1,
+                },
+                VestaboardError::ConfigError {
+                    field: f2,
+                    message: m2,
+                },
             ) => f1 == f2 && m1 == m2,
-            (VestaboardError::Other { message: m1 }, VestaboardError::Other { message: m2 }) =>
-                m1 == m2,
+            (VestaboardError::Other { message: m1 }, VestaboardError::Other { message: m2 }) => {
+                m1 == m2
+            },
             _ => false,
         }
     }
@@ -76,29 +101,29 @@ impl std::fmt::Display for VestaboardError {
         match self {
             VestaboardError::IOError { source, context } => {
                 write!(f, "IO Error in {}: {}", context, source)
-            }
+            },
             VestaboardError::JsonError { source, context } => {
                 write!(f, "JSON Error in {}: {}", context, source)
-            }
+            },
             VestaboardError::ReqwestError { source, context } => {
                 write!(f, "HTTP Request Error in {}: {}", context, source)
-            }
+            },
             VestaboardError::WidgetError { widget, message } => {
                 write!(f, "Widget Error [{}]: {}", widget, message)
-            }
+            },
             VestaboardError::ScheduleError { operation, message } => {
                 write!(f, "Schedule Error [{}]: {}", operation, message)
-            }
-            VestaboardError::ApiError { code, message } => {
-                match code {
-                    Some(c) => write!(f, "API Error [{}]: {}", c, message),
-                    None => write!(f, "API Error: {}", message),
-                }
-            }
+            },
+            VestaboardError::ApiError { code, message } => match code {
+                Some(c) => write!(f, "API Error [{}]: {}", c, message),
+                None => write!(f, "API Error: {}", message),
+            },
             VestaboardError::ConfigError { field, message } => {
                 write!(f, "Configuration Error [{}]: {}", field, message)
-            }
-            VestaboardError::Other { message } => { write!(f, "Error: {}", message) }
+            },
+            VestaboardError::Other { message } => {
+                write!(f, "Error: {}", message)
+            },
         }
     }
 }
