@@ -1,12 +1,12 @@
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
+use rand::{ thread_rng, Rng };
+use serde::{ Deserialize, Serialize };
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{ self, BufRead };
 use std::path::Path;
 
 use crate::errors::VestaboardError;
-use crate::widgets::widget_utils::{split_into_lines, WidgetOutput};
+use crate::widgets::widget_utils::{ split_into_lines, WidgetOutput };
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UsedWord {
@@ -15,32 +15,35 @@ struct UsedWord {
 }
 
 pub fn get_sat_word() -> Result<WidgetOutput, VestaboardError> {
+    log::debug!("SAT word widget starting");
     let path = "./src/widgets/sat_words/words.txt";
-    let words_map = create_words_map(path)
-        .map_err(|e| VestaboardError::io_error(e, "reading SAT words dictionary"))?;
+    let words_map = create_words_map(path).map_err(|e| {
+        log::error!("Failed to load SAT words dictionary from {}: {}", path, e);
+        VestaboardError::io_error(e, "reading SAT words dictionary")
+    })?;
 
+    log::debug!("Loaded {} words from SAT dictionary", words_map.len());
     let mut rng = thread_rng();
     if let Some((key, value)) = words_map.iter().nth(rng.gen_range(0..words_map.len())) {
+        log::info!("Selected SAT word: {} ({})", key, value[0].0);
         let mut message = vec![format!("{} ({}):", key.to_string(), value[0].0.clone())];
         message.push("".to_string());
         let lines = split_into_lines(&value[0].1);
         for line in lines {
             message.push(line);
         }
+        log::debug!("SAT word widget completed successfully, {} lines generated", message.len());
         Ok(message)
     } else {
-        Err(VestaboardError::widget_error(
-            "sat-word",
-            "No words available in dictionary",
-        ))
+        log::error!("No words available in SAT words dictionary");
+        Err(VestaboardError::widget_error("sat-word", "No words available in dictionary"))
     }
 }
 
 pub fn create_words_map<P>(
-    filename: P,
+    filename: P
 ) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
-where
-    P: AsRef<Path>,
+    where P: AsRef<Path>
 {
     let file = File::open(filename)?;
     let reader = io::BufReader::new(file);
@@ -63,8 +66,8 @@ where
                     rest = "";
                     // rest = rest_of_line.split_once(')').map_or("", |(_, r)| r.trim());
                 } else {
-                    println!(
-                        "Line {} does not follow the expected pattern: {}",
+                    log::warn!(
+                        "Line {} does not follow expected pattern: {}",
                         line_number + 1,
                         line
                     );
@@ -75,11 +78,7 @@ where
                 map.insert(key.to_string(), definitions);
             }
         } else {
-            println!(
-                "Line {} does not follow the expected pattern: {}",
-                line_number + 1,
-                line
-            );
+            log::warn!("Line {} does not follow expected pattern: {}", line_number + 1, line);
         }
     }
 
