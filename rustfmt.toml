@@ -1,0 +1,22 @@
+# Rustfmt configuration for vestaboard-local
+# Note: Some features require nightly Rust toolchain
+
+# Enforce trailing commas in multi-line contexts (requires nightly)
+trailing_comma = "Vertical"
+
+# Basic formatting options
+max_width = 100
+hard_tabs = false
+tab_spaces = 2
+newline_style = "Unix"
+use_small_heuristics = "Default"
+
+# Function call formatting
+fn_call_width = 60
+attr_fn_like_width = 70
+
+# Other stable formatting preferences
+match_block_trailing_comma = true
+trailing_semicolon = true
+use_field_init_shorthand = true
+use_try_shorthand = true
