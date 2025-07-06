@@ -10,7 +10,7 @@ use crate::datetime::datetime_to_local;
 use crate::widgets::{
   sat_words::get_sat_word, text::get_text, text::get_text_from_file, weather::get_weather,
 };
-use crate::{errors::VestaboardError, vblconfig::VblConfig};
+use crate::{config::Config, errors::VestaboardError};
 
 // Import logging macros
 use crate::{log_widget_error, log_widget_start, log_widget_success};
@@ -184,7 +184,7 @@ pub fn add_task_to_schedule(
     serde_json::to_string(&input).unwrap_or_else(|_| "invalid".to_string())
   );
 
-  let config = VblConfig::load()?;
+  let config = Config::load()?;
   let schedule_path = config.get_schedule_file_path();
   let mut schedule = load_schedule(&schedule_path)?;
 
@@ -211,7 +211,7 @@ pub fn add_task_to_schedule(
 pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
   log::info!("Removing task with ID: {}", id);
 
-  let config = VblConfig::load()?;
+  let config = Config::load()?;
   let schedule_path = config.get_schedule_file_path();
   let mut schedule = load_schedule(&schedule_path)?;
 
@@ -242,7 +242,7 @@ pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
 pub fn clear_schedule() -> Result<(), VestaboardError> {
   log::info!("Clearing all scheduled tasks");
 
-  let config = VblConfig::load()?;
+  let config = Config::load()?;
   let schedule_path = config.get_schedule_file_path();
   let mut schedule = load_schedule(&schedule_path)?;
   let task_count = schedule.tasks.len();
@@ -265,7 +265,7 @@ pub fn clear_schedule() -> Result<(), VestaboardError> {
 pub fn list_schedule() -> Result<(), VestaboardError> {
   log::debug!("Listing scheduled tasks");
 
-  let config = VblConfig::load()?;
+  let config = Config::load()?;
   let schedule_path = config.get_schedule_file_path();
   let schedule = load_schedule(&schedule_path)?;
 
@@ -299,14 +299,14 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
 pub async fn print_schedule() {
   log::debug!("Running schedule dry run");
 
-  let config = match VblConfig::load() {
+  let config = match Config::load() {
     Ok(c) => c,
     Err(e) => {
       log::warn!(
         "Failed to load config for schedule dry run: {}, using defaults",
         e
       );
-      VblConfig::default() // Fall back to default config
+      Config::default() // Fall back to default config
     },
   };
   let schedule_path = config.get_schedule_file_path();

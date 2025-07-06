@@ -2,12 +2,12 @@ mod api;
 mod api_broker;
 mod cli_display;
 mod cli_setup;
+mod config;
 mod daemon;
 mod datetime;
 mod errors;
 mod logging;
 mod scheduler;
-mod vblconfig;
 mod widgets;
 
 use api_broker::{display_message, validate_message_content};

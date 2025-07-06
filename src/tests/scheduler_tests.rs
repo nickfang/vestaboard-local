@@ -1,12 +1,12 @@
 #[path = "../scheduler.rs"]
 mod scheduler;
 
+use crate::config::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::errors::VestaboardError;
 use crate::scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, load_schedule, remove_task_from_schedule,
   save_schedule, Schedule, ScheduledTask, CUSTOM_ALPHABET, ID_LENGTH,
 };
-use crate::vblconfig::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::widgets::text::get_text;
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::json;
