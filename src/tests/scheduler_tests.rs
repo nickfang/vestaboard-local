@@ -495,10 +495,18 @@ fn test_remove_task_from_schedule() {
   let result = remove_task_from_schedule(&task_id);
   assert!(result.is_ok(), "remove_task_from_schedule should succeed");
 
+  let removed = result.unwrap();
+  assert!(removed, "Task should have been removed");
+
   // Verify task was removed
   let final_schedule =
     load_schedule(&schedule_path.to_path_buf()).expect("Failed to load final schedule");
   assert_eq!(final_schedule.tasks.len(), 0);
+
+  let result2 = remove_task_from_schedule(&task_id);
+  assert!(result2.is_ok(), "Removing non-existent task should succeed");
+  let removed2 = result2.unwrap();
+  assert!(!removed2, "Removing non-existent task should return false");
 
   // Cleanup: restore original file or remove test file
   if had_existing_file {
