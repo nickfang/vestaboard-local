@@ -1,18 +1,15 @@
 # Rustfmt configuration for vestaboard-local
-# Note: Some features require nightly Rust toolchain
-
-
 
 # Basic formatting options
-max_width = 100
+max_width = 120
 hard_tabs = false
 tab_spaces = 2
 newline_style = "Unix"
 use_small_heuristics = "Default"
 
 # Function call formatting
-fn_call_width = 60
-attr_fn_like_width = 70
+fn_call_width = 120
+attr_fn_like_width = 120
 
 # Other stable formatting preferences
 match_block_trailing_comma = true
