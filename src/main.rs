@@ -245,10 +245,18 @@ async fn main() {
           }
         },
         ScheduleArgs::Remove { id } => {
-          log::info!("Removing scheduled task with id: {}", id);
-          println!("Removing task...");
+          log::info!("Removing scheduled task: {}", id);
+          println!("Removing scheduled task {}...", id);
           match remove_task_from_schedule(&id) {
-            Ok(_) => log::info!("Successfully removed task"),
+            Ok(removed) => {
+              if removed {
+                log::info!("Task removed successfully");
+                println!("Task removed successfully");
+              } else {
+                log::info!("No tasks removed");
+                println!("Task not found, no tasks removed");
+              }
+            }
             Err(e) => {
               log::error!("Failed to remove task: {}", e);
               eprintln!("Error removing task: {}", e);

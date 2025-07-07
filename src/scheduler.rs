@@ -91,11 +91,9 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
 
   // Save the schedule to the file
   // handle errors appropriately
-  println!("Saving schedule to {}", path.display());
   match fs::write(path, serde_json::to_string_pretty(schedule).unwrap()) {
     Ok(_) => {
       log::info!("Schedule saved successfully to {}", path.display());
-      println!("Schedule saved successfully.");
       Ok(())
     },
     Err(e) => {
@@ -108,7 +106,6 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
 
 pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
   log::debug!("Loading schedule from {}", path.display());
-  println!("Loading schedule from {}", path.display());
   match fs::read_to_string(&path) {
     Ok(content) => {
       if content.trim().is_empty() {
@@ -124,11 +121,6 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
             schedule.tasks.sort_by_key(|task| task.time);
             log::info!(
               "Successfully loaded {} tasks from schedule {}",
-              schedule.tasks.len(),
-              path.display()
-            );
-            println!(
-              "Successfully loaded {} tasks from schedule {}.",
               schedule.tasks.len(),
               path.display()
             );
@@ -208,7 +200,7 @@ pub fn add_task_to_schedule(
   }
 }
 
-pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
+pub fn remove_task_from_schedule(id: &str) -> Result<bool, VestaboardError> {
   log::info!("Removing task with ID: {}", id);
 
   let config = Config::load()?;
@@ -217,16 +209,14 @@ pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
 
   if schedule.get_task(id).is_none() {
     log::warn!("Task with ID {} not found in schedule", id);
-    println!("Task with ID {} not found.", id);
-    return Ok(());
+    return Ok(false);
   }
 
   if schedule.remove_task(id) {
     match save_schedule(&schedule, &schedule_path) {
       Ok(_) => {
         log::info!("Successfully removed task with ID {}", id);
-        println!("Task with ID {} removed successfully.", id);
-        Ok(())
+        Ok(true)
       },
       Err(e) => {
         log::error!("Failed to save schedule after removing task {}: {}", id, e);
@@ -235,7 +225,7 @@ pub fn remove_task_from_schedule(id: &str) -> Result<(), VestaboardError> {
     }
   } else {
     log::error!("Failed to remove task with ID {}", id);
-    Ok(())
+    Ok(false)
   }
 }
 
