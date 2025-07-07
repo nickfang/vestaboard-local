@@ -40,7 +40,7 @@ console_log_level = "info""#,
   }
 
   #[test]
-  fn test_vbl_config_default() {
+  fn test_config_default() {
     let config = Config::default();
     assert_eq!(config.log_level, crate::config::DEFAULT_LOG_LEVEL);
     assert_eq!(config.log_file_path, crate::config::DEFAULT_LOG_FILE_PATH);
@@ -51,7 +51,7 @@ console_log_level = "info""#,
   }
 
   #[test]
-  fn test_vbl_config_log_level_parsing() {
+  fn test_config_log_level_parsing() {
     let config = Config::default();
 
     // Test valid log levels
@@ -67,7 +67,7 @@ console_log_level = "info""#,
   }
 
   #[test]
-  fn test_vbl_config_paths() {
+  fn test_config_paths() {
     let config = Config {
       log_level: "debug".to_string(),
       log_file_path: "custom/path/log.txt".to_string(),
