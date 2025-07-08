@@ -237,7 +237,7 @@ pub fn clear_schedule() -> Result<(), VestaboardError> {
   let mut schedule = load_schedule(&schedule_path)?;
   let task_count = schedule.tasks.len();
 
-  println!("Clearing schedule...");
+  log::info!("Clearing schedule...");
   schedule.clear();
 
   match save_schedule(&schedule, &schedule_path) {

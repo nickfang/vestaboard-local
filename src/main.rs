@@ -278,7 +278,10 @@ async fn main() {
           log::info!("Clearing all scheduled tasks");
           println!("Clearing schedule...");
           match clear_schedule() {
-            Ok(_) => log::info!("Successfully cleared schedule"),
+            Ok(_) => {
+              log::info!("Successfully cleared schedule");
+              println!("Schedule cleared successfully");
+            },
             Err(e) => {
               log::error!("Failed to clear schedule: {}", e);
               eprintln!("Error clearing schedule: {}", e);
