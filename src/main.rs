@@ -237,6 +237,7 @@ async fn main() {
           match add_task_to_schedule(datetime_utc, widget_lower, input_json) {
             Ok(_) => {
               log::info!("Successfully added task to schedule");
+              println!("Task scheduled successfully");
             },
             Err(e) => {
               log::error!("Failed to add task to schedule: {}", e);

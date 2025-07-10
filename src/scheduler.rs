@@ -98,7 +98,6 @@ pub fn save_schedule(schedule: &Schedule, path: &PathBuf) -> Result<(), Vestaboa
     },
     Err(e) => {
       log::error!("Failed to save schedule to {}: {}", path.display(), e);
-      eprintln!("Error saving schedule: {}", e);
       Err(VestaboardError::io_error(e, "saving schedule to file"))
     },
   }
@@ -113,7 +112,6 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
           "Schedule file {} is empty, creating new schedule",
           path.display()
         );
-        println!("Schedule is empty. Creating a new schedule.");
         Ok(Schedule::default())
       } else {
         match serde_json::from_str::<Schedule>(&content) {
@@ -128,7 +126,6 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
           },
           Err(e) => {
             log::error!("Failed to parse schedule from {}: {}", path.display(), e);
-            println!("Failed to parse schedule from {} : {}", path.display(), e);
             Err(VestaboardError::json_error(e, "parsing schedule JSON"))
           },
         }
@@ -139,23 +136,19 @@ pub fn load_schedule(path: &PathBuf) -> Result<Schedule, VestaboardError> {
         "Schedule file {} not found, creating new schedule",
         path.display()
       );
-      println!("Schedule file not found. Creating a new schedule.");
       let schedule = Schedule::default();
       match save_schedule(&schedule, path) {
         Ok(_) => {
           log::info!("New schedule created and saved to {}", path.display());
-          println!("New schedule created and saved.");
         },
         Err(e) => {
           log::error!("Error saving new schedule to {}: {:?}", path.display(), e);
-          eprintln!("Error saving new schedule: {:?}", e);
         },
       }
       Ok(schedule)
     },
     Err(e) => {
       log::error!("Error reading schedule file {}: {}", path.display(), e);
-      eprintln!("Error reading schedule file {} : {}", path.display(), e);
       Err(VestaboardError::schedule_error(
         "load_schedule",
         &format!("Failed to read schedule file: {}", e),
@@ -341,7 +334,6 @@ pub async fn print_schedule() {
           task.id,
           task.widget
         );
-        println!("Unknown widget type: {}", task.widget);
         Err(VestaboardError::widget_error(
           &task.widget,
           "Unknown widget type",
@@ -363,7 +355,6 @@ pub async fn print_schedule() {
     };
 
     print_message(message, &datetime_to_local(task.time));
-    println!("");
   }
 
   log::info!("Schedule dry run completed");
