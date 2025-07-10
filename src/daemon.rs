@@ -1,8 +1,8 @@
 use crate::api_broker::{display_message, validate_message_content};
+use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
 use crate::scheduler::{load_schedule, Schedule, ScheduledTask};
-use crate::vblconfig::VblConfig;
 use crate::widgets::sat_words::get_sat_word;
 use crate::widgets::text::{get_text, get_text_from_file};
 use crate::widgets::weather::get_weather;
@@ -127,7 +127,7 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
   })
   .expect("Error setting Ctrl-C handler");
 
-  let config = VblConfig::load().map_err(|e| {
+  let config = Config::load().map_err(|e| {
     eprintln!("Error loading config: {:?}", e);
     e
   })?;

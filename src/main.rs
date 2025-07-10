@@ -2,12 +2,12 @@ mod api;
 mod api_broker;
 mod cli_display;
 mod cli_setup;
+mod config;
 mod daemon;
 mod datetime;
 mod errors;
 mod logging;
 mod scheduler;
-mod vblconfig;
 mod widgets;
 
 use api_broker::{display_message, validate_message_content};
@@ -237,6 +237,7 @@ async fn main() {
           match add_task_to_schedule(datetime_utc, widget_lower, input_json) {
             Ok(_) => {
               log::info!("Successfully added task to schedule");
+              println!("Task scheduled successfully");
             },
             Err(e) => {
               log::error!("Failed to add task to schedule: {}", e);
@@ -245,10 +246,18 @@ async fn main() {
           }
         },
         ScheduleArgs::Remove { id } => {
-          log::info!("Removing scheduled task with id: {}", id);
-          println!("Removing task...");
+          log::info!("Removing scheduled task: {}", id);
+          println!("Removing scheduled task {}...", id);
           match remove_task_from_schedule(&id) {
-            Ok(_) => log::info!("Successfully removed task"),
+            Ok(removed) => {
+              if removed {
+                log::info!("Task removed successfully");
+                println!("Task removed successfully");
+              } else {
+                log::info!("No tasks removed");
+                println!("Task not found, no tasks removed");
+              }
+            }
             Err(e) => {
               log::error!("Failed to remove task: {}", e);
               eprintln!("Error removing task: {}", e);
@@ -270,7 +279,10 @@ async fn main() {
           log::info!("Clearing all scheduled tasks");
           println!("Clearing schedule...");
           match clear_schedule() {
-            Ok(_) => log::info!("Successfully cleared schedule"),
+            Ok(_) => {
+              log::info!("Successfully cleared schedule");
+              println!("Schedule cleared successfully");
+            },
             Err(e) => {
               log::error!("Failed to clear schedule: {}", e);
               eprintln!("Error clearing schedule: {}", e);

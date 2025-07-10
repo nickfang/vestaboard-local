@@ -1,11 +1,11 @@
+use crate::config::Config;
 use crate::errors::VestaboardError;
-use crate::vblconfig::VblConfig;
 use env_logger::{Builder, Target};
 use std::fs::OpenOptions;
 use std::io::Write;
 
 pub fn init_logging() -> Result<(), VestaboardError> {
-  let config = VblConfig::load()?;
+  let config = Config::load()?;
 
   // Ensure log directory exists
   let log_file_path = config.get_log_file_path();
@@ -56,7 +56,7 @@ pub fn init_logging() -> Result<(), VestaboardError> {
   Ok(())
 }
 
-fn setup_console_logging(config: &VblConfig) -> Result<(), VestaboardError> {
+fn setup_console_logging(config: &Config) -> Result<(), VestaboardError> {
   // For console logging, we'll use a separate approach since env_logger can only have one target
   // We'll use the log macros and manually handle console output for key messages
   log::info!(

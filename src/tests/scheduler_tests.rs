@@ -1,12 +1,12 @@
 #[path = "../scheduler.rs"]
 mod scheduler;
 
+use crate::config::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::errors::VestaboardError;
 use crate::scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, load_schedule, remove_task_from_schedule,
   save_schedule, Schedule, ScheduledTask, CUSTOM_ALPHABET, ID_LENGTH,
 };
-use crate::vblconfig::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::widgets::text::get_text;
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::json;
@@ -495,10 +495,18 @@ fn test_remove_task_from_schedule() {
   let result = remove_task_from_schedule(&task_id);
   assert!(result.is_ok(), "remove_task_from_schedule should succeed");
 
+  let removed = result.unwrap();
+  assert!(removed, "Task should have been removed");
+
   // Verify task was removed
   let final_schedule =
     load_schedule(&schedule_path.to_path_buf()).expect("Failed to load final schedule");
   assert_eq!(final_schedule.tasks.len(), 0);
+
+  let result2 = remove_task_from_schedule(&task_id);
+  assert!(result2.is_ok(), "Removing non-existent task should succeed");
+  let removed2 = result2.unwrap();
+  assert!(!removed2, "Removing non-existent task should return false");
 
   // Cleanup: restore original file or remove test file
   if had_existing_file {

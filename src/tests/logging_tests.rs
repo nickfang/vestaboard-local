@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-  use crate::vblconfig::VblConfig;
+  use crate::config::Config;
   use std::fs;
   use std::path::PathBuf;
   use tempfile::tempdir;
@@ -34,28 +34,25 @@ console_log_level = "info""#,
     // we can't easily test the actual logging output in a unit test)
     // The real test would be an integration test
 
-    // For now, just test that VblConfig can be loaded
-    let config = VblConfig::load();
+    // For now, just test that Config can be loaded
+    let config = Config::load();
     assert!(config.is_ok(), "Config should load successfully");
   }
 
   #[test]
-  fn test_vbl_config_default() {
-    let config = VblConfig::default();
-    assert_eq!(config.log_level, crate::vblconfig::DEFAULT_LOG_LEVEL);
-    assert_eq!(
-      config.log_file_path,
-      crate::vblconfig::DEFAULT_LOG_FILE_PATH
-    );
+  fn test_config_default() {
+    let config = Config::default();
+    assert_eq!(config.log_level, crate::config::DEFAULT_LOG_LEVEL);
+    assert_eq!(config.log_file_path, crate::config::DEFAULT_LOG_FILE_PATH);
     assert_eq!(
       config.console_log_level,
-      Some(crate::vblconfig::DEFAULT_CONSOLE_LOG_LEVEL.to_string())
+      Some(crate::config::DEFAULT_CONSOLE_LOG_LEVEL.to_string())
     );
   }
 
   #[test]
-  fn test_vbl_config_log_level_parsing() {
-    let config = VblConfig::default();
+  fn test_config_log_level_parsing() {
+    let config = Config::default();
 
     // Test valid log levels
     assert_eq!(config.parse_log_level("error"), log::LevelFilter::Error);
@@ -70,8 +67,8 @@ console_log_level = "info""#,
   }
 
   #[test]
-  fn test_vbl_config_paths() {
-    let config = VblConfig {
+  fn test_config_paths() {
+    let config = Config {
       log_level: "debug".to_string(),
       log_file_path: "custom/path/log.txt".to_string(),
       console_log_level: Some("warn".to_string()),
