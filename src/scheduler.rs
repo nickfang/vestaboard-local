@@ -5,15 +5,8 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::cli_display::print_message;
-use crate::datetime::datetime_to_local;
-use crate::widgets::{
-  sat_words::get_sat_word, text::get_text, text::get_text_from_file, weather::get_weather,
-};
+use crate::widgets::resolver::execute_widget_for_preview;
 use crate::{config::Config, errors::VestaboardError};
-
-// Import logging macros
-use crate::{log_widget_error, log_widget_start, log_widget_success};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
   'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -307,54 +300,10 @@ pub async fn print_schedule() {
   );
 
   for task in schedule.tasks.iter() {
-    let start_time = std::time::Instant::now();
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
-
-    let message_result = match task.widget.as_str() {
-      "text" => {
-        log_widget_start!("text", task.input.as_str().unwrap_or(""));
-        get_text(task.input.as_str().unwrap_or(""))
-      },
-      "file" => {
-        let file_path = task.input.as_str().unwrap_or("");
-        log_widget_start!("file", file_path);
-        get_text_from_file(PathBuf::from(file_path))
-      },
-      "weather" => {
-        log_widget_start!("weather", "");
-        get_weather().await
-      },
-      "sat-word" => {
-        log_widget_start!("sat-word", "");
-        get_sat_word()
-      },
-      _ => {
-        log::error!(
-          "Unknown widget type in scheduled task {}: {}",
-          task.id,
-          task.widget
-        );
-        Err(VestaboardError::widget_error(
-          &task.widget,
-          "Unknown widget type",
-        ))
-      },
-    };
-
-    let duration = start_time.elapsed();
-    let message = match message_result {
-      Ok(msg) => {
-        log_widget_success!(&task.widget, duration);
-        msg
-      },
-      Err(e) => {
-        log_widget_error!(&task.widget, e, duration);
-        use crate::widgets::widget_utils::error_to_display_message;
-        error_to_display_message(&e)
-      },
-    };
-
-    print_message(message, &datetime_to_local(task.time));
+    
+    // Use the new resolver for preview execution
+    execute_widget_for_preview(&task.widget, &task.input, Some(task.time)).await;
   }
 
   log::info!("Schedule dry run completed");

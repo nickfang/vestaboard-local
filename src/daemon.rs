@@ -3,10 +3,7 @@ use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
 use crate::scheduler::{load_schedule, Schedule, ScheduledTask};
-use crate::widgets::sat_words::get_sat_word;
-use crate::widgets::text::{get_text, get_text_from_file};
-use crate::widgets::weather::get_weather;
-use crate::widgets::widget_utils::error_to_display_message;
+use crate::widgets::resolver::execute_widget;
 
 use chrono::Utc;
 use std::fs;
@@ -33,79 +30,29 @@ pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> 
 }
 
 pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
-  let start_time = std::time::Instant::now();
   log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
   log::debug!("Task details: {:?}", task);
 
   println!("Executing task: {:?}", task);
 
-  let message_result = match task.widget.as_str() {
-    "text" => {
-      log::info!("Executing Text widget with input: {:?}", task.input);
-      println!("Executing Text widget with input: {:?}", task.input);
-      get_text(task.input.as_str().unwrap_or(""))
-    },
-    "file" => {
-      log::info!("Executing File widget with input: {:?}", task.input);
-      println!("Executing File widget with input: {:?}", task.input);
-      get_text_from_file(PathBuf::from(task.input.as_str().unwrap_or("")))
-    },
-    "weather" => {
-      log::info!("Executing Weather widget");
-      println!("Executing Weather widget");
-      get_weather().await
-    },
-    "sat-word" => {
-      log::info!("Executing SAT Word widget");
-      println!("Executing SAT Word widget");
-      get_sat_word()
-    },
-    _ => {
-      let error = VestaboardError::widget_error(
-        &task.widget,
-        &format!("Unknown widget type: {}", task.widget),
-      );
-      log::error!("Unknown widget type '{}' in task {}", task.widget, task.id);
-      return Err(error);
-    },
-  };
+  // Execute the widget to get the raw message
+  let message = execute_widget(&task.widget, &task.input, false).await?;
 
-  let duration = start_time.elapsed();
-  let message = match message_result {
-    Ok(msg) => {
-      log::info!(
-        "Widget '{}' completed successfully in {:?}",
-        task.widget,
-        duration
-      );
-      msg
-    },
-    Err(e) => {
-      log::error!(
-        "Widget '{}' failed after {:?}: {}",
-        task.widget,
-        duration,
-        e
-      );
-      eprintln!("Widget error: {}", e);
-      error_to_display_message(&e)
-    },
-  };
-
-  // Validate message content before sending
+  // Validate the message content at the application layer
   if let Err(validation_error) = validate_message_content(&message) {
     log::error!(
-      "Message validation failed for task {}: {}",
-      task.id,
+      "Message validation failed for scheduled task '{}': {}",
+      task.widget,
       validation_error
     );
-    eprintln!("Validation error: {}", validation_error);
-    display_message(error_to_display_message(&VestaboardError::other(
-      &validation_error,
-    )))
-    .await;
-    return Ok(()); // Continue daemon operation even after validation error
+    return Err(VestaboardError::other(&validation_error));
   }
+
+  log::debug!(
+    "Scheduled task '{}' validation successful, message length: {} lines",
+    task.widget,
+    message.len()
+  );
 
   log::info!("Sending message to Vestaboard for task {}", task.id);
   display_message(message).await;

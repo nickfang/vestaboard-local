@@ -21,55 +21,30 @@ use scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, print_schedule, remove_task_from_schedule,
 };
 use serde_json::json;
-use widgets::jokes::get_joke;
-use widgets::sat_words::get_sat_word;
-use widgets::text::{get_text, get_text_from_file};
-use widgets::weather::get_weather;
+use widgets::resolver::execute_widget;
 
 /// Processes a widget command and validates the resulting message
 /// This ensures all messages are validated before any output method
 async fn process_and_validate_widget(
   widget_command: &WidgetCommand,
 ) -> Result<Vec<String>, VestaboardError> {
-  let start_time = std::time::Instant::now();
-  let widget_name = match widget_command {
-    WidgetCommand::Text(_) => "text",
-    WidgetCommand::File(_) => "file",
-    WidgetCommand::Weather => "weather",
-    WidgetCommand::Jokes => "jokes",
-    WidgetCommand::SATWord => "sat-word",
-    WidgetCommand::Clear => "clear",
+  let (widget_type, input_value) = match widget_command {
+    WidgetCommand::Text(args) => ("text", json!(&args.message)),
+    WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
+    WidgetCommand::Weather => ("weather", json!(null)),
+    WidgetCommand::Jokes => ("jokes", json!(null)),
+    WidgetCommand::SATWord => ("sat-word", json!(null)),
+    WidgetCommand::Clear => ("clear", json!(null)),
   };
 
-  log_widget_start!(widget_name, widget_command);
+  // Execute the widget to get the raw message
+  let message = execute_widget(widget_type, &input_value, false).await?;
 
-  let message_result = match widget_command {
-    WidgetCommand::Text(args) => get_text(&args.message),
-    WidgetCommand::File(args) => get_text_from_file(args.name.clone()),
-    WidgetCommand::Weather => get_weather().await,
-    WidgetCommand::Jokes => get_joke(),
-    WidgetCommand::SATWord => get_sat_word(),
-    WidgetCommand::Clear => Ok(vec![String::from("")]), // Clear command
-  };
-
-  let duration = start_time.elapsed();
-
-  let message = match message_result {
-    Ok(msg) => {
-      log_widget_success!(widget_name, duration);
-      msg
-    },
-    Err(e) => {
-      log_widget_error!(widget_name, e, duration);
-      return Err(e);
-    },
-  };
-
-  // Single validation point for all messages
+  // Validate the message content at the application layer
   if let Err(validation_error) = validate_message_content(&message) {
     log::error!(
       "Message validation failed for widget '{}': {}",
-      widget_name,
+      widget_type,
       validation_error
     );
     return Err(VestaboardError::other(&validation_error));
@@ -77,9 +52,10 @@ async fn process_and_validate_widget(
 
   log::debug!(
     "Widget '{}' validation successful, message length: {} lines",
-    widget_name,
+    widget_type,
     message.len()
   );
+
   Ok(message)
 }
 
