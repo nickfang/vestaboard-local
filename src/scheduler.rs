@@ -5,7 +5,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::widgets::resolver::execute_widget_for_preview;
+use crate::widgets::resolver::print_widget_with_timestamp;
 use crate::{config::Config, errors::VestaboardError};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
@@ -301,9 +301,9 @@ pub async fn print_schedule() {
 
   for task in schedule.tasks.iter() {
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
-    
+
     // Use the new resolver for preview execution
-    execute_widget_for_preview(&task.widget, &task.input, Some(task.time)).await;
+    print_widget_with_timestamp(&task.widget, &task.input, Some(task.time)).await;
   }
 
   log::info!("Schedule dry run completed");

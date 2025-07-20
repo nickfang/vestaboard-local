@@ -7,7 +7,7 @@ This refactoring consolidates widget execution logic that was previously duplica
 
 ### New Module: `src/widgets/resolver.rs`
 - **`execute_widget()`**: Unified function for executing any widget type with proper error handling and logging (validation handled by caller)
-- **`execute_widget_for_preview()`**: Specialized function for dry-run/preview execution used by schedule functionality (includes validation for display)
+- **`print_widget_with_timestamp()`**: Executes widget in dry-run mode and prints result with timestamp (used by schedule functionality)
 - Comprehensive documentation and test coverage
 - **Architecture**: Widgets do not import api_broker functions, maintaining clean separation of concerns
 
@@ -69,7 +69,7 @@ let message = execute_widget("text", &json!("hello world"), false).await?;
 let message = execute_widget("weather", &json!(null), true).await?;
 
 // Execute for preview with timestamp (includes validation for display)
-execute_widget_for_preview("sat-word", &json!(null), Some(scheduled_time)).await;
+print_widget_with_timestamp("sat-word", &json!(null), Some(scheduled_time)).await;
 ```
 
 ## Testing

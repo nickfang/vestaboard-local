@@ -108,9 +108,9 @@ pub async fn execute_widget(
   Ok(message)
 }
 
-/// Execute a widget for dry-run display with timestamp
+/// Execute a widget and print the result with timestamp (for schedule previews)
 ///
-/// This function executes a widget in preview mode and displays the result
+/// This function executes a widget in dry-run mode and immediately prints the result
 /// using the existing print_message functionality. Used by schedule dry-run.
 ///
 /// # Arguments
@@ -120,7 +120,7 @@ pub async fn execute_widget(
 ///
 /// # Returns
 /// * `Vec<String>` - The generated message (always succeeds, shows errors as messages)
-pub async fn execute_widget_for_preview(
+pub async fn print_widget_with_timestamp(
   widget_type: &str,
   input: &Value,
   scheduled_time: Option<DateTime<Utc>>,
