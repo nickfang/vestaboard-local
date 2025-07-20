@@ -5,7 +5,11 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::widgets::resolver::print_widget_with_timestamp;
+use crate::widgets::resolver::execute_widget;
+use crate::widgets::widget_utils;
+use crate::api_broker::validate_message_content;
+use crate::cli_display::print_message;
+use crate::datetime::datetime_to_local;
 use crate::{config::Config, errors::VestaboardError};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
@@ -270,6 +274,42 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   }
   println!("{:-<80}", ""); // Footer separator line
   Ok(())
+}
+
+async fn print_widget_with_timestamp(
+  widget_type: &str,
+  input: &Value,
+  scheduled_time: Option<DateTime<Utc>>,
+) -> Vec<String> {
+  // Execute widget and handle errors at application layer
+  let message = match execute_widget(widget_type, input).await {
+    Ok(msg) => {
+      // Validate the message and convert validation errors to display messages
+      match validate_message_content(&msg) {
+        Ok(_) => msg,
+        Err(validation_error) => {
+          log::error!(
+            "Message validation failed for widget '{}' in preview: {}",
+            widget_type,
+            validation_error
+          );
+          widget_utils::error_to_display_message(&VestaboardError::other(&validation_error))
+        }
+      }
+    },
+    Err(e) => {
+      log::error!("Widget execution failed for '{}' in preview: {}", widget_type, e);
+      widget_utils::error_to_display_message(&e)
+    },
+  };
+
+  // Display the message using existing preview functionality
+  let time_str = scheduled_time
+    .map(|t| datetime_to_local(t))
+    .unwrap_or_else(|| "".to_string());
+
+  print_message(message.clone(), &time_str);
+  message
 }
 
 pub async fn preview_schedule() {

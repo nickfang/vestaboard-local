@@ -42,7 +42,7 @@ src/
 ### Widget Execution
 ```rust
 // ✅ Use resolver interface
-let message = execute_widget("text", &input, dry_run).await?;
+let message = execute_widget("text", &input).await?;
 
 // ❌ Never access widgets directly
 use crate::widgets::text::get_text; // WRONG
@@ -110,7 +110,7 @@ All execution modes support dry-run: Send (`--dry-run`), Scheduler (`dryrun`), C
 - Skip dry-run testing
 
 ✅ **Do**:
-- Use resolver: `execute_widget(type, input, dry_run)`
+- Use resolver: `execute_widget(type, input)`
 - Keep widgets self-contained with `widget_utils`
 - Follow layer boundaries: UI → Execution → Widgets
 - Implement 3-tier logging for new components

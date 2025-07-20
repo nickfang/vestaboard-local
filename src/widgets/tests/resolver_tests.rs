@@ -1,11 +1,6 @@
-#[path = "../resolver.rs"]
-mod resolver;
-
 #[cfg(test)]
 mod tests {
-  use crate::widgets::resolver::{
-      execute_widget,
-  };
+  use crate::widgets::resolver::execute_widget;
 
   #[tokio::test]
   async fn test_execute_text_widget() {
