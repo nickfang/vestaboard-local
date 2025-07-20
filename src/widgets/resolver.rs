@@ -20,7 +20,7 @@ use chrono::{DateTime, Utc};
 ///
 /// This function provides a single entry point for executing all widget types,
 /// eliminating code duplication across main.rs, daemon.rs, and scheduler.rs.
-/// 
+///
 /// Note: This function does NOT validate message content - that should be done
 /// at the application layer by the caller using validate_message_content().
 ///
@@ -80,12 +80,24 @@ pub async fn execute_widget(
       log_widget_error!(widget_type, e, duration);
       if dry_run {
         // In dry-run mode, we still want to show the error message
-        error_to_display_message(&e)
+        return Ok(error_to_display_message(&e));
       } else {
         return Err(e);
       }
     },
   };
+
+  // In dry-run mode, also validate and convert validation errors to display messages
+  if dry_run {
+    if let Err(validation_error) = validate_message_content(&message) {
+      log::error!(
+        "Message validation failed for widget '{}' in dry-run: {}",
+        widget_type,
+        validation_error
+      );
+      return Ok(error_to_display_message(&VestaboardError::other(&validation_error)));
+    }
+  }
 
   log::debug!(
     "Widget '{}' execution successful, message length: {} lines",
@@ -100,8 +112,6 @@ pub async fn execute_widget(
 ///
 /// This function executes a widget in preview mode and displays the result
 /// using the existing print_message functionality. Used by schedule dry-run.
-/// Validation is performed here for preview mode, showing validation errors
-/// as display messages rather than failing.
 ///
 /// # Arguments
 /// * `widget_type` - The type of widget to execute
@@ -115,36 +125,14 @@ pub async fn execute_widget_for_preview(
   input: &Value,
   scheduled_time: Option<DateTime<Utc>>,
 ) -> Vec<String> {
-  // First execute the widget to get the raw message
-  let raw_message = match execute_widget(widget_type, input, true).await {
+  // Execute widget in dry-run mode (handles all validation and error conversion)
+  let message = match execute_widget(widget_type, input, true).await {
     Ok(msg) => msg,
     Err(e) => {
-      log::error!("Widget execution failed in preview: {}", e);
-      let error_msg = error_to_display_message(&e);
-      let time_str = scheduled_time
-        .map(|t| datetime_to_local(t))
-        .unwrap_or_else(|| "".to_string());
-      print_message(error_msg.clone(), &time_str);
-      return error_msg;
+      // This shouldn't happen in dry-run mode, but handle it just in case
+      log::error!("Unexpected error in dry-run mode: {}", e);
+      error_to_display_message(&e)
     },
-  };
-
-  // Validate the message content for preview
-  let message = if let Err(validation_error) = validate_message_content(&raw_message) {
-    log::error!(
-      "Message validation failed for widget '{}' in preview: {}",
-      widget_type,
-      validation_error
-    );
-    // Show validation error as a display message in preview mode
-    error_to_display_message(&VestaboardError::other(&validation_error))
-  } else {
-    log::debug!(
-      "Widget '{}' preview validation successful, message length: {} lines",
-      widget_type,
-      raw_message.len()
-    );
-    raw_message
   };
 
   // Display the message using existing preview functionality

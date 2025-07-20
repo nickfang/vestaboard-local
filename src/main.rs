@@ -27,8 +27,9 @@ use widgets::resolver::execute_widget;
 /// This ensures all messages are validated before any output method
 async fn process_and_validate_widget(
   widget_command: &WidgetCommand,
+  dry_run: bool,
 ) -> Result<Vec<String>, VestaboardError> {
-  let (widget_type, input_value) = match widget_command {
+  let (widget_name, input_value) = match widget_command {
     WidgetCommand::Text(args) => ("text", json!(&args.message)),
     WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
     WidgetCommand::Weather => ("weather", json!(null)),
@@ -37,14 +38,19 @@ async fn process_and_validate_widget(
     WidgetCommand::Clear => ("clear", json!(null)),
   };
 
-  // Execute the widget to get the raw message
-  let message = execute_widget(widget_type, &input_value, false).await?;
+  // Execute the widget to get the raw message, passing through dry_run flag
+  let message = execute_widget(widget_name, &input_value, dry_run).await?;
 
-  // Validate the message content at the application layer
+  // In dry-run mode, if we got here, the message is already validated or converted to error display
+  if dry_run {
+    return Ok(message);
+  }
+
+  // In normal mode, validate the message content at the application layer
   if let Err(validation_error) = validate_message_content(&message) {
     log::error!(
       "Message validation failed for widget '{}': {}",
-      widget_type,
+      widget_name,
       validation_error
     );
     return Err(VestaboardError::other(&validation_error));
@@ -52,7 +58,7 @@ async fn process_and_validate_widget(
 
   log::debug!(
     "Widget '{}' validation successful, message length: {} lines",
-    widget_type,
+    widget_name,
     message.len()
   );
 
@@ -101,7 +107,7 @@ async fn main() {
       }
 
       // Process and validate the widget message
-      let message = match process_and_validate_widget(&send_args.widget_command).await {
+      let message = match process_and_validate_widget(&send_args.widget_command, test_mode).await {
         Ok(msg) => {
           log::debug!("Widget processing completed successfully");
           msg
@@ -185,7 +191,7 @@ async fn main() {
           };
 
           // Validate the widget can produce a valid message
-          if let Err(e) = process_and_validate_widget(&widget_command).await {
+          if let Err(e) = process_and_validate_widget(&widget_command, false).await {
             log::error!("Scheduled widget validation failed: {}", e);
             eprintln!("Error validating scheduled widget: {}", e);
             return;
