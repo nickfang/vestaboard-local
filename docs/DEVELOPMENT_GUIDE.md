@@ -96,6 +96,7 @@ All execution modes support dry-run: Send (`--dry-run`), Scheduler (`dryrun`), C
 
 ### Code Standards
 - **Format**: `cargo fmt` using `rustfmt.toml`
+- **Comments**: Use `//` for regular comments, `///` for documentation comments only
 - **Testing**: Unit + integration tests, verify dry-run
 - **Logging**: File (`log::`), console (`println!`), Vestaboard (`display_message`)
 - **Errors**: Use `error_to_display_message()` for consistency
