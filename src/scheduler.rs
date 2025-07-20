@@ -272,8 +272,8 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   Ok(())
 }
 
-pub async fn print_schedule() {
-  log::debug!("Running schedule dry run");
+pub async fn preview_schedule() {
+  log::debug!("Running schedule preview");
 
   let config = match Config::load() {
     Ok(c) => c,

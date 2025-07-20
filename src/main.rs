@@ -18,7 +18,7 @@ use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
 use scheduler::{
-  add_task_to_schedule, clear_schedule, list_schedule, print_schedule, remove_task_from_schedule,
+  add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule,
 };
 use serde_json::json;
 use widgets::resolver::execute_widget;
@@ -271,10 +271,10 @@ async fn main() {
             },
           }
         },
-        ScheduleArgs::Dryrun => {
-          log::info!("Running schedule dry run");
-          println!("Dry run...");
-          print_schedule().await
+        ScheduleArgs::Preview => {
+          log::info!("Running schedule preview");
+          println!("Preview...");
+          preview_schedule().await
         },
       }
     },

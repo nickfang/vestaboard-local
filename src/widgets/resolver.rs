@@ -21,9 +21,6 @@ use chrono::{DateTime, Utc};
 /// This function provides a single entry point for executing all widget types,
 /// eliminating code duplication across main.rs, daemon.rs, and scheduler.rs.
 ///
-/// Note: This function does NOT validate message content - that should be done
-/// at the application layer by the caller using validate_message_content().
-///
 /// # Arguments
 /// * `widget_type` - The type of widget to execute ("text", "file", "weather", etc.)
 /// * `input` - JSON value containing widget-specific input parameters
@@ -65,7 +62,12 @@ pub async fn execute_widget(
         widget_type,
         &format!("Unknown widget type: {}", widget_type),
       );
-      return Err(error);
+      if dry_run {
+        // In dry-run mode, convert unknown widget error to display message
+        return Ok(error_to_display_message(&error));
+      } else {
+        return Err(error);
+      }
     },
   };
 

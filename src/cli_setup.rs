@@ -78,10 +78,10 @@ pub enum ScheduleArgs {
   #[command(name = "clear", about = "Clear all scheduled messages")]
   Clear,
   #[command(
-    name = "dry-run",
-    about = "Test the schedule without updating the Vestaboard"
+    name = "preview",
+    about = "Preview the schedule without updating the Vestaboard"
   )]
-  Dryrun,
+  Preview,
 }
 
 #[derive(Subcommand, Debug)]
