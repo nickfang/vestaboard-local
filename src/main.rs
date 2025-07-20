@@ -11,7 +11,6 @@ mod scheduler;
 mod widgets;
 
 use api_broker::{display_message, validate_message_content};
-use clap::Parser;
 use cli_display::print_message;
 use cli_setup::{Cli, Command, ScheduleArgs, WidgetCommand};
 use daemon::run_daemon;
@@ -20,8 +19,11 @@ use errors::VestaboardError;
 use scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule,
 };
-use serde_json::json;
 use widgets::resolver::execute_widget;
+use widgets::widget_utils::error_to_display_message;
+
+use clap::Parser;
+use serde_json::json;
 
 /// Processes a widget command and validates the resulting message
 /// This ensures all messages are validated before any output method
@@ -38,8 +40,33 @@ async fn process_and_validate_widget(
     WidgetCommand::Clear => ("clear", json!(null)),
   };
 
-  // Execute the widget to get the raw message, passing through dry_run flag
-  let message = execute_widget(widget_name, &input_value, dry_run).await?;
+  // Execute the widget to get the raw message
+  let message = if dry_run {
+    // In dry-run mode, handle errors by converting them to display messages
+    match execute_widget(widget_name, &input_value).await {
+      Ok(msg) => {
+        // Validate the message and convert validation errors to display messages
+        match validate_message_content(&msg) {
+          Ok(_) => msg,
+          Err(validation_error) => {
+            log::error!(
+              "Message validation failed for widget '{}' in dry-run: {}",
+              widget_name,
+              validation_error
+            );
+            error_to_display_message(&VestaboardError::other(&validation_error))
+          }
+        }
+      },
+      Err(e) => {
+        log::error!("Widget execution failed for '{}' in dry-run: {}", widget_name, e);
+        error_to_display_message(&e)
+      },
+    }
+  } else {
+    // In normal mode, propagate errors to application layer
+    execute_widget(widget_name, &input_value).await?
+  };
 
   // In dry-run mode, if we got here, the message is already validated or converted to error display
   if dry_run {

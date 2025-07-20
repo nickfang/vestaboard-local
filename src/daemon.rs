@@ -36,7 +36,7 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
   println!("Executing task: {:?}", task);
 
   // Execute the widget to get the raw message. Dry-run is handled in the scheduler.
-  let message = execute_widget(&task.widget, &task.input, false).await?;
+  let message = execute_widget(&task.widget, &task.input).await?;
 
   // Validate the message content at the application layer
   if let Err(validation_error) = validate_message_content(&message) {

@@ -11,7 +11,7 @@ use crate::widgets::{
   sat_words::get_sat_word,
   text::{get_text, get_text_from_file},
   weather::get_weather,
-  widget_utils::error_to_display_message,
+  widget_utils,
 };
 use crate::{log_widget_error, log_widget_start, log_widget_success};
 use chrono::{DateTime, Utc};
@@ -24,7 +24,6 @@ use chrono::{DateTime, Utc};
 /// # Arguments
 /// * `widget_type` - The type of widget to execute ("text", "file", "weather", etc.)
 /// * `input` - JSON value containing widget-specific input parameters
-/// * `dry_run` - If true, errors return error messages instead of failing
 ///
 /// # Returns
 /// * `Ok(Vec<String>)` - The generated message lines (NOT validated)
@@ -32,7 +31,6 @@ use chrono::{DateTime, Utc};
 pub async fn execute_widget(
   widget_type: &str,
   input: &Value,
-  dry_run: bool,
 ) -> Result<Vec<String>, VestaboardError> {
   let start_time = Instant::now();
 
@@ -62,12 +60,7 @@ pub async fn execute_widget(
         widget_type,
         &format!("Unknown widget type: {}", widget_type),
       );
-      if dry_run {
-        // In dry-run mode, convert unknown widget error to display message
-        return Ok(error_to_display_message(&error));
-      } else {
-        return Err(error);
-      }
+      return Err(error);
     },
   };
 
@@ -80,26 +73,9 @@ pub async fn execute_widget(
     },
     Err(e) => {
       log_widget_error!(widget_type, e, duration);
-      if dry_run {
-        // In dry-run mode, we still want to show the error message
-        return Ok(error_to_display_message(&e));
-      } else {
-        return Err(e);
-      }
+      return Err(e);
     },
   };
-
-  // In dry-run mode, also validate and convert validation errors to display messages
-  if dry_run {
-    if let Err(validation_error) = validate_message_content(&message) {
-      log::error!(
-        "Message validation failed for widget '{}' in dry-run: {}",
-        widget_type,
-        validation_error
-      );
-      return Ok(error_to_display_message(&VestaboardError::other(&validation_error)));
-    }
-  }
 
   log::debug!(
     "Widget '{}' execution successful, message length: {} lines",
@@ -112,8 +88,9 @@ pub async fn execute_widget(
 
 /// Execute a widget and print the result with timestamp (for schedule previews)
 ///
-/// This function executes a widget in dry-run mode and immediately prints the result
-/// using the existing print_message functionality. Used by schedule dry-run.
+/// This function executes a widget and immediately prints the result using the
+/// existing print_message functionality. Errors are converted to display messages
+/// at the application layer.
 ///
 /// # Arguments
 /// * `widget_type` - The type of widget to execute
@@ -127,13 +104,25 @@ pub async fn print_widget_with_timestamp(
   input: &Value,
   scheduled_time: Option<DateTime<Utc>>,
 ) -> Vec<String> {
-  // Execute widget in dry-run mode (handles all validation and error conversion)
-  let message = match execute_widget(widget_type, input, true).await {
-    Ok(msg) => msg,
+  // Execute widget and handle errors at application layer
+  let message = match execute_widget(widget_type, input).await {
+    Ok(msg) => {
+      // Validate the message and convert validation errors to display messages
+      match validate_message_content(&msg) {
+        Ok(_) => msg,
+        Err(validation_error) => {
+          log::error!(
+            "Message validation failed for widget '{}' in preview: {}",
+            widget_type,
+            validation_error
+          );
+          widget_utils::error_to_display_message(&VestaboardError::other(&validation_error))
+        }
+      }
+    },
     Err(e) => {
-      // This shouldn't happen in dry-run mode, but handle it just in case
-      log::error!("Unexpected error in dry-run mode: {}", e);
-      error_to_display_message(&e)
+      log::error!("Widget execution failed for '{}' in preview: {}", widget_type, e);
+      widget_utils::error_to_display_message(&e)
     },
   };
 
