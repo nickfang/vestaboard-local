@@ -76,9 +76,27 @@ use crate::errors::VestaboardError;  // WRONG - breaks isolation
 ```
 
 ### Dry-Run Support
-All execution modes support dry-run: Send (`--dry-run`), Scheduler (`dryrun`), Cycle (future)
+All execution modes support dry-run: Send (`--dry-run`), Scheduler (`preview`), Cycle (future)
 - `dry_run = true`: Errors → display messages
 - `dry_run = false`: Errors → propagated failures
+
+#### Common Use Cases
+- **Character Validation**: Test if widgets output invalid characters before sending to Vestaboard
+- **Content Preview**: Preview text content and formatting before actual transmission
+- **Widget Testing**: Verify widget behavior and error handling without API calls
+- **Schedule Validation**: Preview all scheduled tasks to ensure they work correctly
+
+#### Examples
+```bash
+# Test text for invalid characters
+vbl send --dry-run text "hello world with special chars: ~`^"
+
+# Preview weather widget output
+vbl send --dry-run weather
+
+# Preview all scheduled tasks
+vbl schedule preview
+```
 
 ## Development Guidelines
 
