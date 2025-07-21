@@ -10,8 +10,7 @@ mod logging;
 mod scheduler;
 mod widgets;
 
-use api_broker::{display_message, validate_message_content};
-use cli_display::print_message;
+use api_broker::{handle_message, MessageDestination};
 use cli_setup::{Cli, Command, ScheduleArgs, WidgetCommand};
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
@@ -25,12 +24,11 @@ use widgets::widget_utils::error_to_display_message;
 use clap::Parser;
 use serde_json::json;
 
-/// Processes a widget command and validates the resulting message
-/// This ensures all messages are validated before any output method
-async fn process_and_validate_widget(
+
+async fn process_widget_command(
   widget_command: &WidgetCommand,
   dry_run: bool,
-) -> Result<Vec<String>, VestaboardError> {
+) -> Result<(), VestaboardError> {
   let (widget_name, input_value) = match widget_command {
     WidgetCommand::Text(args) => ("text", json!(&args.message)),
     WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
@@ -40,56 +38,26 @@ async fn process_and_validate_widget(
     WidgetCommand::Clear => ("clear", json!(null)),
   };
 
-  // Execute the widget to get the raw message
-  let message = if dry_run {
-    // In dry-run mode, handle errors by converting them to display messages
-    match execute_widget(widget_name, &input_value).await {
-      Ok(msg) => {
-        // Validate the message and convert validation errors to display messages
-        match validate_message_content(&msg) {
-          Ok(_) => msg,
-          Err(validation_error) => {
-            log::error!(
-              "Message validation failed for widget '{}' in dry-run: {}",
-              widget_name,
-              validation_error
-            );
-            error_to_display_message(&VestaboardError::other(&validation_error))
-          }
-        }
-      },
-      Err(e) => {
-        log::error!("Widget execution failed for '{}' in dry-run: {}", widget_name, e);
-        error_to_display_message(&e)
-      },
-    }
-  } else {
-    // In normal mode, propagate errors to application layer
-    execute_widget(widget_name, &input_value).await?
+  // In dry-run mode, handle errors by converting them to display messages
+  let message = match execute_widget(widget_name, &input_value).await {
+    Ok(message) => message,
+    Err(e) => error_to_display_message(&e),
   };
 
-  // In dry-run mode, if we got here, the message is already validated or converted to error display
-  if dry_run {
-    return Ok(message);
+  let destination = if dry_run {
+    MessageDestination::Console
+  } else {
+    MessageDestination::Vestaboard
+  };
+
+  match handle_message(message.clone(), destination).await {
+    Ok(_) => Ok(()),
+    Err(e) => {
+      log::error!("Failed to handle message: {}", e);
+      eprintln!("Error handling message: {}", e);
+      Err(e)
+    }
   }
-
-  // In normal mode, validate the message content at the application layer
-  if let Err(validation_error) = validate_message_content(&message) {
-    log::error!(
-      "Message validation failed for widget '{}': {}",
-      widget_name,
-      validation_error
-    );
-    return Err(VestaboardError::other(&validation_error));
-  }
-
-  log::debug!(
-    "Widget '{}' validation successful, message length: {} lines",
-    widget_name,
-    message.len()
-  );
-
-  Ok(message)
 }
 
 #[tokio::main]
@@ -103,7 +71,6 @@ async fn main() {
   log::info!("Vestaboard Local starting up");
 
   let cli = Cli::parse();
-  let mut test_mode = false;
 
   match cli.command {
     Command::Send(send_args) => {
@@ -112,50 +79,13 @@ async fn main() {
         send_args.dry_run
       );
 
-      if send_args.dry_run {
-        test_mode = true;
-        log::debug!("Running in test mode (dry run)");
-      }
-
-      // Handle clear command separately since it doesn't need validation
-      if matches!(send_args.widget_command, WidgetCommand::Clear) {
-        log::info!("Executing clear command");
-        if test_mode {
-          print_message(vec![String::from("")], "");
-        } else {
-          if let Err(e) = api::clear_board().await {
-            log::error!("Failed to clear board: {}", e);
-            eprintln!("Error clearing board: {}", e);
-            std::process::exit(1);
-          }
-          log::info!("Board cleared successfully");
-        }
-        return;
-      }
-
-      // Process and validate the widget message
-      let message = match process_and_validate_widget(&send_args.widget_command, test_mode).await {
-        Ok(msg) => {
-          log::debug!("Widget processing completed successfully");
-          msg
-        },
+      match process_widget_command(&send_args.widget_command, send_args.dry_run).await {
+        Ok(_) => {},
         Err(e) => {
-          log::error!("Widget processing failed: {}", e);
-          eprintln!("Widget error: {}", e);
-          // Convert VestaboardError directly to display message
-          use crate::widgets::widget_utils::error_to_display_message;
-          error_to_display_message(&e)
-        },
-      };
-
-      if test_mode {
-        log::info!("Displaying message in test mode");
-        print_message(message, "");
-        return;
+          log::error!("Failed to process widget command: {}", e);
+          eprintln!("Error processing widget command: {}", e);
+        }
       }
-
-      log::info!("Sending message to Vestaboard");
-      display_message(message).await;
     },
     Command::Schedule { action } => {
       log::info!("Processing schedule command");
@@ -218,7 +148,8 @@ async fn main() {
           };
 
           // Validate the widget can produce a valid message
-          if let Err(e) = process_and_validate_widget(&widget_command, false).await {
+          // TODO figure out how to
+          if let Err(e) = process_widget_command(&widget_command, false).await {
             log::error!("Scheduled widget validation failed: {}", e);
             eprintln!("Error validating scheduled widget: {}", e);
             return;

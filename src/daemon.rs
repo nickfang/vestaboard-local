@@ -45,7 +45,7 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
       task.widget,
       validation_error
     );
-    return Err(VestaboardError::other(&validation_error));
+    return Err(validation_error);
   }
 
   log::debug!(

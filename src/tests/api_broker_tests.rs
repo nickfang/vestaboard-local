@@ -4,6 +4,7 @@ use api_broker::{
   display_message, get_valid_characters_description, is_valid_character, message_to_codes,
   to_codes, validate_message_content,
 };
+// use crate::errors::VestaboardError;
 
 #[cfg(test)]
 #[test]
@@ -155,8 +156,9 @@ fn test_validate_message_content_single_invalid() {
   let result = validate_message_content(&message);
   assert!(result.is_err());
   let error = result.unwrap_err();
-  assert!(error.contains("Invalid characters found: '~'"));
-  assert!(error.contains("Valid characters are:"));
+  let error_msg = error.to_string();
+  assert!(error_msg.contains("Invalid characters found: '~'"));
+  assert!(error_msg.contains("Valid characters are:"));
 }
 
 #[test]
@@ -169,12 +171,13 @@ fn test_validate_message_content_multiple_invalid() {
   let result = validate_message_content(&message);
   assert!(result.is_err());
   let error = result.unwrap_err();
-  assert!(error.contains("Invalid characters found:"));
-  assert!(error.contains("'*'"));
-  assert!(error.contains("'['"));
-  assert!(error.contains("']'"));
-  assert!(error.contains("'~'"));
-  assert!(error.contains("Valid characters are:"));
+  let error_msg = error.to_string();
+  assert!(error_msg.contains("Invalid characters found:"));
+  assert!(error_msg.contains("'*'"));
+  assert!(error_msg.contains("'['"));
+  assert!(error_msg.contains("']'"));
+  assert!(error_msg.contains("'~'"));
+  assert!(error_msg.contains("Valid characters are:"));
 }
 
 #[test]
@@ -184,8 +187,9 @@ fn test_validate_message_content_duplicate_invalid() {
   let result = validate_message_content(&message);
   assert!(result.is_err());
   let error = result.unwrap_err();
+  let error_msg = error.to_string();
   // Should only contain one instance of '~'
-  let tilde_count = error.matches("'~'").count();
+  let tilde_count = error_msg.matches("'~'").count();
   assert_eq!(tilde_count, 1);
 }
 

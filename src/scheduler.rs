@@ -7,9 +7,7 @@ use serde_json::Value;
 
 use crate::widgets::resolver::execute_widget;
 use crate::widgets::widget_utils;
-use crate::api_broker::validate_message_content;
-use crate::cli_display::print_message;
-use crate::datetime::datetime_to_local;
+use crate::api_broker::{handle_message, MessageDestination};
 use crate::{config::Config, errors::VestaboardError};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
@@ -276,42 +274,6 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   Ok(())
 }
 
-async fn print_widget_with_timestamp(
-  widget_type: &str,
-  input: &Value,
-  scheduled_time: Option<DateTime<Utc>>,
-) -> Vec<String> {
-  // Execute widget and handle errors at application layer
-  let message = match execute_widget(widget_type, input).await {
-    Ok(msg) => {
-      // Validate the message and convert validation errors to display messages
-      match validate_message_content(&msg) {
-        Ok(_) => msg,
-        Err(validation_error) => {
-          log::error!(
-            "Message validation failed for widget '{}' in preview: {}",
-            widget_type,
-            validation_error
-          );
-          widget_utils::error_to_display_message(&VestaboardError::other(&validation_error))
-        }
-      }
-    },
-    Err(e) => {
-      log::error!("Widget execution failed for '{}' in preview: {}", widget_type, e);
-      widget_utils::error_to_display_message(&e)
-    },
-  };
-
-  // Display the message using existing preview functionality
-  let time_str = scheduled_time
-    .map(|t| datetime_to_local(t))
-    .unwrap_or_else(|| "".to_string());
-
-  print_message(message.clone(), &time_str);
-  message
-}
-
 pub async fn preview_schedule() {
   log::debug!("Running schedule preview");
 
@@ -342,8 +304,25 @@ pub async fn preview_schedule() {
   for task in schedule.tasks.iter() {
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
 
-    // Use the new resolver for preview execution
-    print_widget_with_timestamp(&task.widget, &task.input, Some(task.time)).await;
+    let message = match execute_widget(&task.widget, &task.input).await {
+      Ok(msg) => msg,
+      Err(e) => {
+        log::error!("Failed to execute widget '{}': {}", task.widget, e);
+        widget_utils::error_to_display_message(&e)
+      },
+    };
+
+
+    let local_time = task.time.with_timezone(&Local::now().timezone());
+    let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+    let destination = MessageDestination::ConsoleWithTitle(formatted_time);
+    match handle_message(message, destination).await {
+      Ok(_) => {},
+      Err(e) => {
+        log::error!("Failed to handle message for task {}: {}", task.id, e);
+        eprintln!("Error handling message for task {}: {}", task.id, e);
+      }
+    }
   }
 
   log::info!("Schedule dry run completed");
