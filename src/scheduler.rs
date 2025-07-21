@@ -5,15 +5,10 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::cli_display::print_message;
-use crate::datetime::datetime_to_local;
-use crate::widgets::{
-  sat_words::get_sat_word, text::get_text, text::get_text_from_file, weather::get_weather,
-};
+use crate::widgets::resolver::execute_widget;
+use crate::widgets::widget_utils;
+use crate::api_broker::{handle_message, MessageDestination};
 use crate::{config::Config, errors::VestaboardError};
-
-// Import logging macros
-use crate::{log_widget_error, log_widget_start, log_widget_success};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
   'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -279,8 +274,8 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   Ok(())
 }
 
-pub async fn print_schedule() {
-  log::debug!("Running schedule dry run");
+pub async fn preview_schedule() {
+  log::debug!("Running schedule preview");
 
   let config = match Config::load() {
     Ok(c) => c,
@@ -307,54 +302,27 @@ pub async fn print_schedule() {
   );
 
   for task in schedule.tasks.iter() {
-    let start_time = std::time::Instant::now();
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
 
-    let message_result = match task.widget.as_str() {
-      "text" => {
-        log_widget_start!("text", task.input.as_str().unwrap_or(""));
-        get_text(task.input.as_str().unwrap_or(""))
-      },
-      "file" => {
-        let file_path = task.input.as_str().unwrap_or("");
-        log_widget_start!("file", file_path);
-        get_text_from_file(PathBuf::from(file_path))
-      },
-      "weather" => {
-        log_widget_start!("weather", "");
-        get_weather().await
-      },
-      "sat-word" => {
-        log_widget_start!("sat-word", "");
-        get_sat_word()
-      },
-      _ => {
-        log::error!(
-          "Unknown widget type in scheduled task {}: {}",
-          task.id,
-          task.widget
-        );
-        Err(VestaboardError::widget_error(
-          &task.widget,
-          "Unknown widget type",
-        ))
-      },
-    };
-
-    let duration = start_time.elapsed();
-    let message = match message_result {
-      Ok(msg) => {
-        log_widget_success!(&task.widget, duration);
-        msg
-      },
+    let message = match execute_widget(&task.widget, &task.input).await {
+      Ok(msg) => msg,
       Err(e) => {
-        log_widget_error!(&task.widget, e, duration);
-        use crate::widgets::widget_utils::error_to_display_message;
-        error_to_display_message(&e)
+        log::error!("Failed to execute widget '{}': {}", task.widget, e);
+        widget_utils::error_to_display_message(&e)
       },
     };
 
-    print_message(message, &datetime_to_local(task.time));
+
+    let local_time = task.time.with_timezone(&Local::now().timezone());
+    let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+    let destination = MessageDestination::ConsoleWithTitle(formatted_time);
+    match handle_message(message, destination).await {
+      Ok(_) => {},
+      Err(e) => {
+        log::error!("Failed to handle message for task {}: {}", task.id, e);
+        eprintln!("Error handling message for task {}: {}", task.id, e);
+      }
+    }
   }
 
   log::info!("Schedule dry run completed");

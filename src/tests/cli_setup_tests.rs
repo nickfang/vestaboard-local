@@ -44,7 +44,7 @@ fn test_command_variants() {
         ScheduleArgs::Remove { .. } => {},
         ScheduleArgs::List => {},
         ScheduleArgs::Clear => {},
-        ScheduleArgs::Dryrun => {},
+        ScheduleArgs::Preview => {},
       },
       Command::Daemon => {},
     }
