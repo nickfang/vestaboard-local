@@ -4,7 +4,6 @@ use api_broker::{
   display_message, get_valid_characters_description, is_valid_character, message_to_codes,
   to_codes, validate_message_content,
 };
-// use crate::errors::VestaboardError;
 
 #[cfg(test)]
 #[test]

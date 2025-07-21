@@ -148,7 +148,6 @@ async fn main() {
           };
 
           // Validate the widget can produce a valid message
-          // TODO figure out how to
           if let Err(e) = process_widget_command(&widget_command, false).await {
             log::error!("Scheduled widget validation failed: {}", e);
             eprintln!("Error validating scheduled widget: {}", e);
