@@ -119,6 +119,7 @@ vbl schedule preview
 - **Testing**: Unit + integration tests, verify dry-run
 - **Logging**: File (`log::`), console (`println!`), Vestaboard (`display_message`)
 - **Errors**: Use `error_to_display_message()` for consistency
+- **DRY Principle**: Extract common patterns before duplicating code
 
 ### Testing Organization
 Tests are organized in separate files within a `tests/` folder at the same level as the source files:
@@ -170,12 +171,14 @@ mod tests {
 - Import external modules in widgets: `use crate::api_broker::`
 - Duplicate execution logic across files
 - Skip dry-run testing
+- Copy-paste similar code blocks
 
 ✅ **Do**:
 - Use resolver: `execute_widget(type, input)`
 - Keep widgets self-contained with `widget_utils`
 - Follow layer boundaries: UI → Execution → Widgets
 - Implement 3-tier logging for new components
+- Extract common patterns into reusable functions
 
 ## Developer Checklist
 
@@ -184,6 +187,7 @@ mod tests {
 - [ ] Layer boundaries respected
 - [ ] Dry-run works across all execution modes
 - [ ] 3-tier logging implemented (file/console/Vestaboard)
+- [ ] Common patterns extracted (DRY principle)
 - [ ] Code formatted (`cargo fmt`)
 - [ ] Tests organized in `tests/` folder with corresponding `*_tests.rs` files
 - [ ] Tests pass (normal + dry-run modes)

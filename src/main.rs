@@ -12,7 +12,7 @@ mod scheduler;
 mod widgets;
 
 use api_broker::{handle_message, MessageDestination};
-use cli_setup::{Cli, Command, ScheduleArgs, WidgetCommand};
+use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
@@ -234,6 +234,63 @@ async fn main() {
           println!("Preview...");
           preview_schedule().await
         },
+      }
+    },
+    Command::Cycle { command, args } => {
+      // Use repeat args if available, otherwise use main cycle args
+      let (is_repeat, cycle_args) = match command {
+        Some(CycleCommand::Repeat { args: repeat_args }) => (true, repeat_args),
+        None => (false, args),
+      };
+      
+      log::info!(
+        "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
+        if is_repeat { "continuous" } else { "single" },
+        cycle_args.interval,
+        cycle_args.delay,
+        cycle_args.dry_run
+      );
+
+      if cycle_args.dry_run {
+        println!(
+          "Running {} cycle in preview mode...",
+          if is_repeat { "continuous" } else { "single" }
+        );
+      } else {
+        println!(
+          "Starting {} cycle with {} second intervals...",
+          if is_repeat { "continuous" } else { "single" },
+          cycle_args.interval
+        );
+      }
+
+      if is_repeat {
+        println!("Cycle will repeat continuously until stopped (Ctrl-C).");
+      } else {
+        println!("Cycle will run through all scheduled tasks once.");
+      }
+
+      if cycle_args.delay > 0 {
+        println!("Waiting {} seconds before starting...", cycle_args.delay);
+        tokio::time::sleep(tokio::time::Duration::from_secs(cycle_args.delay)).await;
+      }
+
+      // TODO: Implement cycle functionality
+      log::warn!(
+        "{} cycle functionality not yet implemented",
+        if is_repeat { "Continuous" } else { "Single" }
+      );
+      println!(
+        "{} cycle functionality is not yet implemented.",
+        if is_repeat { "Continuous" } else { "Single" }
+      );
+      println!("This command will read from schedule.json and execute tasks in order:");
+      println!("  - Ignoring scheduled datetime constraints");
+      println!("  - Using {} second intervals between tasks", cycle_args.interval);
+      if is_repeat {
+        println!("  - Continuously repeating the cycle until Ctrl-C");
+      } else {
+        println!("  - Running through the schedule once");
       }
     },
     Command::Daemon => {

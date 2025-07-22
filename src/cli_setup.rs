@@ -43,6 +43,43 @@ pub struct SendArgs {
   pub dry_run: bool,
 }
 
+#[derive(Args, Debug)]
+pub struct CycleArgs {
+  #[arg(
+    short = 'i',
+    long = "interval",
+    default_value = "60",
+    help = "Delay in seconds between messages"
+  )]
+  pub interval: u64,
+  #[arg(
+    short = 'w',
+    long = "delay",
+    default_value = "0",
+    help = "Delay in seconds before showing first message"
+  )]
+  pub delay: u64,
+  #[arg(
+    short = 'd',
+    long = "dry-run",
+    help = "Preview mode - show messages without updating Vestaboard"
+  )]
+  pub dry_run: bool,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CycleCommand {
+  #[command(
+    name = "repeat",
+    about = "Continuously repeat the cycle until stopped (Ctrl-C)",
+    after_help = "Examples:\n  vbl cycle repeat\n  vbl cycle repeat --interval 300\n  vbl cycle repeat --delay 30 --dry-run"
+  )]
+  Repeat {
+    #[command(flatten)]
+    args: CycleArgs,
+  },
+}
+
 #[derive(Subcommand, Debug)]
 pub enum ScheduleArgs {
   #[command(name = "list", about = "List all scheduled messages")]
@@ -86,11 +123,31 @@ pub enum ScheduleArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
+  #[command(
+    about = "Send a single message to the Vestaboard",
+    after_help = "Examples:\n  vbl send text \"Hello World\"\n  vbl send --dry-run weather\n  vbl send file message.txt"
+  )]
   Send(SendArgs),
+  #[command(
+    about = "Manage scheduled messages",
+    after_help = "Examples:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Good morning!\"\n  vbl schedule list\n  vbl schedule preview"
+  )]
   Schedule {
     #[command(subcommand)]
     action: ScheduleArgs,
   },
+  #[command(
+    about = "Cycle through scheduled tasks at set intervals",
+    long_about = "Execute all tasks from the schedule.json file in order. The datetime constraints are ignored - tasks are executed based only on the specified interval. Use 'cycle repeat' for continuous cycling, or 'cycle' alone to run once.",
+    after_help = "Examples:\n  vbl cycle                                    # Default: 60 second intervals, run once\n  vbl cycle --delay 30                        # Wait 30 seconds before starting\n  vbl cycle --interval 300                     # 5 minute intervals, run once\n  vbl cycle repeat                             # Continuous cycling\n  vbl cycle repeat --dry-run                   # Preview continuous mode\n\nNote: Uses tasks from schedule.json, ignoring their scheduled times."
+  )]
+  Cycle {
+    #[command(subcommand)]
+    command: Option<CycleCommand>,
+    #[command(flatten)]
+    args: CycleArgs,
+  },
+  #[command(about = "Run as a background daemon")]
   Daemon,
 }
 
