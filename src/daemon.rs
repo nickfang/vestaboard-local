@@ -1,30 +1,16 @@
-use crate::api_broker::{display_message, handle_message, validate_message_content, MessageDestination};
+use crate::api_broker::{handle_message, MessageDestination};
 use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
 use crate::process_control::ProcessController;
-use crate::scheduler::{load_schedule, Schedule, ScheduledTask};
+use crate::scheduler::{ScheduleMonitor, ScheduledTask};
 use crate::widgets::resolver::execute_widget;
 
 use chrono::Utc;
-use std::fs;
-use std::path::PathBuf;
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 const CHECK_INTERVAL_SECONDS: u64 = 3;
-
-pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
-  log::trace!("Getting file modification time for: {}", path.display());
-
-  fs::metadata(path)
-    .and_then(|meta| meta.modified())
-    .map_err(|e| {
-      log::error!("Error getting mod time for {}: {}", path.display(), e);
-      eprintln!("Error getting mod time for {}: {}", path.display(), e);
-      VestaboardError::io_error(e, &format!("getting mod time for {}", path.display()))
-    })
-}
 
 pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
   log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
@@ -68,31 +54,25 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
   log::info!("Using schedule file: {}", schedule_path.display());
   log::info!("Check interval: {} seconds", CHECK_INTERVAL_SECONDS);
 
-  let mut current_schedule = load_schedule(&schedule_path).unwrap_or_else(|e| {
-    log::warn!(
-      "Error loading initial schedule: {:?}, using empty schedule",
-      e
-    );
+  // Initialize schedule monitor
+  let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
+
+  // Initialize the monitor (loads initial schedule)
+  if let Err(e) = schedule_monitor.initialize() {
+    log::warn!("Failed to initialize schedule monitor: {}", e);
     eprintln!("Error loading initial schedule: {:?}.", e);
-    Schedule::default()
-  });
+    // Continue running even if initial schedule load fails
+  }
 
   log::info!(
     "Initial schedule loaded with {} tasks",
-    current_schedule.tasks.len()
+    schedule_monitor.get_current_schedule().tasks.len()
   );
   println!(
     "Initial schedule loaded with {} tasks.",
-    current_schedule.tasks.len()
+    schedule_monitor.get_current_schedule().tasks.len()
   );
 
-  let mut last_mod_time = get_file_mod_time(&schedule_path).unwrap_or_else(|e| {
-    log::debug!(
-      "Could not get initial file mod time: {}, using UNIX_EPOCH",
-      e
-    );
-    SystemTime::UNIX_EPOCH
-  });
   let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
   log::info!("Daemon started successfully, monitoring schedule");
@@ -107,40 +87,25 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
 
     log::trace!("Daemon loop iteration starting");
 
-    // Reload schedule if the file has been modified
-    match get_file_mod_time(&schedule_path) {
-      Ok(current_mod_time) => {
-        if current_mod_time > last_mod_time {
-          log::info!("Schedule file modified, reloading schedule");
-          println!("Schedule file modified. Reloading schedule...");
-          match load_schedule(&schedule_path) {
-            Ok(new_schedule) => {
-              let old_count = current_schedule.tasks.len();
-              let new_count = new_schedule.tasks.len();
-              current_schedule = new_schedule;
-              last_mod_time = current_mod_time;
-              log::info!(
-                "Successfully reloaded schedule (tasks: {} -> {})",
-                old_count,
-                new_count
-              );
-              println!("Successfully reloaded schedule.");
-            },
-            Err(e) => {
-              log::error!("Error reloading schedule: {:?}", e);
-              eprintln!("Error reloading schedule: {:?}", e);
-            },
-          }
-        }
-      },
+    // Check for schedule file updates
+    match schedule_monitor.reload_if_modified() {
+      Ok(true) => {
+        log::info!("Schedule file updated and reloaded");
+        println!("Successfully reloaded schedule.");
+      }
+      Ok(false) => {
+        log::trace!("No schedule file changes detected");
+      }
       Err(e) => {
-        log::debug!("Error getting file modification time: {:?}", e);
+        log::error!("Error checking for schedule updates: {}", e);
         eprintln!("Error getting file modification time: {:?}", e);
-      },
+        // Continue running even if file monitoring fails
+      }
     }
 
     let now = Utc::now();
     let mut tasks_to_execute = Vec::new();
+    let current_schedule = schedule_monitor.get_current_schedule();
 
     for task in &current_schedule.tasks {
       if is_or_before(task.time, now) && !executed_task_ids.contains(&task.id) {

@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::{Path, PathBuf}, time::SystemTime};
 
 use chrono::{DateTime, Local, Utc};
 use nanoid::nanoid;
@@ -74,6 +74,127 @@ impl Schedule {
   }
   pub fn is_empty(&self) -> bool {
     self.tasks.is_empty()
+  }
+}
+
+/// Monitors schedule file for changes and manages schedule reloading
+pub struct ScheduleMonitor {
+  schedule_file_path: PathBuf,
+  last_modified: Option<SystemTime>,
+  current_schedule: Schedule,
+}
+
+impl ScheduleMonitor {
+  /// Create a new schedule monitor for the given file path
+  pub fn new<P: AsRef<Path>>(schedule_file_path: P) -> Self {
+    Self {
+      schedule_file_path: schedule_file_path.as_ref().to_path_buf(),
+      last_modified: None,
+      current_schedule: Schedule::default(),
+    }
+  }
+
+  /// Initialize the monitor by loading the current schedule and tracking modification time
+  pub fn initialize(&mut self) -> Result<(), VestaboardError> {
+    log::info!("Initializing schedule monitor for: {:?}", self.schedule_file_path);
+
+    // Load initial schedule and track modification time
+    self.reload_schedule()?;
+    Ok(())
+  }
+
+  /// Check if the schedule file has been modified since last check
+  pub fn check_for_updates(&mut self) -> Result<bool, VestaboardError> {
+    let current_mod_time = self.get_file_mod_time()?;
+
+    match self.last_modified {
+      Some(last_mod_time) if current_mod_time == last_mod_time => {
+        // No change detected
+        Ok(false)
+      }
+      _ => {
+        // File has been modified or this is the first check
+        log::info!("Schedule file modification detected");
+        Ok(true)
+      }
+    }
+  }
+
+  /// Get the current cached schedule
+  pub fn get_current_schedule(&self) -> &Schedule {
+    &self.current_schedule
+  }
+
+  /// Reload the schedule if the file has been modified
+  pub fn reload_if_modified(&mut self) -> Result<bool, VestaboardError> {
+    if self.check_for_updates()? {
+      self.reload_schedule()?;
+      Ok(true)
+    } else {
+      Ok(false)
+    }
+  }
+
+  /// Force reload the schedule from file
+  pub fn reload_schedule(&mut self) -> Result<(), VestaboardError> {
+    log::debug!("Reloading schedule from file: {:?}", self.schedule_file_path);
+
+    // Update modification time first
+    self.last_modified = Some(self.get_file_mod_time()?);
+
+    // Load the schedule
+    match load_schedule(&self.schedule_file_path) {
+      Ok(schedule) => {
+        self.current_schedule = schedule;
+        log::info!("Schedule reloaded successfully, {} tasks loaded", self.current_schedule.tasks.len());
+        Ok(())
+      }
+      Err(e) => {
+        log::error!("Failed to reload schedule: {}", e);
+        // Keep the existing schedule on reload failure
+        Err(e)
+      }
+    }
+  }
+
+  /// Get the file modification time, handling various error cases
+  fn get_file_mod_time(&self) -> Result<SystemTime, VestaboardError> {
+    match fs::metadata(&self.schedule_file_path) {
+      Ok(metadata) => {
+        match metadata.modified() {
+          Ok(modified_time) => {
+            log::trace!("File modification time: {:?}", modified_time);
+            Ok(modified_time)
+          }
+          Err(e) => {
+            log::warn!("Could not get file modification time: {}", e);
+            Err(VestaboardError::io_error(e, &format!("getting mod time for {}", self.schedule_file_path.display())))
+          }
+        }
+      }
+      Err(e) => {
+        match e.kind() {
+          std::io::ErrorKind::NotFound => {
+            log::debug!("Schedule file not found: {:?}", self.schedule_file_path);
+            // Return a default time for non-existent files
+            Ok(SystemTime::UNIX_EPOCH)
+          }
+          std::io::ErrorKind::PermissionDenied => {
+            log::error!("Permission denied accessing schedule file: {:?}", self.schedule_file_path);
+            Err(VestaboardError::io_error(e, &format!("accessing schedule file {}", self.schedule_file_path.display())))
+          }
+          _ => {
+            log::error!("Error accessing schedule file metadata: {}", e);
+            Err(VestaboardError::io_error(e, &format!("accessing schedule file {}", self.schedule_file_path.display())))
+          }
+        }
+      }
+    }
+  }
+
+  /// Get the path to the schedule file being monitored
+  pub fn get_schedule_file_path(&self) -> &Path {
+    &self.schedule_file_path
   }
 }
 
