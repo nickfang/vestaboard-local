@@ -114,6 +114,7 @@ vbl schedule preview
 
 ### Code Standards
 - **Format**: `cargo fmt` using `rustfmt.toml`
+- **Whitespace**: No trailing whitespace - configure editor to trim on save
 - **Comments**: Use `//` for regular comments, `///` for documentation comments only
 - **Testing**: Unit + integration tests, verify dry-run
 - **Logging**: File (`log::`), console (`println!`), Vestaboard (`display_message`)

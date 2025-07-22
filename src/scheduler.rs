@@ -97,7 +97,7 @@ impl ScheduleMonitor {
   /// Initialize the monitor by loading the current schedule and tracking modification time
   pub fn initialize(&mut self) -> Result<(), VestaboardError> {
     log::info!("Initializing schedule monitor for: {:?}", self.schedule_file_path);
-    
+
     // Load initial schedule and track modification time
     self.reload_schedule()?;
     Ok(())
@@ -106,7 +106,7 @@ impl ScheduleMonitor {
   /// Check if the schedule file has been modified since last check
   pub fn check_for_updates(&mut self) -> Result<bool, VestaboardError> {
     let current_mod_time = self.get_file_mod_time()?;
-    
+
     match self.last_modified {
       Some(last_mod_time) if current_mod_time == last_mod_time => {
         // No change detected
@@ -138,10 +138,10 @@ impl ScheduleMonitor {
   /// Force reload the schedule from file
   pub fn reload_schedule(&mut self) -> Result<(), VestaboardError> {
     log::debug!("Reloading schedule from file: {:?}", self.schedule_file_path);
-    
+
     // Update modification time first
     self.last_modified = Some(self.get_file_mod_time()?);
-    
+
     // Load the schedule
     match load_schedule(&self.schedule_file_path) {
       Ok(schedule) => {

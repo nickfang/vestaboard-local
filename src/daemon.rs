@@ -56,7 +56,7 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
 
   // Initialize schedule monitor
   let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
-  
+
   // Initialize the monitor (loads initial schedule)
   if let Err(e) = schedule_monitor.initialize() {
     log::warn!("Failed to initialize schedule monitor: {}", e);

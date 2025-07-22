@@ -711,7 +711,7 @@ fn schedule_monitor_initialize_with_existing_file_test() {
       input: json!("test message"),
     }],
   };
-  
+
   // Write the schedule to the temp file
   write!(temp_file, "{}", serde_json::to_string_pretty(&schedule).unwrap()).unwrap();
   temp_file.flush().unwrap();
@@ -719,7 +719,7 @@ fn schedule_monitor_initialize_with_existing_file_test() {
   // Initialize the monitor
   let mut monitor = ScheduleMonitor::new(&path);
   let result = monitor.initialize();
-  
+
   assert!(result.is_ok());
   assert_eq!(monitor.get_current_schedule().tasks.len(), 1);
   assert_eq!(monitor.get_current_schedule().tasks[0].id, "test1");
@@ -730,13 +730,13 @@ fn schedule_monitor_initialize_with_existing_file_test() {
 fn schedule_monitor_initialize_with_nonexistent_file_test() {
   let temp_file = NamedTempFile::new().expect("Failed to create temp file");
   let path = temp_file.path().to_path_buf();
-  
+
   // Delete the temp file to test non-existent file behavior
   drop(temp_file);
 
   let mut monitor = ScheduleMonitor::new(&path);
   let result = monitor.initialize();
-  
+
   // Should succeed and create an empty schedule
   assert!(result.is_ok());
   assert_eq!(monitor.get_current_schedule().tasks.len(), 0);
@@ -785,7 +785,7 @@ fn schedule_monitor_reload_if_modified_test() {
 
   let mut monitor = ScheduleMonitor::new(&path);
   monitor.initialize().expect("Failed to initialize monitor");
-  
+
   assert_eq!(monitor.get_current_schedule().tasks.len(), 0);
 
   // Update the file with a new task
@@ -799,7 +799,7 @@ fn schedule_monitor_reload_if_modified_test() {
       input: json!("new message"),
     }],
   };
-  
+
   temp_file.seek(std::io::SeekFrom::Start(0)).unwrap();
   temp_file.as_file_mut().set_len(0).unwrap();
   write!(temp_file, "{}", serde_json::to_string_pretty(&new_schedule).unwrap()).unwrap();
@@ -820,12 +820,12 @@ fn schedule_monitor_reload_if_modified_test() {
 fn schedule_monitor_handles_file_not_found_test() {
   let temp_file = NamedTempFile::new().expect("Failed to create temp file");
   let path = temp_file.path().to_path_buf();
-  
+
   // Delete the file
   drop(temp_file);
 
   let mut monitor = ScheduleMonitor::new(&path);
-  
+
   // check_for_updates should handle missing file gracefully
   let result = monitor.check_for_updates();
   assert!(result.is_ok());
