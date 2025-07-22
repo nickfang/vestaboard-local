@@ -759,7 +759,7 @@ fn schedule_monitor_check_for_updates_test() {
   // First check should return false (no changes since initialization)
   let result = monitor.check_for_updates();
   assert!(result.is_ok());
-  assert_eq!(result.unwrap(), false);
+  assert!(!result.unwrap());
 
   // Modify the file
   std::thread::sleep(std::time::Duration::from_millis(10)); // Ensure different timestamp
@@ -769,7 +769,7 @@ fn schedule_monitor_check_for_updates_test() {
   // Second check should detect changes
   let result = monitor.check_for_updates();
   assert!(result.is_ok());
-  assert_eq!(result.unwrap(), true);
+  assert!(result.unwrap());
 }
 
 #[cfg(test)]
