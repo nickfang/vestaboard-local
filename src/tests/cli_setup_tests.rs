@@ -46,6 +46,7 @@ fn test_command_variants() {
         ScheduleArgs::Clear => {},
         ScheduleArgs::Preview => {},
       },
+      Command::Cycle { .. } => {},
       Command::Daemon => {},
     }
   }
