@@ -119,6 +119,49 @@ vbl schedule preview
 - **Logging**: File (`log::`), console (`println!`), Vestaboard (`display_message`)
 - **Errors**: Use `error_to_display_message()` for consistency
 
+### Testing Organization
+Tests are organized in separate files within a `tests/` folder at the same level as the source files:
+
+```
+src/
+├── config.rs
+├── daemon.rs
+├── scheduler.rs
+├── tests/
+│   ├── mod.rs           # Test module declarations
+│   ├── config_tests.rs  # Tests for config.rs
+│   ├── daemon_tests.rs  # Tests for daemon.rs
+│   └── scheduler_tests.rs
+└── widgets/
+    ├── resolver.rs
+    ├── widget_utils.rs
+    └── tests/
+        ├── mod.rs
+        ├── resolver_tests.rs
+        └── widget_utils_tests.rs
+```
+
+**Benefits of this approach:**
+- Keeps source files focused on implementation
+- Allows for better organization of large test suites
+- Clear separation between production and test code
+- Enables test-specific helper functions and imports
+
+**Test file structure:**
+```rust
+#[cfg(test)]
+mod tests {
+  use crate::module_name::{function_to_test, StructToTest};
+
+  #[test]
+  fn test_function_behavior() {
+    // Test implementation
+  }
+}
+```
+
+**Note:** For small modules or utility functions, inline tests with `#[cfg(test)]` at the bottom of the source file are also acceptable and follow standard Rust conventions.
+
 ## Common Mistakes
 
 ❌ **Don't**:
@@ -141,9 +184,11 @@ vbl schedule preview
 - [ ] Dry-run works across all execution modes
 - [ ] 3-tier logging implemented (file/console/Vestaboard)
 - [ ] Code formatted (`cargo fmt`)
+- [ ] Tests organized in `tests/` folder with corresponding `*_tests.rs` files
 - [ ] Tests pass (normal + dry-run modes)
 
 ## References
 - [Widget Execution Refactoring](./20250719-widget-execution-refactoring.md)
+- [ProcessController Usage Guide](./20250721-process-controller-usage.md) - Signal handling and graceful shutdown patterns
 - `src/widgets/resolver.rs` - Central execution logic
 - `src/logging.rs` - Logging patterns

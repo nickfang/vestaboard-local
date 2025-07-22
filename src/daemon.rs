@@ -1,20 +1,17 @@
-use crate::api_broker::{display_message, validate_message_content};
+use crate::api_broker::{display_message, handle_message, validate_message_content, MessageDestination};
 use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
+use crate::process_control::ProcessController;
 use crate::scheduler::{load_schedule, Schedule, ScheduledTask};
 use crate::widgets::resolver::execute_widget;
 
 use chrono::Utc;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
-static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
-#[allow(dead_code)] // Not dead code, but the compiler doesn't know that.
 const CHECK_INTERVAL_SECONDS: u64 = 3;
 
 pub fn get_file_mod_time(path: &PathBuf) -> Result<SystemTime, VestaboardError> {
@@ -38,24 +35,13 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
   // Execute the widget to get the raw message. Dry-run is handled in the scheduler.
   let message = execute_widget(&task.widget, &task.input).await?;
 
-  // Validate the message content at the application layer
-  if let Err(validation_error) = validate_message_content(&message) {
-    log::error!(
-      "Message validation failed for scheduled task '{}': {}",
-      task.widget,
-      validation_error
-    );
-    return Err(validation_error);
+  match handle_message(message.clone(), MessageDestination::Vestaboard).await {
+    Ok(_) => {},
+    Err(e) => {
+      log::error!("Failed to send message to Vestaboard: {}", e);
+      eprintln!("Error sending message to Vestaboard: {}", e);
+    },
   }
-
-  log::debug!(
-    "Scheduled task '{}' validation successful, message length: {} lines",
-    task.widget,
-    message.len()
-  );
-
-  log::info!("Sending message to Vestaboard for task {}", task.id);
-  display_message(message).await;
   log::info!("Task {} completed successfully", task.id);
   Ok(())
 }
@@ -64,15 +50,13 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
 pub async fn run_daemon() -> Result<(), VestaboardError> {
   log::info!("Starting Vestaboard daemon");
   println!("Starting daemon...");
-  println!("Press Ctrl+C to stop the daemon.");
 
-  // handle ctrl+c
-  ctrlc::set_handler(move || {
-    log::info!("Ctrl+C received, initiating shutdown");
-    println!("\nCtrl+C received, shutting down...");
-    SHUTDOWN_FLAG.store(true, Ordering::SeqCst);
-  })
-  .expect("Error setting Ctrl-C handler");
+  // Create and setup process controller for graceful shutdown
+  let process_controller = ProcessController::new();
+  process_controller.setup_signal_handler().map_err(|e| {
+    eprintln!("Error setting up signal handler: {:?}", e);
+    e
+  })?;
 
   let config = Config::load().map_err(|e| {
     eprintln!("Error loading config: {:?}", e);
@@ -115,8 +99,8 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
   println!("Daemon started. Monitoring schedule...");
 
   loop {
-    if SHUTDOWN_FLAG.load(Ordering::SeqCst) {
-      log::info!("Shutdown flag detected, stopping daemon");
+    if process_controller.should_shutdown() {
+      log::info!("Shutdown request detected, stopping daemon");
       println!("Daemon shutting down...");
       break;
     }

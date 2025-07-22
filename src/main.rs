@@ -7,6 +7,7 @@ mod daemon;
 mod datetime;
 mod errors;
 mod logging;
+mod process_control;
 mod scheduler;
 mod widgets;
 
