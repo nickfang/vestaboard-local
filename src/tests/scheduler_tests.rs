@@ -5,7 +5,7 @@ use crate::config::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::errors::VestaboardError;
 use crate::scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, load_schedule, remove_task_from_schedule,
-  save_schedule, Schedule, ScheduledTask, CUSTOM_ALPHABET, ID_LENGTH,
+  save_schedule, Schedule, ScheduledTask, ScheduleMonitor, CUSTOM_ALPHABET, ID_LENGTH,
 };
 use crate::widgets::text::get_text;
 use chrono::{DateTime, TimeZone, Utc};
@@ -680,4 +680,153 @@ async fn test_print_schedule() {
       },
     }
   }
+}
+
+// ScheduleMonitor Tests
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_new_test() {
+  let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path();
+
+  let monitor = ScheduleMonitor::new(path);
+  assert_eq!(monitor.get_schedule_file_path(), path);
+  assert_eq!(monitor.get_current_schedule().tasks.len(), 0);
+}
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_initialize_with_existing_file_test() {
+  let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path().to_path_buf();
+
+  // Create a schedule file with one task
+  let task_time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+  let schedule = Schedule {
+    tasks: vec![ScheduledTask {
+      id: "test1".to_string(),
+      time: task_time,
+      widget: "text".to_string(),
+      input: json!("test message"),
+    }],
+  };
+  
+  // Write the schedule to the temp file
+  write!(temp_file, "{}", serde_json::to_string_pretty(&schedule).unwrap()).unwrap();
+  temp_file.flush().unwrap();
+
+  // Initialize the monitor
+  let mut monitor = ScheduleMonitor::new(&path);
+  let result = monitor.initialize();
+  
+  assert!(result.is_ok());
+  assert_eq!(monitor.get_current_schedule().tasks.len(), 1);
+  assert_eq!(monitor.get_current_schedule().tasks[0].id, "test1");
+}
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_initialize_with_nonexistent_file_test() {
+  let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path().to_path_buf();
+  
+  // Delete the temp file to test non-existent file behavior
+  drop(temp_file);
+
+  let mut monitor = ScheduleMonitor::new(&path);
+  let result = monitor.initialize();
+  
+  // Should succeed and create an empty schedule
+  assert!(result.is_ok());
+  assert_eq!(monitor.get_current_schedule().tasks.len(), 0);
+}
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_check_for_updates_test() {
+  let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path().to_path_buf();
+
+  // Create initial schedule
+  let schedule = Schedule::default();
+  write!(temp_file, "{}", serde_json::to_string_pretty(&schedule).unwrap()).unwrap();
+  temp_file.flush().unwrap();
+
+  let mut monitor = ScheduleMonitor::new(&path);
+  monitor.initialize().expect("Failed to initialize monitor");
+
+  // First check should return false (no changes since initialization)
+  let result = monitor.check_for_updates();
+  assert!(result.is_ok());
+  assert_eq!(result.unwrap(), false);
+
+  // Modify the file
+  std::thread::sleep(std::time::Duration::from_millis(10)); // Ensure different timestamp
+  write!(temp_file, "{}", serde_json::to_string_pretty(&schedule).unwrap()).unwrap();
+  temp_file.flush().unwrap();
+
+  // Second check should detect changes
+  let result = monitor.check_for_updates();
+  assert!(result.is_ok());
+  assert_eq!(result.unwrap(), true);
+}
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_reload_if_modified_test() {
+  let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path().to_path_buf();
+
+  // Create initial empty schedule
+  let schedule = Schedule::default();
+  write!(temp_file, "{}", serde_json::to_string_pretty(&schedule).unwrap()).unwrap();
+  temp_file.flush().unwrap();
+
+  let mut monitor = ScheduleMonitor::new(&path);
+  monitor.initialize().expect("Failed to initialize monitor");
+  
+  assert_eq!(monitor.get_current_schedule().tasks.len(), 0);
+
+  // Update the file with a new task
+  std::thread::sleep(std::time::Duration::from_millis(10)); // Ensure different timestamp
+  let task_time = Utc.with_ymd_and_hms(2025, 5, 4, 18, 30, 0).unwrap();
+  let new_schedule = Schedule {
+    tasks: vec![ScheduledTask {
+      id: "new1".to_string(),
+      time: task_time,
+      widget: "text".to_string(),
+      input: json!("new message"),
+    }],
+  };
+  
+  temp_file.seek(std::io::SeekFrom::Start(0)).unwrap();
+  temp_file.as_file_mut().set_len(0).unwrap();
+  write!(temp_file, "{}", serde_json::to_string_pretty(&new_schedule).unwrap()).unwrap();
+  temp_file.flush().unwrap();
+
+  // Check if modified and reload
+  let result = monitor.reload_if_modified();
+  assert!(result.is_ok());
+  assert_eq!(result.unwrap(), true); // Should indicate file was modified
+
+  // Verify the new schedule was loaded
+  assert_eq!(monitor.get_current_schedule().tasks.len(), 1);
+  assert_eq!(monitor.get_current_schedule().tasks[0].id, "new1");
+}
+
+#[cfg(test)]
+#[test]
+fn schedule_monitor_handles_file_not_found_test() {
+  let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+  let path = temp_file.path().to_path_buf();
+  
+  // Delete the file
+  drop(temp_file);
+
+  let mut monitor = ScheduleMonitor::new(&path);
+  
+  // check_for_updates should handle missing file gracefully
+  let result = monitor.check_for_updates();
+  assert!(result.is_ok());
 }
