@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{ Args, Parser, Subcommand };
 use std::path::PathBuf;
 
 #[derive(Args, Debug)]
@@ -14,10 +14,8 @@ pub struct FileArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum WidgetCommand {
-  #[command(name = "text", about = "Display a text message")]
-  Text(TextArgs),
-  #[command(name = "file", about = "Display a message from a file")]
-  File(FileArgs),
+  #[command(name = "text", about = "Display a text message")] Text(TextArgs),
+  #[command(name = "file", about = "Display a message from a file")] File(FileArgs),
   #[command(name = "weather", about = "Display the weather")]
   Weather,
   #[command(name = "jokes", about = "Display a random joke")]
@@ -38,16 +36,25 @@ pub struct ShowArgs {
 
 #[derive(Args, Debug)]
 pub struct CycleArgs {
-  #[arg(short = 'i', long = "interval", default_value = "60", help = "Delay in seconds between messages")]
+  #[arg(
+    short = 'i',
+    long = "interval",
+    default_value = "60",
+    help = "Delay in seconds between messages"
+  )]
   pub interval: u64,
   #[arg(
     short = 'w',
     long = "delay",
     default_value = "0",
-    help = "Delay in seconds before showing first message"
+    help = "Delay in seconds before sending the first message"
   )]
   pub delay: u64,
-  #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without updating Vestaboard")]
+  #[arg(
+    short = 'd',
+    long = "dry-run",
+    help = "Preview mode - show messages without updating Vestaboard"
+  )]
   pub dry_run: bool,
 }
 
@@ -57,8 +64,7 @@ pub enum CycleCommand {
     name = "repeat",
     about = "Continuously repeat the cycle until stopped (Ctrl-C)",
     after_help = "Examples:\n  vbl cycle repeat\n  vbl cycle repeat --interval 300\n  vbl cycle repeat --delay 30 --dry-run"
-  )]
-  Repeat {
+  )] Repeat {
     #[command(flatten)]
     args: CycleArgs,
   },
@@ -73,8 +79,7 @@ pub enum ScheduleArgs {
     about = "Add a new scheduled message.  Message must be in lowercase letters.",
     arg_required_else_help = true,
     after_help = "Example:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Don\\'t panic!\"\n  vbl schedule add \"2025-05-01 20:00:30\" weather"
-  )]
-  Add {
+  )] Add {
     #[clap(help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.", required = true)]
     time: String,
     #[clap(help = "The widget to use (text, file, weather, sat-word).", required = true)]
@@ -82,8 +87,10 @@ pub enum ScheduleArgs {
     #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
     input: Vec<String>,
   },
-  #[command(name = "remove", about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's")]
-  Remove {
+  #[command(
+    name = "remove",
+    about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's"
+  )] Remove {
     #[clap(help = "The ID of the scheduled task", required = true)]
     id: String,
   },
@@ -98,13 +105,11 @@ pub enum Command {
   #[command(
     about = "Show a message on the Vestaboard",
     after_help = "Examples:\n  vbl show text \"Hello World\"\n  vbl show --dry-run weather\n  vbl show file message.txt"
-  )]
-  Show(ShowArgs),
+  )] Show(ShowArgs),
   #[command(
     about = "Manage scheduled messages",
     after_help = "Examples:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Good morning!\"\n  vbl schedule list\n  vbl schedule preview"
-  )]
-  Schedule {
+  )] Schedule {
     #[command(subcommand)]
     action: ScheduleArgs,
   },
@@ -112,8 +117,7 @@ pub enum Command {
     about = "Cycle through scheduled tasks at set intervals",
     long_about = "Execute all tasks from the schedule.json file in order. The datetime constraints are ignored - tasks are executed based only on the specified interval. Use 'cycle repeat' for continuous cycling, or 'cycle' alone to run once.",
     after_help = "Examples:\n  vbl cycle                                    # Default: 60 second intervals, run once\n  vbl cycle --delay 30                        # Wait 30 seconds before starting\n  vbl cycle --interval 300                     # 5 minute intervals, run once\n  vbl cycle repeat                             # Continuous cycling\n  vbl cycle repeat --dry-run                   # Preview continuous mode\n\nNote: Uses tasks from schedule.json, ignoring their scheduled times."
-  )]
-  Cycle {
+  )] Cycle {
     #[command(subcommand)]
     command: Option<CycleCommand>,
     #[command(flatten)]
@@ -125,11 +129,11 @@ pub enum Command {
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "Vestaboard CLI",
-    author = "Nicholas Fang",
-    version = "1.0",
-    about = "CLI for updating a local Vestaboard",
-    long_about = None
+  name = "Vestaboard CLI",
+  author = "Nicholas Fang",
+  version = "1.0",
+  about = "CLI for updating a local Vestaboard",
+  long_about = None
 )]
 pub struct Cli {
   #[clap(subcommand)]

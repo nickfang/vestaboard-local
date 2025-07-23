@@ -3,6 +3,7 @@ mod api_broker;
 mod cli_display;
 mod cli_setup;
 mod config;
+mod cycle;
 mod daemon;
 mod datetime;
 mod errors;
@@ -11,13 +12,21 @@ mod process_control;
 mod scheduler;
 mod widgets;
 
-use api_broker::{handle_message, MessageDestination};
-use cli_display::{init_output_control, print_error, print_progress, print_success};
-use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
+use api_broker::{ handle_message, MessageDestination };
+use cli_display::{ init_output_control, print_error, print_progress, print_success };
+use cli_setup::{ Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand };
+use cycle::run_schedule_cycle;
+use std::process;
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
-use scheduler::{add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule};
+use scheduler::{
+  add_task_to_schedule,
+  clear_schedule,
+  list_schedule,
+  preview_schedule,
+  remove_task_from_schedule,
+};
 use std::process;
 use widgets::resolver::execute_widget;
 use widgets::widget_utils::error_to_display_message;
@@ -25,7 +34,10 @@ use widgets::widget_utils::error_to_display_message;
 use clap::Parser;
 use serde_json::json;
 
-async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -> Result<(), VestaboardError> {
+async fn process_widget_command(
+  widget_command: &WidgetCommand,
+  dry_run: bool
+) -> Result<(), VestaboardError> {
   let (widget_name, input_value) = match widget_command {
     WidgetCommand::Text(args) => ("text", json!(&args.message)),
     WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
@@ -53,7 +65,7 @@ async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -
       log::error!("Failed to handle message: {}", e);
       print_error(&e.to_user_message());
       Err(e)
-    },
+    }
   }
 }
 
@@ -82,14 +94,19 @@ async fn main() {
           log::error!("Failed to process widget command: {}", e);
           print_error(&e.to_user_message());
           1
-        },
+        }
       }
-    },
+    }
     Command::Schedule { action } => {
       log::info!("Processing schedule command");
       match action {
         ScheduleArgs::Add { time, widget, input } => {
-          log::info!("Adding scheduled task - time: {}, widget: {}, input: {:?}", time, widget, input);
+          log::info!(
+            "Adding scheduled task - time: {}, widget: {}, input: {:?}",
+            time,
+            widget,
+            input
+          );
           let datetime_utc = match datetime_to_utc(&time) {
             Ok(dt) => {
               log::debug!("Parsed datetime: {}", dt);
@@ -97,12 +114,12 @@ async fn main() {
               let formatted_time = local_time.format("%Y-%m-%d %I:%M %p").to_string();
               print_progress(&format!("Scheduling task for {}...", formatted_time));
               dt
-            },
+            }
             Err(e) => {
               log::error!("Invalid datetime format '{}': {}", time, e);
               print_error(&format!("Invalid datetime format: {}", e));
               process::exit(1);
-            },
+            }
           };
 
           // Convert the schedule widget args to a WidgetCommand for validation
@@ -120,7 +137,7 @@ async fn main() {
                 print_error("Input is required for text widgets.");
                 process::exit(1);
               }
-            },
+            }
             "file" => {
               if !input.is_empty() {
                 WidgetCommand::File(cli_setup::FileArgs {
@@ -130,11 +147,11 @@ async fn main() {
                 print_error("Input is required for file widgets.");
                 process::exit(1);
               }
-            },
+            }
             _ => {
               print_error(&format!("Unsupported widget type: {}", widget));
               process::exit(1);
-            },
+            }
           };
 
           // Validate the widget can produce a valid message (dry-run mode - don't send to Vestaboard)
@@ -153,15 +170,15 @@ async fn main() {
           match widget_lower.as_str() {
             "weather" | "sat-word" | "jokes" | "clear" => {
               input_json = json!(null);
-            },
+            }
             "text" | "file" => {
               input_json = serde_json::to_value(input.join(" ")).unwrap();
-            },
+            }
             _ => {
               log::error!("Unsupported widget type: {}", widget_lower);
               print_error(&format!("Unsupported widget type: {}", widget_lower));
               process::exit(1);
-            },
+            }
           }
 
           match add_task_to_schedule(datetime_utc, widget_lower, input_json) {
@@ -169,14 +186,14 @@ async fn main() {
               log::info!("Successfully added task {} to schedule", task_id);
               print_success(&format!("Task scheduled (ID: {})", task_id));
               0
-            },
+            }
             Err(e) => {
               log::error!("Failed to add task to schedule: {}", e);
               print_error(&e.to_user_message());
               1
-            },
+            }
           }
-        },
+        }
         ScheduleArgs::Remove { id } => {
           log::info!("Removing scheduled task: {}", id);
           match remove_task_from_schedule(&id) {
@@ -185,44 +202,44 @@ async fn main() {
               log::error!("Failed to remove task: {}", e);
               print_error(&e.to_user_message());
               1
-            },
+            }
           }
-        },
+        }
         ScheduleArgs::List => {
           log::info!("Listing scheduled tasks");
           match list_schedule() {
             Ok(_) => {
               log::debug!("Listed tasks successfully");
               0
-            },
+            }
             Err(e) => {
               log::error!("Failed to list tasks: {}", e);
               print_error(&e.to_user_message());
               1
-            },
+            }
           }
-        },
+        }
         ScheduleArgs::Clear => {
           log::info!("Clearing all scheduled tasks");
           match clear_schedule() {
             Ok(_) => {
               log::info!("Successfully cleared schedule");
               0
-            },
+            }
             Err(e) => {
               log::error!("Failed to clear schedule: {}", e);
               print_error(&e.to_user_message());
               1
-            },
+            }
           }
-        },
+        }
         ScheduleArgs::Preview => {
           log::info!("Running schedule preview");
           preview_schedule().await;
           0
-        },
+        }
       }
-    },
+    }
     Command::Cycle { command, args } => {
       // Use repeat args if available, otherwise use main cycle args
       let (is_repeat, cycle_args) = match command {
@@ -232,18 +249,30 @@ async fn main() {
 
       log::info!(
         "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
-        if is_repeat { "continuous" } else { "single" },
+        if is_repeat {
+          "continuous"
+        } else {
+          "single"
+        },
         cycle_args.interval,
         cycle_args.delay,
         cycle_args.dry_run
       );
 
       if cycle_args.dry_run {
-        println!("Running {} cycle in preview mode...", if is_repeat { "continuous" } else { "single" });
+        println!("Running {} cycle in preview mode...", if is_repeat {
+          "continuous"
+        } else {
+          "single"
+        });
       } else {
         println!(
           "Starting {} cycle with {} second intervals...",
-          if is_repeat { "continuous" } else { "single" },
+          if is_repeat {
+            "continuous"
+          } else {
+            "single"
+          },
           cycle_args.interval
         );
       }
@@ -259,33 +288,43 @@ async fn main() {
         tokio::time::sleep(tokio::time::Duration::from_secs(cycle_args.delay)).await;
       }
 
-      // TODO: Implement cycle functionality
-      log::warn!("{} cycle functionality not yet implemented", if is_repeat { "Continuous" } else { "Single" });
-      println!("{} cycle functionality is not yet implemented.", if is_repeat { "Continuous" } else { "Single" });
-      println!("This command will read from schedule.json and execute tasks in order:");
-      println!("  - Ignoring scheduled datetime constraints");
-      println!("  - Using {} second intervals between tasks", cycle_args.interval);
-      if is_repeat {
-        println!("  - Continuously repeating the cycle until Ctrl-C");
-      } else {
-        println!("  - Running through the schedule once");
+      // Execute cycle functionality
+      match
+        run_schedule_cycle(
+          cycle_args.interval,
+          cycle_args.dry_run,
+          is_repeat,
+          true // Enable schedule monitoring for file changes
+        ).await
+      {
+        Ok(_) => {
+          log::info!("{} cycle completed successfully", if is_repeat {
+            "Continuous"
+          } else {
+            "Single"
+          });
+        }
+        Err(e) => {
+          log::error!("{} cycle failed: {}", if is_repeat { "Continuous" } else { "Single" }, e);
+          eprintln!("Cycle error: {}", e);
+        }
       }
       0 // Return success for now (not implemented yet)
-    },
+    }
     Command::Daemon => {
       log::info!("Starting daemon mode");
       match run_daemon().await {
         Ok(_) => {
           log::info!("Daemon completed successfully");
           0
-        },
+        }
         Err(e) => {
           log::error!("Daemon failed: {}", e);
           print_error(&e.to_user_message());
           1
-        },
+        }
       }
-    },
+    }
   };
 
   process::exit(exit_code);
