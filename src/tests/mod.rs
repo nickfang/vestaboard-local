@@ -4,6 +4,7 @@ mod api_tests;
 mod cli_display_tests;
 mod cli_setup_tests;
 mod config_tests;
+mod cycle_tests;
 mod daemon_tests;
 mod error_tests;
 mod logging_tests;
