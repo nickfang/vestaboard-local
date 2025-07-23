@@ -5,6 +5,7 @@ mod cli_display_tests;
 mod cli_output_integration_tests;
 mod cli_setup_tests;
 mod config_tests;
+mod cycle_tests;
 mod daemon_tests;
 mod error_tests;
 mod logging_tests;
