@@ -3,6 +3,7 @@ mod api_broker;
 mod cli_display;
 mod cli_setup;
 mod config;
+mod cycle;
 mod daemon;
 mod datetime;
 mod errors;
@@ -13,6 +14,7 @@ mod widgets;
 
 use api_broker::{handle_message, MessageDestination};
 use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
+use cycle::run_schedule_cycle;
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
@@ -242,7 +244,7 @@ async fn main() {
         Some(CycleCommand::Repeat { args: repeat_args }) => (true, repeat_args),
         None => (false, args),
       };
-      
+
       log::info!(
         "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
         if is_repeat { "continuous" } else { "single" },
@@ -275,22 +277,22 @@ async fn main() {
         tokio::time::sleep(tokio::time::Duration::from_secs(cycle_args.delay)).await;
       }
 
-      // TODO: Implement cycle functionality
-      log::warn!(
-        "{} cycle functionality not yet implemented",
-        if is_repeat { "Continuous" } else { "Single" }
-      );
-      println!(
-        "{} cycle functionality is not yet implemented.",
-        if is_repeat { "Continuous" } else { "Single" }
-      );
-      println!("This command will read from schedule.json and execute tasks in order:");
-      println!("  - Ignoring scheduled datetime constraints");
-      println!("  - Using {} second intervals between tasks", cycle_args.interval);
-      if is_repeat {
-        println!("  - Continuously repeating the cycle until Ctrl-C");
-      } else {
-        println!("  - Running through the schedule once");
+      // Execute cycle functionality
+      match run_schedule_cycle(
+        cycle_args.interval,
+        cycle_args.dry_run,
+        is_repeat,
+        true, // Enable schedule monitoring for file changes
+      )
+      .await
+      {
+        Ok(_) => {
+          log::info!("{} cycle completed successfully", if is_repeat { "Continuous" } else { "Single" });
+        }
+        Err(e) => {
+          log::error!("{} cycle failed: {}", if is_repeat { "Continuous" } else { "Single" }, e);
+          eprintln!("Cycle error: {}", e);
+        }
       }
     },
     Command::Daemon => {
