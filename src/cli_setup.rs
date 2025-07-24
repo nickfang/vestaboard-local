@@ -49,20 +49,20 @@ pub struct CycleArgs {
     short = 'i',
     long = "interval",
     default_value = "60",
-    help = "Delay in seconds between messages"
+    help = "Delay in seconds before sending the next message"
   )]
   pub interval: u64,
   #[arg(
     short = 'w',
     long = "delay",
     default_value = "0",
-    help = "Delay in seconds before showing first message"
+    help = "Delay in seconds before sending the first message"
   )]
   pub delay: u64,
   #[arg(
     short = 'd',
     long = "dry-run",
-    help = "Preview mode - show messages without updating Vestaboard"
+    help = "Preview mode - show messages without sending to Vestaboard"
   )]
   pub dry_run: bool,
 }
