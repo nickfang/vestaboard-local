@@ -345,18 +345,16 @@ pub async fn execute_single_task(task: &ScheduledTask, dry_run: bool) -> Result<
   log::debug!("Executing widget '{}' with input: {:?}", task.widget, task.input);
 
   // Execute widget (with error handling for dry-run mode)
-  let message = if dry_run {
-    // In dry-run mode, convert errors to display messages
-    match execute_widget(&task.widget, &task.input).await {
-      Ok(message) => message,
-      Err(e) => {
+  let message = match execute_widget(&task.widget, &task.input).await {
+    Ok(message) => message,
+    Err(e) => {
+      if dry_run {
         log::debug!("Widget '{}' failed in dry-run, converting to display message: {}", task.widget, e);
         error_to_display_message(&e)
+      } else {
+        return Err(e);
       }
     }
-  } else {
-    // In normal mode, propagate errors
-    execute_widget(&task.widget, &task.input).await?
   };
 
   // Determine destination and title
