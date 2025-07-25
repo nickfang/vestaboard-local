@@ -20,6 +20,7 @@ pub struct Config {
   pub console_log_level: Option<String>,
   pub schedule_file_path: Option<String>,
   pub schedule_backup_path: Option<String>,
+  pub check_interval_seconds: Option<u64>,
 }
 
 impl Default for Config {
@@ -30,6 +31,7 @@ impl Default for Config {
       console_log_level: Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()),
       schedule_file_path: Some(DEFAULT_SCHEDULE_FILE_PATH.to_string()),
       schedule_backup_path: Some(DEFAULT_SCHEDULE_BACKUP_PATH.to_string()),
+      check_interval_seconds: Some(3),
     }
   }
 }
@@ -146,5 +148,9 @@ impl Config {
         .as_deref()
         .unwrap_or(DEFAULT_SCHEDULE_BACKUP_PATH),
     )
+  }
+
+  pub fn get_check_interval_seconds(&self) -> u64 {
+    self.check_interval_seconds.unwrap_or(3)
   }
 }

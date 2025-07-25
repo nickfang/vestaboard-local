@@ -11,8 +11,6 @@ use chrono::Utc;
 use std::thread;
 use std::time::Duration;
 
-const CHECK_INTERVAL_SECONDS: u64 = 3;
-
 pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
   log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
   log::debug!("Task details: {:?}", task);
@@ -53,10 +51,11 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
   })?;
 
   let schedule_path = config.get_schedule_file_path();
-  let check_interval = Duration::from_secs(CHECK_INTERVAL_SECONDS);
+  let check_interval_seconds = config.get_check_interval_seconds();
+  let check_interval = Duration::from_secs(check_interval_seconds);
 
   log::info!("Using schedule file: {}", schedule_path.display());
-  log::info!("Check interval: {} seconds", CHECK_INTERVAL_SECONDS);
+  log::info!("Check interval: {} seconds", check_interval_seconds);
 
   let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
 

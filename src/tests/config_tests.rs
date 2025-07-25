@@ -31,6 +31,7 @@ mod tests {
       console_log_level: Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()),
       schedule_file_path: Some("custom/schedule.json".to_string()),
       schedule_backup_path: Some("custom/backup.json".to_string()),
+      check_interval_seconds: Some(5),
     };
     assert_eq!(custom_config.get_schedule_file_path(), PathBuf::from("custom/schedule.json"));
     assert_eq!(custom_config.get_schedule_backup_path(), PathBuf::from("custom/backup.json"));
@@ -42,6 +43,7 @@ mod tests {
       console_log_level: Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()),
       schedule_file_path: None,
       schedule_backup_path: None,
+      check_interval_seconds: None,
     };
     assert_eq!(minimal_config.get_schedule_file_path(), PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH));
     assert_eq!(minimal_config.get_schedule_backup_path(), PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH));

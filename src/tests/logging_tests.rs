@@ -70,6 +70,7 @@ console_log_level = "info""#,
       console_log_level: Some("warn".to_string()),
       schedule_file_path: Some("custom/schedule.json".to_string()),
       schedule_backup_path: Some("custom/backup.json".to_string()),
+      check_interval_seconds: Some(5),
     };
 
     assert_eq!(config.get_log_level(), log::LevelFilter::Debug);
