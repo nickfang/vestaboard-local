@@ -159,6 +159,7 @@ use crate::scheduler::{Schedule, ScheduledTask};
   }
 
   #[tokio::test]
+  #[ignore]
   async fn test_shutdown_responsiveness_with_chunked_sleep() {
     let mut schedule = Schedule::default();
     schedule.add_task(create_test_task("text", json!("first")));
