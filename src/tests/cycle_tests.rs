@@ -106,6 +106,8 @@ use crate::scheduler::{Schedule, ScheduledTask};
   }
 
   #[tokio::test]
+  #[ignore]
+  // This is ignored because it actually sends to the vestaboard.  Need to figure out how to mock the api calls.
   async fn test_execute_schedule_tasks_with_delay_normal_mode() {
     let mut schedule = Schedule::default();
     schedule.add_task(create_test_task("text", json!("first")));
@@ -150,7 +152,7 @@ use crate::scheduler::{Schedule, ScheduledTask};
     // Request shutdown before starting
     process_controller.request_shutdown();
 
-    let result = execute_schedule_tasks(&schedule, 5, false, &process_controller).await;
+    let result = execute_schedule_tasks(&schedule, 5, true, &process_controller).await;
 
     assert!(result.is_ok(), "Should handle shutdown gracefully");
     assert_eq!(result.unwrap(), 0, "Should execute 0 tasks when shutdown is already requested");
