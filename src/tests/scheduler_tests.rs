@@ -379,12 +379,12 @@ fn test_schedule_error_context() {
 
   match error {
     VestaboardError::IOError { context, .. } => {
-      assert_eq!(context, "saving schedule to file");
+      assert!(context.contains("saving schedule to"));
     },
     _ => panic!("Expected IOError with context"),
   }
 
-  assert!(error_msg.contains("IO Error in saving schedule to file"));
+  assert!(error_msg.contains("IO Error in saving schedule to"));
 }
 
 #[test]

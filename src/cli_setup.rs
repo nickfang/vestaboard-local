@@ -32,13 +32,13 @@ pub enum WidgetCommand {
 }
 
 #[derive(Args, Debug)]
-pub struct SendArgs {
+pub struct ShowArgs {
   #[command(subcommand)]
   pub widget_command: WidgetCommand,
   #[arg(
     short = 'd',
     long = "dry-run",
-    help = "Show message content without updating Vestaboard"
+    help = "Preview message without updating Vestaboard"
   )]
   pub dry_run: bool,
 }
@@ -124,10 +124,10 @@ pub enum ScheduleArgs {
 #[derive(Subcommand, Debug)]
 pub enum Command {
   #[command(
-    about = "Send a single message to the Vestaboard",
-    after_help = "Examples:\n  vbl send text \"Hello World\"\n  vbl send --dry-run weather\n  vbl send file message.txt"
+    about = "Show a message on the Vestaboard",
+    after_help = "Examples:\n  vbl show text \"Hello World\"\n  vbl show --dry-run weather\n  vbl show file message.txt"
   )]
-  Send(SendArgs),
+  Show(ShowArgs),
   #[command(
     about = "Manage scheduled messages",
     after_help = "Examples:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Good morning!\"\n  vbl schedule list\n  vbl schedule preview"
@@ -162,4 +162,20 @@ pub enum Command {
 pub struct Cli {
   #[clap(subcommand)]
   pub command: Command,
+
+  #[arg(
+    short = 'q',
+    long = "quiet",
+    global = true,
+    help = "Suppress all non-error output"
+  )]
+  pub quiet: bool,
+
+  #[arg(
+    short = 'v',
+    long = "verbose",
+    global = true,
+    help = "Show detailed progress information"
+  )]
+  pub verbose: bool,
 }

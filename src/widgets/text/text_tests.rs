@@ -62,7 +62,7 @@ mod tests {
     let error = result.unwrap_err();
     match error {
       VestaboardError::IOError { context, .. } => {
-        assert!(context.contains("reading text file"));
+        assert!(context.contains("reading file"));
         assert!(context.contains("/this/file/does/not/exist.txt"));
       },
       _ => panic!("Expected IOError"),

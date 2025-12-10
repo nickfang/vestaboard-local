@@ -31,11 +31,11 @@ pub fn get_text_from_file(file: PathBuf) -> Result<Vec<String>, VestaboardError>
     },
     Err(e) => {
       log::error!("Failed to read file {}: {}", file.display(), e);
-      eprintln!("Error reading file: {:?}", e);
-      Err(VestaboardError::io_error(
+      let error = VestaboardError::io_error(
         e,
-        &format!("reading text file {}", file.display()),
-      ))
+        &format!("reading file {}", file.display()),
+      );
+      Err(error)
     },
   }
 }

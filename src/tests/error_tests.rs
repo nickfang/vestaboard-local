@@ -234,4 +234,100 @@ mod tests {
     assert!(debug_str.contains("test"));
     assert!(debug_str.contains("message"));
   }
+
+  // Tests for to_user_message() - error message conversion
+  #[test]
+  fn test_to_user_message_io_error_not_found() {
+    let io_err = IoError::new(ErrorKind::NotFound, "file not found");
+    let vb_error = VestaboardError::io_error(io_err, "reading text file /path/to/file.txt");
+    let user_msg = vb_error.to_user_message();
+
+    // Should match pattern for file not found
+    assert!(user_msg.contains("File not found"));
+    assert!(user_msg.contains("/path/to/file.txt"));
+  }
+
+  #[test]
+  fn test_to_user_message_io_error_other() {
+    let io_err = IoError::new(ErrorKind::PermissionDenied, "permission denied");
+    let vb_error = VestaboardError::io_error(io_err, "accessing schedule file");
+    let user_msg = vb_error.to_user_message();
+
+    // Should match pattern for file access error
+    assert!(user_msg.contains("Error accessing file"));
+    assert!(user_msg.contains("schedule file"));
+  }
+
+  #[test]
+  fn test_to_user_message_json_error() {
+    let json_str = r#"{"invalid": json}"#;
+    let json_err = serde_json::from_str::<serde_json::Value>(json_str).unwrap_err();
+    let vb_error = VestaboardError::json_error(json_err, "parsing schedule JSON");
+    let user_msg = vb_error.to_user_message();
+
+    assert!(user_msg.contains("Error parsing data"));
+    assert!(user_msg.contains("parsing schedule JSON"));
+  }
+
+  #[test]
+  fn test_to_user_message_widget_error() {
+    let vb_error = VestaboardError::widget_error("weather", "API timeout");
+    let user_msg = vb_error.to_user_message();
+
+    assert!(user_msg.contains("Widget error"));
+    assert!(user_msg.contains("weather"));
+    assert!(user_msg.contains("API timeout"));
+  }
+
+  #[test]
+  fn test_to_user_message_schedule_error() {
+    let vb_error = VestaboardError::schedule_error("save_schedule", "disk full");
+    let user_msg = vb_error.to_user_message();
+
+    assert!(user_msg.contains("Schedule error"));
+    assert!(user_msg.contains("save_schedule"));
+    assert!(user_msg.contains("disk full"));
+  }
+
+  #[test]
+  fn test_to_user_message_api_error_with_code() {
+    let vb_error = VestaboardError::api_error(Some(404), "Not found");
+    let user_msg = vb_error.to_user_message();
+
+    assert!(user_msg.contains("API error"));
+    assert!(user_msg.contains("404"));
+    assert!(user_msg.contains("Not found"));
+  }
+
+  #[test]
+  fn test_to_user_message_api_error_invalid_characters() {
+    let vb_error = VestaboardError::api_error(Some(400), "Invalid characters found: '~', '`'. Valid characters are: a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK).");
+    let user_msg = vb_error.to_user_message();
+
+    // Should preserve the full message for invalid characters
+    assert!(user_msg.contains("Invalid characters found"));
+    assert!(user_msg.contains("Valid characters are"));
+  }
+
+  #[test]
+  fn test_to_user_message_config_error() {
+    let vb_error = VestaboardError::config_error("WEATHER_API_KEY", "Environment variable not set");
+    let user_msg = vb_error.to_user_message();
+
+    assert!(user_msg.contains("Configuration error"));
+    assert!(user_msg.contains("WEATHER_API_KEY"));
+    assert!(user_msg.contains("Environment variable not set"));
+  }
+
+  #[test]
+  fn test_to_user_message_other_error() {
+    let vb_error = VestaboardError::other("Unexpected error occurred");
+    let user_msg = vb_error.to_user_message();
+
+    assert_eq!(user_msg, "Unexpected error occurred");
+  }
+
+  // Note: Reqwest error testing is better done in integration tests
+  // since creating reqwest::Error instances in unit tests is difficult
+  // without making actual network requests
 }

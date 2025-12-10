@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use crate::api::send_codes;
-use crate::cli_display::print_message;
+use crate::cli_display::{print_error, print_message, print_progress};
 use crate::errors::VestaboardError;
 
 #[derive(Debug)]
@@ -194,6 +194,7 @@ pub async fn handle_message(message: Vec<String>, destination: MessageDestinatio
     },
     Err(e) => {
       log::error!("Message validation failed: {}", e);
+      print_error(&e.to_user_message());
       return Err(e);
     }
   }
@@ -203,9 +204,11 @@ pub async fn handle_message(message: Vec<String>, destination: MessageDestinatio
       display_message(message).await;
     }
     MessageDestination::Console => {
+      print_progress("Displaying message preview:");
       print_message(message, "");
     }
     MessageDestination::ConsoleWithTitle(title) => {
+      print_progress("Displaying message preview:");
       print_message(message, &title);
     }
   }

@@ -5,7 +5,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 pub fn init_logging() -> Result<(), VestaboardError> {
-  let config = Config::load()?;
+  let config = Config::load_silent()?;
 
   // Ensure log directory exists
   let log_file_path = config.get_log_file_path();

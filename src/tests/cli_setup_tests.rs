@@ -1,7 +1,7 @@
 #[path = "../cli_setup.rs"]
 mod cli_setup;
 
-use cli_setup::{Command, FileArgs, ScheduleArgs, SendArgs, TextArgs, WidgetCommand};
+use cli_setup::{Command, FileArgs, ScheduleArgs, ShowArgs, TextArgs, WidgetCommand};
 
 #[cfg(test)]
 #[test]
@@ -38,7 +38,7 @@ fn test_command_variants() {
   // Ensure all Command variants exist
   fn assert_command(cmd: Command) {
     match cmd {
-      Command::Send(_) => {},
+      Command::Show(_) => {},
       Command::Schedule { action } => match action {
         ScheduleArgs::Add { .. } => {},
         ScheduleArgs::Remove { .. } => {},
@@ -52,7 +52,7 @@ fn test_command_variants() {
   }
 
   // Call the function to ensure all variants are covered
-  assert_command(Command::Send(SendArgs {
+  assert_command(Command::Show(ShowArgs {
     widget_command: WidgetCommand::Clear,
     dry_run: false,
   }));
@@ -67,15 +67,15 @@ fn test_command_variants() {
 }
 
 #[test]
-fn test_invalid_args() {
-  // Test invalid arguments for SendArgs
-  let invalid_send_args = SendArgs {
+fn test_show_args() {
+  // Test arguments for ShowArgs
+  let show_args = ShowArgs {
     widget_command: WidgetCommand::Text(TextArgs {
-      message: String::from("Invalid message"),
+      message: String::from("Test message"),
     }),
     dry_run: true,
   };
 
-  // Check if the invalid arguments are handled correctly
-  assert_eq!(invalid_send_args.dry_run, true);
+  // Check if the arguments are handled correctly
+  assert_eq!(show_args.dry_run, true);
 }
