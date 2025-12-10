@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use serde_json::Value;
 
+use crate::cli_display::{print_error, print_progress};
 use crate::errors::VestaboardError;
 use crate::widgets::{
   jokes::get_joke,
@@ -37,6 +38,20 @@ pub async fn execute_widget(
 
   log_widget_start!(widget_type, input_str);
 
+  // Print user-facing widget start message
+  match widget_type {
+    "text" => print_progress("Creating message..."),
+    "file" => {
+      let file_path = input.as_str().unwrap_or("");
+      print_progress(&format!("Reading file: {}...", file_path));
+    },
+    "weather" => print_progress("Fetching weather for Austin, TX..."),
+    "jokes" => print_progress("Getting joke..."),
+    "sat-word" => print_progress("Selecting SAT word..."),
+    "clear" => print_progress("Clearing board..."),
+    _ => {},
+  }
+
   let message_result = match widget_type {
     "text" => {
       let text_input = input.as_str().unwrap_or("");
@@ -68,6 +83,7 @@ pub async fn execute_widget(
     },
     Err(e) => {
       log_widget_error!(widget_type, e, duration);
+      print_error(&e.to_user_message());
       return Err(e);
     },
   };

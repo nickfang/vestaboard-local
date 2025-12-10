@@ -213,3 +213,73 @@ impl From<reqwest::Error> for VestaboardError {
     VestaboardError::reqwest_error(error, "unknown context")
   }
 }
+
+impl VestaboardError {
+  /// Convert error to user-friendly message string
+  pub fn to_user_message(&self) -> String {
+    match self {
+      VestaboardError::IOError { source, context } => {
+        if source.kind() == std::io::ErrorKind::NotFound {
+          if context.contains("file") {
+            // Extract file path from context if possible
+            format!("File not found: {}", context)
+          } else {
+            format!("File not found: {}", context)
+          }
+        } else {
+          format!("Error accessing file: {}", context)
+        }
+      },
+      VestaboardError::JsonError { context, .. } => {
+        format!("Error parsing data: {}", context)
+      },
+      VestaboardError::ReqwestError { source, context } => {
+        if source.is_connect() || source.is_timeout() {
+          if context.contains("weather") {
+            "Network error: Unable to reach weather service".to_string()
+          } else if context.contains("Vestaboard") || context.contains("local-api") {
+            "Network error: Unable to reach Vestaboard".to_string()
+          } else {
+            format!("Network error: Unable to connect to {}. Check your internet connection.", context)
+          }
+        } else if source.status() == Some(reqwest::StatusCode::UNAUTHORIZED) || source.status() == Some(reqwest::StatusCode::FORBIDDEN) {
+          if context.contains("weather") {
+            "Authentication error: Check WEATHER_API_KEY".to_string()
+          } else if context.contains("Vestaboard") || context.contains("local-api") {
+            "Authentication error: Check LOCAL_API_KEY".to_string()
+          } else {
+            format!("Authentication error: Check API credentials")
+          }
+        } else if source.status() == Some(reqwest::StatusCode::BAD_GATEWAY) || source.status() == Some(reqwest::StatusCode::GATEWAY_TIMEOUT) {
+          if context.contains("weather") {
+            "Weather service temporarily unavailable".to_string()
+          } else {
+            format!("Service temporarily unavailable: {}", context)
+          }
+        } else {
+          format!("Network error: {}", context)
+        }
+      },
+      VestaboardError::WidgetError { widget, message } => {
+        format!("Widget error: {} - {}", widget, message)
+      },
+      VestaboardError::ScheduleError { operation, message } => {
+        format!("Schedule error: {} - {}", operation, message)
+      },
+      VestaboardError::ApiError { code, message } => {
+        if message.contains("Invalid characters") {
+          message.clone()
+        } else {
+          match code {
+            Some(c) => format!("API error [{}]: {}", c, message),
+            None => message.clone(),
+          }
+        }
+      },
+      VestaboardError::ConfigError { field, message } => {
+        format!("Configuration error [{}]: {}", field, message)
+      },
+      VestaboardError::Other { message } => message.clone(),
+    }
+  }
+}

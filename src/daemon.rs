@@ -1,4 +1,5 @@
 use crate::api_broker::{handle_message, MessageDestination};
+use crate::cli_display::{print_error, print_progress, print_success, print_warning};
 use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
@@ -16,72 +17,72 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
   log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
   log::debug!("Task details: {:?}", task);
 
-  println!("Executing task: {:?}", task);
+  print_progress(&format!("Executing task {} ({})...", task.id, task.widget));
 
   // Execute the widget to get the raw message. Dry-run is handled in the scheduler.
   let message = execute_widget(&task.widget, &task.input).await?;
 
+  // send_codes() will print "Sending message to Vestaboard..." so we don't need to print it here
   match handle_message(message.clone(), MessageDestination::Vestaboard).await {
     Ok(_) => {},
     Err(e) => {
       log::error!("Failed to send message to Vestaboard: {}", e);
-      eprintln!("Error sending message to Vestaboard: {}", e);
+      print_error(&e.to_user_message());
     },
   }
   log::info!("Task {} completed successfully", task.id);
+  print_success(&format!("Task {} completed successfully", task.id));
   Ok(())
 }
 // Err(VestaboardError::Other("execute_task() not implemented".to_string()));
 
 pub async fn run_daemon() -> Result<(), VestaboardError> {
   log::info!("Starting Vestaboard daemon");
-  println!("Starting daemon...");
+  print_progress("Starting Vestaboard daemon...");
 
   // Create and setup process controller for graceful shutdown
   let process_controller = ProcessController::new();
   process_controller.setup_signal_handler().map_err(|e| {
-    eprintln!("Error setting up signal handler: {:?}", e);
+    print_error(&format!("Error setting up signal handler: {:?}", e));
     e
   })?;
 
-  let config = Config::load().map_err(|e| {
-    eprintln!("Error loading config: {:?}", e);
+  let config = Config::load_silent().map_err(|e| {
+    print_error(&e.to_user_message());
     e
   })?;
+
   let schedule_path = config.get_schedule_file_path();
   let check_interval = Duration::from_secs(CHECK_INTERVAL_SECONDS);
 
   log::info!("Using schedule file: {}", schedule_path.display());
   log::info!("Check interval: {} seconds", CHECK_INTERVAL_SECONDS);
 
-  // Initialize schedule monitor
   let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
 
   // Initialize the monitor (loads initial schedule)
-  if let Err(e) = schedule_monitor.initialize() {
-    log::warn!("Failed to initialize schedule monitor: {}", e);
-    eprintln!("Error loading initial schedule: {:?}.", e);
-    // Continue running even if initial schedule load fails
-  }
-
-  log::info!(
-    "Initial schedule loaded with {} tasks",
-    schedule_monitor.get_current_schedule().tasks.len()
-  );
-  println!(
-    "Initial schedule loaded with {} tasks.",
-    schedule_monitor.get_current_schedule().tasks.len()
-  );
+  let initial_task_count = match schedule_monitor.initialize() {
+    Ok(_) => {
+      let count = schedule_monitor.get_current_schedule().tasks.len();
+      log::info!("Initial schedule loaded with {} tasks", count);
+      count
+    },
+    Err(e) => {
+      log::warn!("Failed to initialize schedule monitor: {}", e);
+      print_warning(&format!("Could not load schedule: {}", e.to_user_message()));
+      0
+    }
+  };
 
   let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
   log::info!("Daemon started successfully, monitoring schedule");
-  println!("Daemon started. Monitoring schedule...");
+  print_success(&format!("Daemon started ({} tasks, checking every {}s)", initial_task_count, CHECK_INTERVAL_SECONDS));
 
   loop {
     if process_controller.should_shutdown() {
       log::info!("Shutdown request detected, stopping daemon");
-      println!("Daemon shutting down...");
+      print_progress("Shutting down daemon...");
       break;
     }
 
@@ -91,15 +92,15 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
     match schedule_monitor.reload_if_modified() {
       Ok(true) => {
         log::info!("Schedule file updated and reloaded");
-        println!("Successfully reloaded schedule.");
+        let task_count = schedule_monitor.get_current_schedule().tasks.len();
+        print_success(&format!("Schedule reloaded ({} tasks)", task_count));
       }
       Ok(false) => {
         log::trace!("No schedule file changes detected");
       }
       Err(e) => {
         log::error!("Error checking for schedule updates: {}", e);
-        eprintln!("Error getting file modification time: {:?}", e);
-        // Continue running even if file monitoring fails
+        print_warning(&e.to_user_message());
       }
     }
 
@@ -130,7 +131,7 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
         },
         Err(e) => {
           log::error!("Error executing task {}: {:?}", task.id, e);
-          eprintln!("Error executing task: {:?}", e);
+          print_error(&format!("Error executing task {}: {}", task.id, e.to_user_message()));
           // In daemon mode, we continue running even after task execution errors
           // The error should have been displayed on the Vestaboard by execute_task
         },
@@ -144,6 +145,6 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
   }
 
   log::info!("Daemon shutdown complete");
-  println!("Shutdown complete.");
+  print_success("Daemon shutdown complete");
   Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::cli_display::{print_error, print_progress, print_success};
 use crate::errors::VestaboardError;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,16 @@ impl Default for Config {
 
 impl Config {
   pub fn load() -> Result<Self, VestaboardError> {
+    Self::load_internal(true)
+  }
+
+  /// Load configuration without printing progress messages
+  /// Used for internal operations like logging initialization
+  pub fn load_silent() -> Result<Self, VestaboardError> {
+    Self::load_internal(false)
+  }
+
+  fn load_internal(show_messages: bool) -> Result<Self, VestaboardError> {
     let config_path = PathBuf::from(CONFIG_FILE_PATH);
 
     if !config_path.exists() {
@@ -42,18 +53,42 @@ impl Config {
         "Config file not found, creating default config at {}",
         config_path.display()
       );
+      if show_messages {
+        print_progress("Creating default configuration...");
+      }
       let default_config = Self::default();
       default_config.save()?;
+      if show_messages {
+        print_success("Default configuration created");
+      }
       return Ok(default_config);
     }
 
+    if show_messages {
+      print_progress("Loading configuration...");
+    }
     let config_content = fs::read_to_string(&config_path)
-      .map_err(|e| VestaboardError::io_error(e, "reading config file"))?;
+      .map_err(|e| {
+        let error = VestaboardError::io_error(e, "reading config file");
+        if show_messages {
+          print_error(&format!("Error loading configuration: {}", error.to_user_message()));
+        }
+        error
+      })?;
 
     let config: Config = toml::from_str(&config_content)
-      .map_err(|e| VestaboardError::other(&format!("Invalid config format: {}", e)))?;
+      .map_err(|e| {
+        let error = VestaboardError::other(&format!("Invalid config format: {}", e));
+        if show_messages {
+          print_error(&format!("Error loading configuration: {}", error.to_user_message()));
+        }
+        error
+      })?;
 
     log::debug!("Loaded config: {:?}", config);
+    if show_messages {
+      print_success("Configuration loaded");
+    }
     Ok(config)
   }
 

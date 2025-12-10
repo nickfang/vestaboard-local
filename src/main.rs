@@ -12,7 +12,9 @@ mod scheduler;
 mod widgets;
 
 use api_broker::{handle_message, MessageDestination};
+use cli_display::{init_output_control, print_error, print_progress, print_success};
 use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
+use std::process;
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
@@ -55,7 +57,7 @@ async fn process_widget_command(
     Ok(_) => Ok(()),
     Err(e) => {
       log::error!("Failed to handle message: {}", e);
-      eprintln!("Error handling message: {}", e);
+      print_error(&e.to_user_message());
       Err(e)
     }
   }
@@ -73,18 +75,22 @@ async fn main() {
 
   let cli = Cli::parse();
 
-  match cli.command {
-    Command::Send(send_args) => {
+  // Initialize output control (quiet, verbose, TTY detection)
+  init_output_control(cli.quiet, cli.verbose);
+
+  let exit_code = match cli.command {
+    Command::Show(show_args) => {
       log::info!(
-        "Processing send command with dry_run: {}",
-        send_args.dry_run
+        "Processing show command with dry_run: {}",
+        show_args.dry_run
       );
 
-      match process_widget_command(&send_args.widget_command, send_args.dry_run).await {
-        Ok(_) => {},
+      match process_widget_command(&show_args.widget_command, show_args.dry_run).await {
+        Ok(_) => 0,
         Err(e) => {
           log::error!("Failed to process widget command: {}", e);
-          eprintln!("Error processing widget command: {}", e);
+          print_error(&e.to_user_message());
+          1
         }
       }
     },
@@ -102,17 +108,18 @@ async fn main() {
             widget,
             input
           );
-          println!("Scheduling task...");
           let datetime_utc = match datetime_to_utc(&time) {
             Ok(dt) => {
               log::debug!("Parsed datetime: {}", dt);
+              let local_time = dt.with_timezone(&chrono::Local::now().timezone());
+              let formatted_time = local_time.format("%Y-%m-%d %I:%M %p").to_string();
+              print_progress(&format!("Scheduling task for {}...", formatted_time));
               dt
             },
             Err(e) => {
               log::error!("Invalid datetime format '{}': {}", time, e);
-              println!("datetime: {}", time);
-              eprintln!("Error invalid datetime format: {}", e);
-              return;
+              print_error(&format!("Invalid datetime format: {}", e));
+              process::exit(1);
             },
           };
 
@@ -128,8 +135,8 @@ async fn main() {
                   message: input.join(" "),
                 })
               } else {
-                eprintln!("Error: Input is required for text widgets.");
-                return;
+                print_error("Input is required for text widgets.");
+                process::exit(1);
               }
             },
             "file" => {
@@ -138,21 +145,22 @@ async fn main() {
                   name: std::path::PathBuf::from(input.join(" ")),
                 })
               } else {
-                eprintln!("Error: Input is required for file widgets.");
-                return;
+                print_error("Input is required for file widgets.");
+                process::exit(1);
               }
             },
             _ => {
-              eprintln!("Error: Unsupported widget type {}.", widget);
-              return;
+              print_error(&format!("Unsupported widget type: {}", widget));
+              process::exit(1);
             },
           };
 
-          // Validate the widget can produce a valid message
-          if let Err(e) = process_widget_command(&widget_command, false).await {
+          // Validate the widget can produce a valid message (dry-run mode - don't send to Vestaboard)
+          print_progress("Validating...");
+          if let Err(e) = process_widget_command(&widget_command, true).await {
             log::error!("Scheduled widget validation failed: {}", e);
-            eprintln!("Error validating scheduled widget: {}", e);
-            return;
+            print_error(&e.to_user_message());
+            process::exit(1);
           }
 
           log::debug!("Scheduled widget validation successful");
@@ -169,70 +177,67 @@ async fn main() {
             },
             _ => {
               log::error!("Unsupported widget type: {}", widget_lower);
-              eprintln!("Error: Unsupported widget type {}.", widget_lower);
-              return;
+              print_error(&format!("Unsupported widget type: {}", widget_lower));
+              process::exit(1);
             },
           }
 
           match add_task_to_schedule(datetime_utc, widget_lower, input_json) {
-            Ok(_) => {
-              log::info!("Successfully added task to schedule");
-              println!("Task scheduled successfully");
+            Ok(task_id) => {
+              log::info!("Successfully added task {} to schedule", task_id);
+              print_success(&format!("Task scheduled (ID: {})", task_id));
+              0
             },
             Err(e) => {
               log::error!("Failed to add task to schedule: {}", e);
-              eprintln!("Error adding task to schedule: {}", e);
+              print_error(&e.to_user_message());
+              1
             },
           }
         },
         ScheduleArgs::Remove { id } => {
           log::info!("Removing scheduled task: {}", id);
-          println!("Removing scheduled task {}...", id);
           match remove_task_from_schedule(&id) {
-            Ok(removed) => {
-              if removed {
-                log::info!("Task removed successfully");
-                println!("Task removed successfully");
-              } else {
-                log::info!("No tasks removed");
-                println!("Task not found, no tasks removed");
-              }
-            }
+            Ok(_) => 0,
             Err(e) => {
               log::error!("Failed to remove task: {}", e);
-              eprintln!("Error removing task: {}", e);
+              print_error(&e.to_user_message());
+              1
             },
           }
         },
         ScheduleArgs::List => {
           log::info!("Listing scheduled tasks");
-          println!("Listing tasks...");
           match list_schedule() {
-            Ok(_) => log::debug!("Listed tasks successfully"),
+            Ok(_) => {
+              log::debug!("Listed tasks successfully");
+              0
+            },
             Err(e) => {
               log::error!("Failed to list tasks: {}", e);
-              eprintln!("Error listing tasks: {}", e);
+              print_error(&e.to_user_message());
+              1
             },
           }
         },
         ScheduleArgs::Clear => {
           log::info!("Clearing all scheduled tasks");
-          println!("Clearing schedule...");
           match clear_schedule() {
             Ok(_) => {
               log::info!("Successfully cleared schedule");
-              println!("Schedule cleared successfully");
+              0
             },
             Err(e) => {
               log::error!("Failed to clear schedule: {}", e);
-              eprintln!("Error clearing schedule: {}", e);
+              print_error(&e.to_user_message());
+              1
             },
           }
         },
         ScheduleArgs::Preview => {
           log::info!("Running schedule preview");
-          println!("Preview...");
-          preview_schedule().await
+          preview_schedule().await;
+          0
         },
       }
     },
@@ -242,7 +247,7 @@ async fn main() {
         Some(CycleCommand::Repeat { args: repeat_args }) => (true, repeat_args),
         None => (false, args),
       };
-      
+
       log::info!(
         "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
         if is_repeat { "continuous" } else { "single" },
@@ -292,18 +297,25 @@ async fn main() {
       } else {
         println!("  - Running through the schedule once");
       }
+      0  // Return success for now (not implemented yet)
     },
     Command::Daemon => {
       log::info!("Starting daemon mode");
       match run_daemon().await {
-        Ok(_) => log::info!("Daemon completed successfully"),
+        Ok(_) => {
+          log::info!("Daemon completed successfully");
+          0
+        },
         Err(e) => {
           log::error!("Daemon failed: {}", e);
-          eprintln!("Daemon error: {}", e);
+          print_error(&e.to_user_message());
+          1
         },
       }
     },
-  }
+  };
+
+  process::exit(exit_code);
 }
 
 #[cfg(test)]

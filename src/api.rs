@@ -1,3 +1,4 @@
+use crate::cli_display::{print_error, print_progress, print_success};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 use reqwest::Client;
@@ -15,6 +16,8 @@ static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
 
 pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
   let start_time = std::time::Instant::now();
+  print_progress("Sending to Vestaboard...");
+
   let client = Client::new();
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
   let body = json!(message);
@@ -36,13 +39,22 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
       let status = response.status();
       log::info!("API response received: {} in {:?}", status, duration);
       log::debug!("Response: {:?}", response);
-      println!("Response: {:?}", response);
+      if status.is_success() {
+        print_success("Sent to Vestaboard");
+      } else {
+        print_error(&format!("Vestaboard error: HTTP {}", status));
+      }
       Ok(())
     },
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
-      eprintln!("Error: {:?}", e);
-      Err(e)
+      let error = crate::errors::VestaboardError::reqwest_error(e, "Vestaboard");
+      print_error(&error.to_user_message());
+      // Extract the original reqwest error from the VestaboardError
+      match error {
+        crate::errors::VestaboardError::ReqwestError { source, .. } => Err(source),
+        _ => unreachable!(),
+      }
     },
   }
 }

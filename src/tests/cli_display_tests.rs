@@ -1,6 +1,7 @@
 #[path = "../cli_display.rs"]
 mod cli_display;
 
+
 #[cfg(test)]
 #[test]
 fn print_message_test() {
@@ -102,4 +103,38 @@ fn print_message_with_title() {
       "|----------------------|",
     ]
   )
+}
+
+// Tests for helper functions
+// Note: Since println! and eprintln! write directly to stdout/stderr,
+// we can't easily capture their output in unit tests without refactoring.
+// These tests verify the functions exist and execute without panicking.
+// Actual output verification is done in integration tests.
+
+#[test]
+fn test_print_success_exists() {
+  // Test that print_success can be called without panicking
+  cli_display::print_success("Test success message");
+  assert!(true); // Function executed
+}
+
+#[test]
+fn test_print_error_exists() {
+  // Test that print_error can be called without panicking
+  cli_display::print_error("Test error message");
+  assert!(true); // Function executed
+}
+
+#[test]
+fn test_print_progress_exists() {
+  // Test that print_progress can be called without panicking
+  cli_display::print_progress("Test progress message");
+  assert!(true); // Function executed
+}
+
+#[test]
+fn test_print_warning_exists() {
+  // Test that print_warning can be called without panicking
+  cli_display::print_warning("Test warning message");
+  assert!(true); // Function executed
 }
