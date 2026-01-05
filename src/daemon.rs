@@ -1,10 +1,10 @@
-use crate::api_broker::{handle_message, MessageDestination};
-use crate::cli_display::{print_error, print_progress, print_success, print_warning};
+use crate::api_broker::{ handle_message, MessageDestination };
+use crate::cli_display::{ print_error, print_progress, print_success, print_warning };
 use crate::config::Config;
 use crate::datetime::is_or_before;
 use crate::errors::VestaboardError;
 use crate::process_control::ProcessController;
-use crate::scheduler::{ScheduleMonitor, ScheduledTask};
+use crate::scheduler::{ ScheduleMonitor, ScheduledTask };
 use crate::widgets::resolver::execute_widget;
 
 use chrono::Utc;
@@ -22,11 +22,11 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
 
   // send_codes() will print "Sending message to Vestaboard..." so we don't need to print it here
   match handle_message(message.clone(), MessageDestination::Vestaboard).await {
-    Ok(_) => {},
+    Ok(_) => {}
     Err(e) => {
       log::error!("Failed to send message to Vestaboard: {}", e);
       print_error(&e.to_user_message());
-    },
+    }
   }
   log::info!("Task {} completed successfully", task.id);
   print_success(&format!("Task {} completed successfully", task.id));
@@ -65,21 +65,24 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
       let count = schedule_monitor.get_current_schedule().tasks.len();
       log::info!("Initial schedule loaded with {} tasks", count);
       count
-    },
+    }
     Err(e) => {
       log::warn!("Failed to initialize schedule monitor: {}", e);
       print_warning(&format!("Could not load schedule: {}", e.to_user_message()));
       0
-    },
+    }
   };
 
   let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
   log::info!("Daemon started successfully, monitoring schedule");
-  print_success(&format!(
-    "Daemon started ({} tasks, checking every {}s)",
-    initial_task_count, CHECK_INTERVAL_SECONDS
-  ));
+  print_success(
+    &format!(
+      "Daemon started ({} tasks, checking every {}s)",
+      initial_task_count,
+      check_interval_seconds
+    )
+  );
 
   loop {
     if process_controller.should_shutdown() {
@@ -96,14 +99,14 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
         log::info!("Schedule file updated and reloaded");
         let task_count = schedule_monitor.get_current_schedule().tasks.len();
         print_success(&format!("Schedule reloaded ({} tasks)", task_count));
-      },
+      }
       Ok(false) => {
         log::trace!("No schedule file changes detected");
-      },
+      }
       Err(e) => {
         log::error!("Error checking for schedule updates: {}", e);
         print_warning(&e.to_user_message());
-      },
+      }
     }
 
     let now = Utc::now();
@@ -120,17 +123,20 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
       log::info!("Found {} task(s) ready for execution", tasks_to_execute.len());
       match execute_task(task).await {
         Ok(_) => {
-          log::info!("Task execution successful, marking {} task(s) as executed", tasks_to_execute.len());
+          log::info!(
+            "Task execution successful, marking {} task(s) as executed",
+            tasks_to_execute.len()
+          );
           for task in &tasks_to_execute {
             executed_task_ids.insert(task.id.clone());
           }
-        },
+        }
         Err(e) => {
           log::error!("Error executing task {}: {:?}", task.id, e);
           print_error(&format!("Error executing task {}: {}", task.id, e.to_user_message()));
           // In daemon mode, we continue running even after task execution errors
           // The error should have been displayed on the Vestaboard by execute_task
-        },
+        }
       }
     } else {
       log::trace!("No tasks ready for execution");
