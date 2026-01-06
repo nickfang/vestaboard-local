@@ -71,6 +71,37 @@ pub enum CycleCommand {
 }
 
 #[derive(Subcommand, Debug)]
+pub enum PlaylistArgs {
+  #[command(
+    name = "add",
+    about = "Add a widget to the playlist",
+    after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist add sat-word"
+  )]
+  Add {
+    #[clap(help = "The widget to add (weather, text, sat-word, jokes, clear)", required = true)]
+    widget: String,
+    #[clap(help = "Widget input (required for text widget)")]
+    input: Vec<String>,
+  },
+  #[command(name = "list", about = "List all playlist items")]
+  List,
+  #[command(name = "remove", about = "Remove a playlist item by ID")]
+  Remove {
+    #[clap(help = "The ID of the playlist item to remove", required = true)]
+    id: String,
+  },
+  #[command(name = "clear", about = "Remove all playlist items")]
+  Clear,
+  #[command(name = "interval", about = "Show or set the rotation interval in seconds (minimum 60)")]
+  Interval {
+    #[clap(help = "Interval in seconds between items (omit to show current)")]
+    seconds: Option<u64>,
+  },
+  #[command(name = "preview", about = "Preview all playlist items without sending to Vestaboard")]
+  Preview,
+}
+
+#[derive(Subcommand, Debug)]
 pub enum ScheduleArgs {
   #[command(name = "list", about = "List all scheduled messages")]
   List,
@@ -125,6 +156,14 @@ pub enum Command {
   },
   #[command(about = "Run as a background daemon")]
   Daemon,
+  #[command(
+    about = "Manage and run the playlist",
+    after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist list\n  vbl playlist remove abc1\n  vbl playlist interval 300"
+  )]
+  Playlist {
+    #[command(subcommand)]
+    action: PlaylistArgs,
+  },
 }
 
 #[derive(Parser, Debug)]

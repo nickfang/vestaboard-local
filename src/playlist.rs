@@ -242,3 +242,180 @@ impl Playlist {
         }
     }
 }
+
+// --- CLI functions (following scheduler.rs pattern) ---
+
+use crate::api_broker::{handle_message, MessageDestination};
+use crate::config::Config;
+use crate::widgets::resolver::execute_widget;
+use crate::widgets::widget_utils::error_to_display_message;
+
+/// Get the default playlist file path from config
+fn get_playlist_path() -> std::path::PathBuf {
+    Config::load_silent()
+        .map(|c| c.get_playlist_file_path())
+        .unwrap_or_else(|_| std::path::PathBuf::from("data/playlist.json"))
+}
+
+/// Add an item to the playlist and save
+pub fn add_item_to_playlist(widget: &str, input: Value) -> Result<String, VestaboardError> {
+    let path = get_playlist_path();
+    let mut playlist = Playlist::load_silent(&path)?;
+
+    let id = playlist.add_widget(widget, input);
+    playlist.save_silent(&path)?;
+
+    log::info!("Added item {} ({}) to playlist", id, widget);
+    Ok(id)
+}
+
+/// List all items in the playlist
+pub fn list_playlist() -> Result<(), VestaboardError> {
+    let path = get_playlist_path();
+    let playlist = Playlist::load_silent(&path)?;
+
+    if playlist.is_empty() {
+        println!("Playlist is empty.");
+        println!("Add items with: vbl playlist add <widget> [input]");
+        return Ok(());
+    }
+
+    println!(
+        "Playlist ({} items, {} second interval):",
+        playlist.len(),
+        playlist.interval_seconds
+    );
+    println!();
+
+    for (index, item) in playlist.items.iter().enumerate() {
+        let input_display = if item.input.is_null() {
+            String::new()
+        } else if let Some(s) = item.input.as_str() {
+            format!(" \"{}\"", s)
+        } else {
+            format!(" {}", item.input)
+        };
+
+        println!(
+            "  {}. [{}] {}{}",
+            index + 1,
+            item.id,
+            item.widget,
+            input_display
+        );
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Remove an item from the playlist by ID
+pub fn remove_item_from_playlist(id: &str) -> Result<(), VestaboardError> {
+    let path = get_playlist_path();
+    let mut playlist = Playlist::load_silent(&path)?;
+
+    if !playlist.remove_item(id) {
+        return Err(VestaboardError::validation_error(&format!(
+            "Item '{}' not found in playlist",
+            id
+        )));
+    }
+
+    playlist.save_silent(&path)?;
+    log::info!("Removed item {} from playlist", id);
+    Ok(())
+}
+
+/// Clear all items from the playlist
+pub fn clear_playlist() -> Result<(), VestaboardError> {
+    let path = get_playlist_path();
+    let mut playlist = Playlist::load_silent(&path)?;
+
+    let count = playlist.len();
+    playlist.clear();
+    playlist.save_silent(&path)?;
+
+    log::info!("Cleared {} items from playlist", count);
+    Ok(())
+}
+
+/// Show the current playlist rotation interval
+pub fn show_playlist_interval() -> Result<(), VestaboardError> {
+    let path = get_playlist_path();
+    let playlist = Playlist::load_silent(&path)?;
+
+    println!("Current interval: {} seconds", playlist.interval_seconds);
+    Ok(())
+}
+
+/// Set the playlist rotation interval
+pub fn set_playlist_interval(seconds: u64) -> Result<(), VestaboardError> {
+    if seconds < 60 {
+        return Err(VestaboardError::validation_error(
+            "Interval must be at least 60 seconds",
+        ));
+    }
+
+    let path = get_playlist_path();
+    let mut playlist = Playlist::load_silent(&path)?;
+
+    playlist.interval_seconds = seconds;
+    playlist.save_silent(&path)?;
+
+    log::info!("Set playlist interval to {} seconds", seconds);
+    Ok(())
+}
+
+/// Preview all items in the playlist (dry-run mode)
+pub async fn preview_playlist() {
+    let path = get_playlist_path();
+    let playlist = match Playlist::load_silent(&path) {
+        Ok(p) => p,
+        Err(e) => {
+            print_error(&e.to_user_message());
+            return;
+        }
+    };
+
+    if playlist.is_empty() {
+        println!("Playlist is empty. Nothing to preview.");
+        return;
+    }
+
+    println!(
+        "Previewing {} playlist items ({} second interval):",
+        playlist.len(),
+        playlist.interval_seconds
+    );
+    println!();
+
+    for (index, item) in playlist.items.iter().enumerate() {
+        let input_display = if item.input.is_null() {
+            String::new()
+        } else if let Some(s) = item.input.as_str() {
+            format!(" \"{}\"", s)
+        } else {
+            format!(" {}", item.input)
+        };
+
+        println!("--- Item {} of {}: {}{} ---", index + 1, playlist.len(), item.widget, input_display);
+
+        // Execute widget and show preview
+        let message = match execute_widget(&item.widget, &item.input).await {
+            Ok(msg) => msg,
+            Err(e) => {
+                println!("  Error: {}", e.to_user_message());
+                error_to_display_message(&e)
+            }
+        };
+
+        // Display to console (dry-run)
+        if let Err(e) = handle_message(message, MessageDestination::Console).await {
+            println!("  Display error: {}", e.to_user_message());
+        }
+
+        println!();
+    }
+
+    println!("Preview complete.");
+}
