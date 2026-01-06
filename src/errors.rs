@@ -1,50 +1,90 @@
 #[derive(Debug)]
 pub enum VestaboardError {
-  IOError { source: std::io::Error, context: String },
-  JsonError { source: serde_json::Error, context: String },
-  ReqwestError { source: reqwest::Error, context: String },
-  WidgetError { widget: String, message: String },
-  ScheduleError { operation: String, message: String },
-  ApiError { code: Option<u16>, message: String },
-  ConfigError { field: String, message: String },
-  Other { message: String },
+  IOError {
+    source: std::io::Error,
+    context: String,
+  },
+  JsonError {
+    source: serde_json::Error,
+    context: String,
+  },
+  ReqwestError {
+    source: reqwest::Error,
+    context: String,
+  },
+  WidgetError {
+    widget: String,
+    message: String,
+  },
+  ScheduleError {
+    operation: String,
+    message: String,
+  },
+  ApiError {
+    code: Option<u16>,
+    message: String,
+  },
+  ConfigError {
+    field: String,
+    message: String,
+  },
+  LockError {
+    message: String,
+  },
+  InputError {
+    message: String,
+  },
+  ValidationError {
+    message: String,
+  },
+  Other {
+    message: String,
+  },
 }
 
 impl PartialEq for VestaboardError {
   fn eq(&self, other: &Self) -> bool {
     match (self, other) {
-      (VestaboardError::IOError { context: c1, .. }, VestaboardError::IOError { context: c2, .. }) => c1 == c2,
-      (VestaboardError::JsonError { context: c1, .. }, VestaboardError::JsonError { context: c2, .. }) => c1 == c2,
-      (VestaboardError::ReqwestError { context: c1, .. }, VestaboardError::ReqwestError { context: c2, .. }) => {
-        c1 == c2
-      },
       (
-        VestaboardError::WidgetError {
-          widget: w1,
-          message: m1,
-        },
-        VestaboardError::WidgetError {
-          widget: w2,
-          message: m2,
-        },
+        VestaboardError::IOError { context: c1, .. },
+        VestaboardError::IOError { context: c2, .. },
+      ) => c1 == c2,
+      (
+        VestaboardError::JsonError { context: c1, .. },
+        VestaboardError::JsonError { context: c2, .. },
+      ) => c1 == c2,
+      (
+        VestaboardError::ReqwestError { context: c1, .. },
+        VestaboardError::ReqwestError { context: c2, .. },
+      ) => {
+        c1 == c2
+      }
+      (
+        VestaboardError::WidgetError { widget: w1, message: m1 },
+        VestaboardError::WidgetError { widget: w2, message: m2 },
       ) => w1 == w2 && m1 == m2,
       (
-        VestaboardError::ScheduleError {
-          operation: o1,
-          message: m1,
-        },
-        VestaboardError::ScheduleError {
-          operation: o2,
-          message: m2,
-        },
+        VestaboardError::ScheduleError { operation: o1, message: m1 },
+        VestaboardError::ScheduleError { operation: o2, message: m2 },
       ) => o1 == o2 && m1 == m2,
-      (VestaboardError::ApiError { code: c1, message: m1 }, VestaboardError::ApiError { code: c2, message: m2 }) => {
+      (
+        VestaboardError::ApiError { code: c1, message: m1 },
+        VestaboardError::ApiError { code: c2, message: m2 },
+      ) => {
         c1 == c2 && m1 == m2
-      },
+      }
       (
         VestaboardError::ConfigError { field: f1, message: m1 },
         VestaboardError::ConfigError { field: f2, message: m2 },
       ) => f1 == f2 && m1 == m2,
+      (VestaboardError::LockError { message: m1 }, VestaboardError::LockError { message: m2 }) =>
+        m1 == m2,
+      (VestaboardError::InputError { message: m1 }, VestaboardError::InputError { message: m2 }) =>
+        m1 == m2,
+      (
+        VestaboardError::ValidationError { message: m1 },
+        VestaboardError::ValidationError { message: m2 },
+      ) => m1 == m2,
       (VestaboardError::Other { message: m1 }, VestaboardError::Other { message: m2 }) => m1 == m2,
       _ => false,
     }
@@ -56,29 +96,31 @@ impl std::fmt::Display for VestaboardError {
     match self {
       VestaboardError::IOError { source, context } => {
         write!(f, "IO Error in {}: {}", context, source)
-      },
+      }
       VestaboardError::JsonError { source, context } => {
         write!(f, "JSON Error in {}: {}", context, source)
-      },
+      }
       VestaboardError::ReqwestError { source, context } => {
         write!(f, "HTTP Request Error in {}: {}", context, source)
-      },
+      }
       VestaboardError::WidgetError { widget, message } => {
         write!(f, "Widget Error [{}]: {}", widget, message)
-      },
+      }
       VestaboardError::ScheduleError { operation, message } => {
         write!(f, "Schedule Error [{}]: {}", operation, message)
-      },
-      VestaboardError::ApiError { code, message } => match code {
-        Some(c) => write!(f, "API Error [{}]: {}", c, message),
-        None => write!(f, "API Error: {}", message),
-      },
+      }
+      VestaboardError::ApiError { code, message } =>
+        match code {
+          Some(c) => write!(f, "API Error [{}]: {}", c, message),
+          None => write!(f, "API Error: {}", message),
+        }
       VestaboardError::ConfigError { field, message } => {
         write!(f, "Configuration Error [{}]: {}", field, message)
-      },
-      VestaboardError::Other { message } => {
-        write!(f, "Error: {}", message)
-      },
+      }
+      VestaboardError::LockError { message } => { write!(f, "Lock Error: {}", message) }
+      VestaboardError::InputError { message } => { write!(f, "Input Error: {}", message) }
+      VestaboardError::ValidationError { message } => { write!(f, "Validation Error: {}", message) }
+      VestaboardError::Other { message } => { write!(f, "Error: {}", message) }
     }
   }
 }
@@ -150,6 +192,24 @@ impl VestaboardError {
       message: message.to_string(),
     }
   }
+
+  pub fn lock_error(message: &str) -> Self {
+    VestaboardError::LockError {
+      message: message.to_string(),
+    }
+  }
+
+  pub fn input_error(message: &str) -> Self {
+    VestaboardError::InputError {
+      message: message.to_string(),
+    }
+  }
+
+  pub fn validation_error(message: &str) -> Self {
+    VestaboardError::ValidationError {
+      message: message.to_string(),
+    }
+  }
 }
 
 // From implementations for automatic conversion
@@ -186,10 +246,8 @@ impl VestaboardError {
         } else {
           format!("Error accessing file: {}", context)
         }
-      },
-      VestaboardError::JsonError { context, .. } => {
-        format!("Error parsing data: {}", context)
-      },
+      }
+      VestaboardError::JsonError { context, .. } => { format!("Error parsing data: {}", context) }
       VestaboardError::ReqwestError { source, context } => {
         if source.is_connect() || source.is_timeout() {
           if context.contains("weather") {
@@ -199,8 +257,9 @@ impl VestaboardError {
           } else {
             format!("Network error: Unable to connect to {}. Check your internet connection.", context)
           }
-        } else if source.status() == Some(reqwest::StatusCode::UNAUTHORIZED)
-          || source.status() == Some(reqwest::StatusCode::FORBIDDEN)
+        } else if
+          source.status() == Some(reqwest::StatusCode::UNAUTHORIZED) ||
+          source.status() == Some(reqwest::StatusCode::FORBIDDEN)
         {
           if context.contains("weather") {
             "Authentication error: Check WEATHER_API_KEY".to_string()
@@ -209,8 +268,9 @@ impl VestaboardError {
           } else {
             format!("Authentication error: Check API credentials")
           }
-        } else if source.status() == Some(reqwest::StatusCode::BAD_GATEWAY)
-          || source.status() == Some(reqwest::StatusCode::GATEWAY_TIMEOUT)
+        } else if
+          source.status() == Some(reqwest::StatusCode::BAD_GATEWAY) ||
+          source.status() == Some(reqwest::StatusCode::GATEWAY_TIMEOUT)
         {
           if context.contains("weather") {
             "Weather service temporarily unavailable".to_string()
@@ -220,13 +280,13 @@ impl VestaboardError {
         } else {
           format!("Network error: {}", context)
         }
-      },
+      }
       VestaboardError::WidgetError { widget, message } => {
         format!("Widget error: {} - {}", widget, message)
-      },
+      }
       VestaboardError::ScheduleError { operation, message } => {
         format!("Schedule error: {} - {}", operation, message)
-      },
+      }
       VestaboardError::ApiError { code, message } => {
         if message.contains("Invalid characters") {
           message.clone()
@@ -236,10 +296,13 @@ impl VestaboardError {
             None => message.clone(),
           }
         }
-      },
+      }
       VestaboardError::ConfigError { field, message } => {
         format!("Configuration error [{}]: {}", field, message)
-      },
+      }
+      VestaboardError::LockError { message } => message.clone(),
+      VestaboardError::InputError { message } => message.clone(),
+      VestaboardError::ValidationError { message } => message.clone(),
       VestaboardError::Other { message } => message.clone(),
     }
   }

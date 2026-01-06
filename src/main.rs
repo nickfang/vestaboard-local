@@ -8,7 +8,10 @@ mod daemon;
 mod datetime;
 mod errors;
 mod logging;
+mod playlist;
 mod process_control;
+mod runner;
+mod runtime_state;
 mod scheduler;
 mod widgets;
 
