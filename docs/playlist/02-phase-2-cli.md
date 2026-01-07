@@ -24,7 +24,8 @@ vbl playlist interval 300         # Set rotation interval (seconds)
 vbl playlist preview              # Dry-run all playlist items
 
 # Playlist execution (Phase 3)
-vbl playlist run                  # Long-running: rotate through items (loops forever)
+vbl playlist run                  # Start from index 0 (loops forever)
+vbl playlist run --resume         # Continue from last saved position
 vbl playlist run --once           # Run through playlist once, then exit
 vbl playlist run --index 3        # Start from index 3
 vbl playlist run --id abc1        # Start from item with id "abc1"

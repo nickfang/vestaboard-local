@@ -431,11 +431,13 @@ pub async fn preview_playlist() {
 ///
 /// # Arguments
 /// * `once` - If true, run through playlist once and exit
+/// * `resume` - If true, resume from last saved position
 /// * `start_index` - Optional starting index (0-based)
 /// * `start_id` - Optional starting item ID
 /// * `dry_run` - If true, display to console instead of Vestaboard
 pub async fn run_playlist(
     once: bool,
+    resume: bool,
     start_index: Option<usize>,
     start_id: Option<String>,
     dry_run: bool,
@@ -469,15 +471,18 @@ pub async fn run_playlist(
                 VestaboardError::validation_error(&format!("Item '{}' not found in playlist", id))
             })?
         }
-        (None, None) => {
-            // Restore from saved state
+        (None, None) if resume => {
+            // Restore from saved state (--resume flag)
             let saved_state = crate::runtime_state::RuntimeState::load(&state_path);
             if saved_state.playlist_index < playlist.len() {
+                log::info!("Resuming from saved index {}", saved_state.playlist_index);
                 saved_state.playlist_index
             } else {
+                log::info!("Saved index {} out of range, starting from 0", saved_state.playlist_index);
                 0
             }
         }
+        (None, None) => 0, // Default: start from beginning
     };
 
     // Acquire exclusive lock

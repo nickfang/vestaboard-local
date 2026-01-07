@@ -58,13 +58,7 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     }
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
-      let error = crate::errors::VestaboardError::reqwest_error(e, "Vestaboard");
-      print_error(&error.to_user_message());
-      // Extract the original reqwest error from the VestaboardError
-      match error {
-        crate::errors::VestaboardError::ReqwestError { source, .. } => Err(source),
-        _ => unreachable!(),
-      }
+      Err(e)
     }
   }
 }

@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use crate::api::send_codes;
-use crate::cli_display::{print_error, print_message, print_progress};
+use crate::cli_display::{ print_error, print_message, print_progress };
 use crate::errors::VestaboardError;
 
 #[derive(Debug)]
@@ -127,17 +127,14 @@ pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
   codes
 }
 
-pub async fn display_message(message: Vec<String>) {
+pub async fn display_message(message: Vec<String>) -> Result<(), VestaboardError> {
   log::info!("Processing message for display, {} lines", message.len());
   log::debug!("Message content: {:?}", message);
 
   let codes = message_to_codes(message);
   log::debug!("Converted message to character codes");
 
-  send_codes(codes).await.unwrap_or_else(|e| {
-    log::error!("Failed to send message to Vestaboard: {}", e);
-    eprintln!("Error sending codes to Vestaboard: {}", e);
-  });
+  send_codes(codes).await.map_err(|e| { VestaboardError::reqwest_error(e, "Vestaboard") })
 }
 
 /// Checks if a character is valid for Vestaboard display
@@ -170,7 +167,11 @@ pub fn validate_message_content(message: &[String]) -> Result<(), VestaboardErro
       code: Some(400),
       message: format!(
         "Invalid characters found: {}. Valid characters are: {}.",
-        chars.iter().map(|c| format!("'{}'", c)).collect::<Vec<_>>().join(", "),
+        chars
+          .iter()
+          .map(|c| format!("'{}'", c))
+          .collect::<Vec<_>>()
+          .join(", "),
         get_valid_characters_description()
       ),
     });
@@ -179,33 +180,36 @@ pub fn validate_message_content(message: &[String]) -> Result<(), VestaboardErro
   Ok(())
 }
 
-pub async fn handle_message(message: Vec<String>, destination: MessageDestination) -> Result<(), VestaboardError> {
+pub async fn handle_message(
+  message: Vec<String>,
+  destination: MessageDestination
+) -> Result<(), VestaboardError> {
   log::debug!("Handling message for destination: {:?}", destination);
 
   // Validate the message content
   match validate_message_content(&message) {
     Ok(_) => {
       log::debug!("Message validation successful");
-    },
+    }
     Err(e) => {
       log::error!("Message validation failed: {}", e);
       print_error(&e.to_user_message());
       return Err(e);
-    },
+    }
   }
 
   match destination {
     MessageDestination::Vestaboard => {
-      display_message(message).await;
-    },
+      display_message(message).await?;
+    }
     MessageDestination::Console => {
       print_progress("Displaying message preview:");
       print_message(message, "");
-    },
+    }
     MessageDestination::ConsoleWithTitle(title) => {
       print_progress("Displaying message preview:");
       print_message(message, &title);
-    },
+    }
   }
 
   Ok(())

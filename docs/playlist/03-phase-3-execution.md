@@ -728,7 +728,9 @@ impl PlaylistRunner {
         }
     }
 
-    /// Restore from saved state if available
+    /// Restore from saved state if available (used with --resume flag)
+    /// By default, `vbl playlist run` starts at index 0.
+    /// Use `--resume` to continue from the last saved position.
     pub fn restore_from_state(playlist: Playlist, state_path: PathBuf, run_once: bool, dry_run: bool) -> Self {
         let saved_state = RuntimeState::load(&state_path);
 
@@ -1395,15 +1397,20 @@ fn test_playlist_runner_unknown_key_ignored() {
 }
 ```
 
-### 3.4 Add --once, --index, --id flags
+### 3.4 Add --once, --index, --id, --resume flags
 
 - [x] **Write test**: `test_playlist_run_once_exits_after_cycle`
 - [x] **Write test**: `test_playlist_run_index_starts_at_position`
 - [x] **Write test**: `test_playlist_run_id_starts_at_item`
 - [x] **Write test**: `test_playlist_run_id_not_found_errors`
+- [x] **Write test**: `test_cli_parses_playlist_run_resume`
+- [x] **Write test**: `test_cli_playlist_run_resume_and_index_mutually_exclusive`
+- [x] **Write test**: `test_cli_playlist_run_resume_and_id_mutually_exclusive`
 - [x] **Update CLI**: Add flags to `playlist run` command
 - [x] **Implement**: Flag handling in `PlaylistRunner`
 - [x] **Run tests** - pass
+
+**Default behavior**: `vbl playlist run` starts at index 0. Use `--resume` to continue from last saved position.
 
 ```rust
 #[test]
@@ -1548,9 +1555,36 @@ fn test_cli_parses_playlist_run_id() {
 }
 
 #[test]
+fn test_cli_parses_playlist_run_resume() {
+    let cli = Cli::parse_from(["vbl", "playlist", "run", "--resume"]);
+    match cli.command {
+        Command::Playlist { action: PlaylistArgs::Run { resume, index, id, .. } } => {
+            assert!(resume);
+            assert!(index.is_none());
+            assert!(id.is_none());
+        }
+        _ => panic!("Expected Playlist Run command with --resume"),
+    }
+}
+
+#[test]
 fn test_cli_playlist_run_index_and_id_mutually_exclusive() {
     // Should fail to parse when both are provided
     let result = Cli::try_parse_from(["vbl", "playlist", "run", "--index", "3", "--id", "abc1"]);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_cli_playlist_run_resume_and_index_mutually_exclusive() {
+    // Should fail to parse when both are provided
+    let result = Cli::try_parse_from(["vbl", "playlist", "run", "--resume", "--index", "3"]);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_cli_playlist_run_resume_and_id_mutually_exclusive() {
+    // Should fail to parse when both are provided
+    let result = Cli::try_parse_from(["vbl", "playlist", "run", "--resume", "--id", "abc1"]);
     assert!(result.is_err());
 }
 ```
@@ -1565,7 +1599,8 @@ fn test_cli_playlist_run_index_and_id_mutually_exclusive() {
 ## Phase 3 Definition of Done
 
 - [x] `cargo test playlist_runner` - all tests pass
-- [x] `vbl playlist run` - starts playlist rotation
+- [x] `vbl playlist run` - starts playlist rotation from index 0
+- [x] `vbl playlist run --resume` - continues from last saved position
 - [x] Press `p` - pauses rotation
 - [x] Press `r` - resumes rotation
 - [x] Press `n` - skips to next item
@@ -1574,6 +1609,7 @@ fn test_cli_playlist_run_index_and_id_mutually_exclusive() {
 - [x] `vbl playlist run --once` - exits after one cycle
 - [x] `vbl playlist run --index 2` - starts at index 2
 - [x] `vbl playlist run --id abc1` - starts at item abc1
+- [x] `--resume`, `--index`, and `--id` are mutually exclusive
 - [x] Ctrl+C - exits cleanly (same as `q`)
 - [x] State persists across restarts
 - [x] Cannot run two instances simultaneously (lock file works)

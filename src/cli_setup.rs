@@ -102,14 +102,16 @@ pub enum PlaylistArgs {
   #[command(
     name = "run",
     about = "Run the playlist, rotating through items at the set interval",
-    after_help = "Examples:\n  vbl playlist run\n  vbl playlist run --once\n  vbl playlist run --index 2\n  vbl playlist run --id abc1\n  vbl playlist run --dry-run"
+    after_help = "Examples:\n  vbl playlist run\n  vbl playlist run --resume\n  vbl playlist run --once\n  vbl playlist run --index 2\n  vbl playlist run --id abc1\n  vbl playlist run --dry-run"
   )]
   Run {
     #[arg(long, help = "Run through playlist once and exit")]
     once: bool,
-    #[arg(long, help = "Start from this index (0-based)", conflicts_with = "id")]
+    #[arg(long, help = "Resume from last position", conflicts_with_all = ["index", "id"])]
+    resume: bool,
+    #[arg(long, help = "Start from this index (0-based)", conflicts_with_all = ["id", "resume"])]
     index: Option<usize>,
-    #[arg(long, help = "Start from item with this ID", conflicts_with = "index")]
+    #[arg(long, help = "Start from item with this ID", conflicts_with_all = ["index", "resume"])]
     id: Option<String>,
     #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
     dry_run: bool,
