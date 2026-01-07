@@ -159,7 +159,6 @@ Schedule and Playlist cannot run simultaneously. Only one can be active at a tim
 Both schedule and playlist runners share common patterns. Define a trait:
 
 ```rust
-use async_trait::async_trait;
 use crossterm::event::KeyCode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -168,14 +167,15 @@ pub enum ControlFlow {
     Exit,
 }
 
-#[async_trait]
+/// Common trait for playlist and schedule runners.
+/// Uses native async traits (Rust 1.75+) - no async-trait crate needed.
 pub trait Runner {
     /// Called once when the runner starts
     fn start(&mut self);
 
     /// Run one iteration of the runner (check if work needs to be done, do it)
     /// Returns quickly if nothing to do (non-blocking)
-    async fn run_iteration(&mut self) -> Result<(), VestaboardError>;
+    async fn run_iteration(&mut self) -> Result<ControlFlow, VestaboardError>;
 
     /// Handle a keyboard input, return whether to continue
     fn handle_key(&mut self, key: KeyCode) -> ControlFlow;
@@ -198,7 +198,7 @@ pub const PLAYLIST_HELP: &str = "\
 Playlist Controls:
   p - Pause rotation
   r - Resume rotation
-  n - Skip to next item
+  n - Next item (show now, or skip if paused)
   q - Quit
   ? - Show this help";
 
@@ -222,6 +222,121 @@ impl Runner for ScheduleRunner {
         SCHEDULE_HELP
     }
     // ... other methods
+}
+```
+
+### Keyboard Control Semantics
+
+#### The 'n' Key - Next Item
+
+From the user's perspective, the "next" item is the one that **hasn't been shown yet** - the one queued to appear on the Vestaboard next. The internal index already points to this item after the previous item was displayed.
+
+**While Running:**
+- Pressing 'n' triggers immediate display of the queued item (skips the wait)
+- The item displays, then the index advances to the next one
+- Multiple 'n' presses each trigger a display (one per press)
+
+```
+Example: Playlist [A, B, C], currently showing A, index points to B
+
+User presses 'n':
+  → B displays immediately (instead of waiting for interval)
+  → Index advances to C
+  → User sees B on the board
+```
+
+**While Paused:**
+- First 'n': Queues immediate display when resumed (clears the wait timer)
+- Subsequent 'n' presses: Skip the queued item, advance to the next one
+- Each press shows a console preview of what will display on resume
+
+```
+Example: Paused, index points to B
+
+First 'n':
+  → Timer cleared (B will display immediately on resume)
+  → Console: "Next: text [id: xyz] - will display on resume"
+
+Second 'n':
+  → Index advances to C (B is skipped)
+  → Console: "Next: weather [id: abc] - will display on resume"
+
+User presses 'r' to resume:
+  → C displays immediately
+```
+
+**Implementation Logic:**
+```rust
+fn handle_next_key(&mut self) {
+    if self.last_display_time.is_none() && self.state == PlaylistState::Paused {
+        // Already queued for immediate display, so skip to next item
+        self.advance_index();
+    } else {
+        // Queue immediate display (clear the timer)
+        self.last_display_time = None;
+    }
+
+    // If paused, show preview of what will display
+    if self.state == PlaylistState::Paused {
+        if let Some(item) = self.current_item() {
+            println!("Next: {} [{}] - will display on resume", item.widget, item.id);
+        }
+    }
+}
+```
+
+#### Pause/Resume Timing
+
+When pausing, the **remaining time** before the next item should be preserved. If you pause with 30 seconds left on a 60-second interval, resuming should wait 30 more seconds (not reset or skip).
+
+**Implementation:** Track when the pause started and adjust `last_display_time` on resume.
+
+```
+Example: 60-second interval
+
+T=0:   Display A, last_display_time = T=0
+T=30:  User pauses (30 seconds remaining)
+       Record: paused_at = T=30
+T=90:  User resumes
+       Adjust: last_display_time = T=0 + (90-30) = T=60
+       Elapsed since adjusted time: 90 - 60 = 30 seconds
+       Still need to wait 30 more seconds
+T=120: 60 seconds elapsed, B displays
+```
+
+**Exception:** If 'n' was pressed while paused, `last_display_time` is None and the next item displays immediately on resume (no waiting).
+
+**Implementation:**
+```rust
+pub struct PlaylistRunner {
+    // ... existing fields ...
+    last_display_time: Option<Instant>,
+    paused_at: Option<Instant>,  // NEW: tracks when we paused
+}
+
+fn pause(&mut self) {
+    if self.state == PlaylistState::Running {
+        self.state = PlaylistState::Paused;
+        self.paused_at = Some(Instant::now());  // Record pause time
+        println!("Paused.");
+    }
+}
+
+fn resume(&mut self) {
+    if self.state == PlaylistState::Paused {
+        self.state = PlaylistState::Running;
+
+        // Adjust last_display_time to preserve remaining interval
+        if let (Some(last), Some(paused)) = (self.last_display_time, self.paused_at) {
+            let pause_duration = paused.elapsed();
+            // Move last_display_time forward by pause duration
+            self.last_display_time = Some(last + pause_duration);
+        }
+        // If last_display_time is None (user pressed 'n'), leave it as None
+
+        self.paused_at = None;
+        println!("Resumed.");
+    }
 }
 ```
 
@@ -309,6 +424,7 @@ Uses `std::sync::mpsc` with a background thread, providing a non-blocking `try_r
 
 ```rust
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use std::io::IsTerminal;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -321,7 +437,8 @@ pub struct KeyboardListener {
 impl KeyboardListener {
     pub fn new() -> Result<Self, VestaboardError> {
         // Check if stdin is a TTY (required for interactive mode)
-        if !atty::is(atty::Stream::Stdin) {
+        // Uses std::io::IsTerminal (stable since Rust 1.70)
+        if !std::io::stdin().is_terminal() {
             return Err(VestaboardError::input_error(
                 "Interactive mode requires a terminal. Stdin is not a TTY."
             ));
@@ -573,15 +690,14 @@ This is the core runner that integrates with existing infrastructure. **Critical
 use std::path::PathBuf;
 use std::time::Instant;
 
-use async_trait::async_trait;
 use crossterm::event::KeyCode;
 
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_progress, print_success};
 use crate::errors::VestaboardError;
-use crate::playlist::{Playlist, PlaylistItem, PlaylistState};
+use crate::playlist::Playlist;
 use crate::runner::{ControlFlow, Runner, PLAYLIST_HELP};
-use crate::runtime_state::RuntimeState;
+use crate::runtime_state::{PlaylistState, RuntimeState};
 use crate::widgets::resolver::execute_widget;
 use crate::widgets::widget_utils::error_to_display_message;
 
@@ -593,10 +709,12 @@ pub struct PlaylistRunner {
     run_once: bool,
     cycle_complete: bool,
     last_display_time: Option<Instant>,
+    paused_at: Option<Instant>,  // Tracks when we paused (for preserving remaining time)
+    dry_run: bool,
 }
 
 impl PlaylistRunner {
-    pub fn new(playlist: Playlist, state_path: PathBuf, start_index: usize, run_once: bool) -> Self {
+    pub fn new(playlist: Playlist, state_path: PathBuf, start_index: usize, run_once: bool, dry_run: bool) -> Self {
         Self {
             playlist,
             state: PlaylistState::Stopped,
@@ -605,14 +723,16 @@ impl PlaylistRunner {
             run_once,
             cycle_complete: false,
             last_display_time: None,
+            paused_at: None,
+            dry_run,
         }
     }
 
     /// Restore from saved state if available
-    pub fn restore_from_state(playlist: Playlist, state_path: &PathBuf) -> Self {
-        let saved_state = RuntimeState::load(state_path);
+    pub fn restore_from_state(playlist: Playlist, state_path: PathBuf, run_once: bool, dry_run: bool) -> Self {
+        let saved_state = RuntimeState::load(&state_path);
 
-        let start_index = if saved_state.playlist_index < playlist.items.len() {
+        let start_index = if saved_state.playlist_index < playlist.len() {
             saved_state.playlist_index
         } else {
             0
@@ -620,7 +740,7 @@ impl PlaylistRunner {
 
         log::info!("Restored playlist state: index={}", start_index);
 
-        Self::new(playlist, state_path.clone(), start_index, false)
+        Self::new(playlist, state_path, start_index, run_once, dry_run)
     }
 
     pub fn current_index(&self) -> usize {
@@ -638,6 +758,7 @@ impl PlaylistRunner {
     pub fn pause(&mut self) {
         if self.state == PlaylistState::Running {
             self.state = PlaylistState::Paused;
+            self.paused_at = Some(Instant::now());  // Record when we paused
             log::info!("Playlist paused at index {}", self.current_index);
             println!("Paused.");
         }
@@ -646,17 +767,40 @@ impl PlaylistRunner {
     pub fn resume(&mut self) {
         if self.state == PlaylistState::Paused {
             self.state = PlaylistState::Running;
+
+            // Adjust last_display_time to preserve remaining interval time
+            if let (Some(last), Some(paused)) = (self.last_display_time, self.paused_at) {
+                let pause_duration = paused.elapsed();
+                self.last_display_time = Some(last + pause_duration);
+            }
+            // If last_display_time is None (user pressed 'n' while paused), leave it None
+
+            self.paused_at = None;
             log::info!("Playlist resumed from index {}", self.current_index);
             println!("Resumed.");
         }
     }
 
-    pub fn skip_to_next(&mut self) {
-        self.advance_index();
-        // Reset last_display_time so the item displays immediately on next iteration
-        self.last_display_time = None;
-        log::info!("Skipped to item {}", self.current_index);
-        println!("Skipping to next item...");
+    /// Handle the 'n' key - show next item now (or skip if already queued while paused)
+    pub fn handle_next_key(&mut self) {
+        // If paused and already queued for immediate display, advance to skip current
+        if self.last_display_time.is_none() && self.state == PlaylistState::Paused {
+            self.advance_index();
+        } else {
+            // Clear timer to trigger immediate display
+            self.last_display_time = None;
+        }
+
+        // If paused, show preview of what will display on resume
+        if self.state == PlaylistState::Paused {
+            if let Some(item) = self.playlist.get_item_by_index(self.current_index) {
+                println!("Next: {} [{}] - will display on resume", item.widget, item.id);
+            }
+        } else {
+            println!("Showing next item...");
+        }
+
+        log::info!("Next key pressed, index now at {}", self.current_index);
     }
 
     fn advance_index(&mut self) {
@@ -743,7 +887,6 @@ impl PlaylistRunner {
     }
 }
 
-#[async_trait]
 impl Runner for PlaylistRunner {
     fn start(&mut self) {
         if self.playlist.is_empty() {
@@ -794,7 +937,7 @@ impl Runner for PlaylistRunner {
                 ControlFlow::Continue
             }
             KeyCode::Char('n') | KeyCode::Char('N') => {
-                self.skip_to_next();
+                self.handle_next_key();
                 ControlFlow::Continue
             }
             KeyCode::Char('?') => {
@@ -1019,13 +1162,13 @@ impl VestaboardError {
 
 ### 3.1 Create PlaylistRunner struct
 
-- [ ] **Write test**: `test_playlist_runner_creation`
-- [ ] **Write test**: `test_playlist_runner_advances_index`
-- [ ] **Write test**: `test_playlist_runner_wraps_at_end`
-- [ ] **Run tests** - fail
-- [ ] **Create file**: `src/runner/playlist_runner.rs`
-- [ ] **Implement**: Basic `PlaylistRunner` struct
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_playlist_runner_creation`
+- [x] **Write test**: `test_playlist_runner_advances_index`
+- [x] **Write test**: `test_playlist_runner_wraps_at_end`
+- [x] **Run tests** - fail
+- [x] **Create file**: `src/runner/playlist_runner.rs`
+- [x] **Implement**: Basic `PlaylistRunner` struct
+- [x] **Run tests** - pass
 
 ```rust
 // src/tests/playlist_runner_tests.rs
@@ -1097,11 +1240,11 @@ fn test_playlist_runner_current_item() {
 
 ### 3.2 Implement state machine
 
-- [ ] **Write test**: `test_playlist_runner_pause_sets_state`
-- [ ] **Write test**: `test_playlist_runner_resume_from_paused`
-- [ ] **Write test**: `test_playlist_runner_pause_when_already_paused_is_noop`
-- [ ] **Implement**: `pause()`, `resume()` methods
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_playlist_runner_pause_sets_state`
+- [x] **Write test**: `test_playlist_runner_resume_from_paused`
+- [x] **Write test**: `test_playlist_runner_pause_when_already_paused_is_noop`
+- [x] **Implement**: `pause()`, `resume()` methods
+- [x] **Run tests** - pass
 
 ```rust
 #[test]
@@ -1163,13 +1306,13 @@ fn test_playlist_runner_next_advances_and_stays_paused() {
 
 ### 3.3 Implement keyboard handling
 
-- [ ] **Write test**: `test_playlist_runner_handles_p_key`
-- [ ] **Write test**: `test_playlist_runner_handles_r_key`
-- [ ] **Write test**: `test_playlist_runner_handles_n_key`
-- [ ] **Write test**: `test_playlist_runner_handles_q_key`
-- [ ] **Write test**: `test_playlist_runner_handles_question_mark`
-- [ ] **Implement**: `handle_key()` method using `Runner` trait
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_playlist_runner_handles_p_key`
+- [x] **Write test**: `test_playlist_runner_handles_r_key`
+- [x] **Write test**: `test_playlist_runner_handles_n_key`
+- [x] **Write test**: `test_playlist_runner_handles_q_key`
+- [x] **Write test**: `test_playlist_runner_handles_question_mark`
+- [x] **Implement**: `handle_key()` method using `Runner` trait
+- [x] **Run tests** - pass
 
 ```rust
 use crate::runner::{Runner, ControlFlow};
@@ -1254,13 +1397,13 @@ fn test_playlist_runner_unknown_key_ignored() {
 
 ### 3.4 Add --once, --index, --id flags
 
-- [ ] **Write test**: `test_playlist_run_once_exits_after_cycle`
-- [ ] **Write test**: `test_playlist_run_index_starts_at_position`
-- [ ] **Write test**: `test_playlist_run_id_starts_at_item`
-- [ ] **Write test**: `test_playlist_run_id_not_found_errors`
-- [ ] **Update CLI**: Add flags to `playlist run` command
-- [ ] **Implement**: Flag handling in `PlaylistRunner`
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_playlist_run_once_exits_after_cycle`
+- [x] **Write test**: `test_playlist_run_index_starts_at_position`
+- [x] **Write test**: `test_playlist_run_id_starts_at_item`
+- [x] **Write test**: `test_playlist_run_id_not_found_errors`
+- [x] **Update CLI**: Add flags to `playlist run` command
+- [x] **Implement**: Flag handling in `PlaylistRunner`
+- [x] **Run tests** - pass
 
 ```rust
 #[test]
@@ -1304,10 +1447,10 @@ fn test_playlist_runner_once_mode_stops_after_full_cycle() {
 
 ### 3.5 Add state persistence
 
-- [ ] **Write test**: `test_playlist_runner_saves_state_on_advance`
-- [ ] **Write test**: `test_playlist_runner_restores_state_on_creation`
-- [ ] **Implement**: Integration with `RuntimeState`
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_playlist_runner_saves_state_on_advance`
+- [x] **Write test**: `test_playlist_runner_restores_state_on_creation`
+- [x] **Implement**: Integration with `RuntimeState`
+- [x] **Run tests** - pass
 
 ```rust
 #[test]
@@ -1347,13 +1490,13 @@ fn test_playlist_runner_restores_state() {
 
 ### 3.6 Wire up to CLI and test end-to-end
 
-- [ ] **Write test**: `test_cli_parses_playlist_run`
-- [ ] **Write test**: `test_cli_parses_playlist_run_once`
-- [ ] **Write test**: `test_cli_parses_playlist_run_index`
-- [ ] **Write test**: `test_cli_parses_playlist_run_id`
-- [ ] **Run tests** - fail
-- [ ] **Implement**: Add `Run` variant to `PlaylistArgs` in `cli_setup.rs`
-- [ ] **Run tests** - pass
+- [x] **Write test**: `test_cli_parses_playlist_run`
+- [x] **Write test**: `test_cli_parses_playlist_run_once`
+- [x] **Write test**: `test_cli_parses_playlist_run_index`
+- [x] **Write test**: `test_cli_parses_playlist_run_id`
+- [x] **Run tests** - fail
+- [x] **Implement**: Add `Run` variant to `PlaylistArgs` in `cli_setup.rs`
+- [x] **Run tests** - pass
 
 ```rust
 // Add to src/tests/cli_setup_tests.rs
@@ -1412,28 +1555,28 @@ fn test_cli_playlist_run_index_and_id_mutually_exclusive() {
 }
 ```
 
-- [ ] **Implement**: Handle `Command::Playlist { action: PlaylistArgs::Run { .. } }` in `main.rs`
+- [x] **Implement**: Handle `Command::Playlist { action: PlaylistArgs::Run { .. } }` in `main.rs`
 - [ ] **Write integration test**: End-to-end playlist run (uses mock Vestaboard)
-- [ ] **Manual test**: Full interactive session
+- [x] **Manual test**: Full interactive session
 - [ ] **Commit**: "Implement playlist run with interactive controls"
 
 ---
 
 ## Phase 3 Definition of Done
 
-- [ ] `cargo test playlist_runner` - all tests pass
-- [ ] `vbl playlist run` - starts playlist rotation
-- [ ] Press `p` - pauses rotation
-- [ ] Press `r` - resumes rotation
-- [ ] Press `n` - skips to next item
-- [ ] Press `q` - exits cleanly
-- [ ] Press `?` - shows help
-- [ ] `vbl playlist run --once` - exits after one cycle
-- [ ] `vbl playlist run --index 2` - starts at index 2
-- [ ] `vbl playlist run --id abc1` - starts at item abc1
-- [ ] Ctrl+C - exits cleanly (same as `q`)
-- [ ] State persists across restarts
-- [ ] Cannot run two instances simultaneously (lock file works)
+- [x] `cargo test playlist_runner` - all tests pass
+- [x] `vbl playlist run` - starts playlist rotation
+- [x] Press `p` - pauses rotation
+- [x] Press `r` - resumes rotation
+- [x] Press `n` - skips to next item
+- [x] Press `q` - exits cleanly
+- [x] Press `?` - shows help
+- [x] `vbl playlist run --once` - exits after one cycle
+- [x] `vbl playlist run --index 2` - starts at index 2
+- [x] `vbl playlist run --id abc1` - starts at item abc1
+- [x] Ctrl+C - exits cleanly (same as `q`)
+- [x] State persists across restarts
+- [x] Cannot run two instances simultaneously (lock file works)
 
 **Test count checkpoint**: Phase 3 should add approximately 30-40 new tests.
 

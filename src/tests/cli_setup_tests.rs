@@ -52,6 +52,7 @@ fn test_command_variants() {
         PlaylistArgs::Clear => {},
         PlaylistArgs::Interval { .. } => {},
         PlaylistArgs::Preview => {},
+        PlaylistArgs::Run { .. } => {},
       },
       Command::Cycle { .. } => {},
       Command::Daemon => {},
@@ -173,5 +174,90 @@ fn test_cli_parses_playlist_preview() {
   match cli.command {
     Command::Playlist { action: PlaylistArgs::Preview } => {}
     _ => panic!("Expected Playlist Preview command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_defaults() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { once, index, id, dry_run } } => {
+      assert!(!once);
+      assert!(index.is_none());
+      assert!(id.is_none());
+      assert!(!dry_run);
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_once() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--once"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { once, .. } } => {
+      assert!(once);
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_with_index() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--index", "2"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { index, id, .. } } => {
+      assert_eq!(index, Some(2));
+      assert!(id.is_none());
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_with_id() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--id", "abc1"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { index, id, .. } } => {
+      assert!(index.is_none());
+      assert_eq!(id, Some("abc1".to_string()));
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_dry_run() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--dry-run"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { dry_run, .. } } => {
+      assert!(dry_run);
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_dry_run_short() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "-d"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { dry_run, .. } } => {
+      assert!(dry_run);
+    }
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_run_combined_flags() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--once", "--index", "1", "-d"]);
+  match cli.command {
+    Command::Playlist { action: PlaylistArgs::Run { once, index, id, dry_run } } => {
+      assert!(once);
+      assert_eq!(index, Some(1));
+      assert!(id.is_none());
+      assert!(dry_run);
+    }
+    _ => panic!("Expected Playlist Run command"),
   }
 }

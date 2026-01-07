@@ -470,6 +470,23 @@ async fn main() {
           playlist::preview_playlist().await;
           0
         }
+        PlaylistArgs::Run { once, index, id, dry_run } => {
+          log::info!(
+            "Running playlist - once: {}, index: {:?}, id: {:?}, dry_run: {}",
+            once,
+            index,
+            id,
+            dry_run
+          );
+          match playlist::run_playlist(once, index, id, dry_run).await {
+            Ok(_) => 0,
+            Err(e) => {
+              log::error!("Playlist run failed: {}", e);
+              print_error(&e.to_user_message());
+              1
+            }
+          }
+        }
       }
     }
   };

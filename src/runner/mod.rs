@@ -5,13 +5,18 @@
 
 pub mod keyboard;
 pub mod lock;
+pub mod playlist_runner;
+
+use crossterm::event::KeyCode;
+
+use crate::errors::VestaboardError;
 
 /// Help text for playlist runner keyboard controls
 pub const PLAYLIST_HELP: &str = "\
 Playlist Controls:
   p - Pause rotation
   r - Resume rotation
-  n - Skip to next item
+  n - Show next item now
   q - Quit
   ? - Show this help";
 
@@ -28,6 +33,25 @@ pub enum ControlFlow {
     Continue,
     /// Exit the runner
     Exit,
+}
+
+/// Common trait for playlist and schedule runners
+pub trait Runner: Send {
+    /// Called once when the runner starts
+    fn start(&mut self);
+
+    /// Run one iteration of the runner (check if work needs to be done, do it)
+    /// Returns quickly if nothing to do (non-blocking)
+    async fn run_iteration(&mut self) -> Result<ControlFlow, VestaboardError>;
+
+    /// Handle a keyboard input, return whether to continue
+    fn handle_key(&mut self, key: KeyCode) -> ControlFlow;
+
+    /// Get help text for keyboard controls
+    fn help_text(&self) -> &'static str;
+
+    /// Called on graceful shutdown
+    fn cleanup(&mut self);
 }
 
 #[cfg(test)]

@@ -1,23 +1,13 @@
-use crate::cli_display::{print_error, print_progress, print_success};
+use std::env;
+use std::time::Duration;
+
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde_json::json;
-use std::env;
-use std::time::Duration;
 
-/// Default timeout for Vestaboard API requests (10 seconds)
-pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
-
-/// Creates an HTTP client configured with appropriate timeouts for Vestaboard API requests.
-/// This prevents the application from hanging indefinitely when the Vestaboard is unreachable.
-pub fn create_client() -> Client {
-  Client::builder()
-    .timeout(DEFAULT_TIMEOUT)
-    .connect_timeout(DEFAULT_TIMEOUT)
-    .build()
-    .expect("Failed to build HTTP client")
-}
+use crate::cli_display::{ print_error, print_progress, print_success };
+use crate::config::DEFAULT_API_TIMEOUT_SECONDS;
 
 static API_KEY: Lazy<String> = Lazy::new(|| {
   dotenv().ok();
@@ -27,12 +17,19 @@ static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
   dotenv().ok();
   env::var("IP_ADDRESS").expect("IP_ADDRESS not set")
 });
+static CLIENT: Lazy<Client> = Lazy::new(|| {
+  Client::builder()
+    .timeout(Duration::from_secs(DEFAULT_API_TIMEOUT_SECONDS))
+    .connect_timeout(Duration::from_secs(DEFAULT_API_TIMEOUT_SECONDS))
+    .build()
+    .expect("Failed to create HTTP client")
+});
 
 pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
   let start_time = std::time::Instant::now();
   print_progress("Sending to Vestaboard...");
 
-  let client = create_client();
+  let client = &*CLIENT;
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
   let body = json!(message);
 
@@ -43,8 +40,7 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     .post(&url)
     .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
     .json(&body)
-    .send()
-    .await;
+    .send().await;
 
   let duration = start_time.elapsed();
 
@@ -59,7 +55,7 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
         print_error(&format!("Vestaboard error: HTTP {}", status));
       }
       Ok(())
-    },
+    }
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
       let error = crate::errors::VestaboardError::reqwest_error(e, "Vestaboard");
@@ -69,7 +65,7 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
         crate::errors::VestaboardError::ReqwestError { source, .. } => Err(source),
         _ => unreachable!(),
       }
-    },
+    }
   }
 }
 
@@ -81,12 +77,12 @@ pub async fn clear_board() -> Result<(), reqwest::Error> {
     Ok(_) => {
       log::info!("Board cleared successfully");
       Ok(())
-    },
+    }
     Err(e) => {
       log::error!("Failed to clear board: {}", e);
       eprintln!("Error: {:?}", e);
       Err(e)
-    },
+    }
   }
 }
 
@@ -98,29 +94,25 @@ pub async fn blank_board() -> Result<(), reqwest::Error> {
     Err(e) => {
       eprintln!("Error: {:?}", e);
       Err(e)
-    },
+    }
   }
 }
 
 #[allow(dead_code)]
 pub async fn get_message() -> Result<(), reqwest::Error> {
-  let client = create_client();
+  let client = &*CLIENT;
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
-  let res = client
-    .get(&url)
-    .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
-    .send()
-    .await;
+  let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &*API_KEY).send().await;
 
   match res {
     Ok(response) => {
       println!("Response: {:?}", response);
       Ok(())
-    },
+    }
     Err(e) => {
       eprintln!("Error: {:?}", e);
       Err(e)
-    },
+    }
   }
 }

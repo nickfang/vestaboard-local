@@ -8,6 +8,7 @@ use std::path::PathBuf;
 // Configuration file and default paths
 pub const CONFIG_FILE_PATH: &str = "data/vblconfig.toml";
 pub const DEFAULT_LOG_LEVEL: &str = "info";
+pub const DEFAULT_API_TIMEOUT_SECONDS: u64 = 15;
 pub const DEFAULT_LOG_FILE_PATH: &str = "data/vestaboard.log";
 pub const DEFAULT_CONSOLE_LOG_LEVEL: &str = "info";
 pub const DEFAULT_SCHEDULE_FILE_PATH: &str = "data/schedule.json";

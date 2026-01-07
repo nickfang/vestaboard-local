@@ -245,8 +245,15 @@ impl Playlist {
 
 // --- CLI functions (following scheduler.rs pattern) ---
 
+use std::time::Duration;
+
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::config::Config;
+use crate::process_control::ProcessController;
+use crate::runner::keyboard::{InputSource, KeyboardListener};
+use crate::runner::lock::InstanceLock;
+use crate::runner::playlist_runner::PlaylistRunner;
+use crate::runner::{ControlFlow, Runner};
 use crate::widgets::resolver::execute_widget;
 use crate::widgets::widget_utils::error_to_display_message;
 
@@ -418,4 +425,122 @@ pub async fn preview_playlist() {
     }
 
     println!("Preview complete.");
+}
+
+/// Run the playlist with interactive controls.
+///
+/// # Arguments
+/// * `once` - If true, run through playlist once and exit
+/// * `start_index` - Optional starting index (0-based)
+/// * `start_id` - Optional starting item ID
+/// * `dry_run` - If true, display to console instead of Vestaboard
+pub async fn run_playlist(
+    once: bool,
+    start_index: Option<usize>,
+    start_id: Option<String>,
+    dry_run: bool,
+) -> Result<(), VestaboardError> {
+    let playlist_path = get_playlist_path();
+    let config = Config::load_silent().unwrap_or_default();
+    let state_path = config.get_runtime_state_path();
+
+    // Load playlist
+    let playlist = Playlist::load_silent(&playlist_path)?;
+
+    if playlist.is_empty() {
+        println!("Playlist is empty. Add items with: vbl playlist add <widget>");
+        return Ok(());
+    }
+
+    // Determine starting index
+    let start_idx = match (start_index, start_id) {
+        (Some(idx), _) => {
+            if idx >= playlist.len() {
+                return Err(VestaboardError::validation_error(&format!(
+                    "Index {} is out of range (playlist has {} items)",
+                    idx,
+                    playlist.len()
+                )));
+            }
+            idx
+        }
+        (_, Some(id)) => {
+            playlist.find_index_by_id(&id).ok_or_else(|| {
+                VestaboardError::validation_error(&format!("Item '{}' not found in playlist", id))
+            })?
+        }
+        (None, None) => {
+            // Restore from saved state
+            let saved_state = crate::runtime_state::RuntimeState::load(&state_path);
+            if saved_state.playlist_index < playlist.len() {
+                saved_state.playlist_index
+            } else {
+                0
+            }
+        }
+    };
+
+    // Acquire exclusive lock
+    let _lock = InstanceLock::acquire("playlist")?;
+
+    // Create runner
+    let mut runner = PlaylistRunner::new(playlist, state_path, start_idx, once, dry_run);
+
+    // Setup keyboard listener
+    let mut keyboard = KeyboardListener::new()?;
+
+    // Setup Ctrl+C handler
+    let process_controller = ProcessController::new();
+    process_controller.setup_signal_handler()?;
+
+    // Show initial help
+    println!("Press ? for help, q to quit.");
+
+    // Start the runner
+    runner.start();
+
+    // Main loop
+    loop {
+        // Priority 1: Check for shutdown signal (Ctrl+C)
+        if process_controller.should_shutdown() {
+            log::info!("Shutdown requested, stopping playlist");
+            println!("\nShutting down...");
+            break;
+        }
+
+        // Priority 2: Check for keyboard input (non-blocking)
+        if let Some(key) = keyboard.try_recv() {
+            match runner.handle_key(key) {
+                ControlFlow::Continue => {}
+                ControlFlow::Exit => {
+                    log::info!("User requested exit via keyboard");
+                    break;
+                }
+            }
+        }
+
+        // Priority 3: Run one iteration of the runner
+        match runner.run_iteration().await {
+            Ok(ControlFlow::Continue) => {}
+            Ok(ControlFlow::Exit) => {
+                log::info!("Runner requested exit");
+                break;
+            }
+            Err(e) => {
+                log::error!("Runner error: {}", e);
+                print_error(&e.to_user_message());
+                // Continue running unless fatal - matches cycle.rs behavior
+            }
+        }
+
+        // Small sleep to prevent busy-looping
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    // Cleanup
+    runner.cleanup();
+    print_success("Playlist stopped.");
+
+    // Lock is automatically released when _lock is dropped (RAII)
+    Ok(())
 }
