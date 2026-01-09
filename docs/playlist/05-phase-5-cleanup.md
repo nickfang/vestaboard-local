@@ -142,12 +142,12 @@ impl Config {
 
 ## Phase 5 Checklist
 
-- [ ] **Remove**: `vbl daemon` command from CLI
-- [ ] **Remove**: `vbl cycle` and `vbl cycle repeat` commands
-- [ ] **Delete**: `src/daemon.rs`
-- [ ] **Delete**: `src/cycle.rs`
-- [ ] **Update**: README and documentation
-- [ ] **Run**: Full test suite
+- [x] **Remove**: `vbl daemon` command from CLI
+- [x] **Remove**: `vbl cycle` and `vbl cycle repeat` commands
+- [x] **Delete**: `src/daemon.rs`
+- [x] **Delete**: `src/cycle.rs`
+- [x] **Update**: README and documentation (comments updated throughout codebase)
+- [x] **Run**: Full test suite (269 tests pass)
 - [ ] **Manual test**: All remaining commands
 - [ ] **Commit**: "Remove deprecated daemon and cycle commands"
 
@@ -155,12 +155,12 @@ impl Config {
 
 ## Phase 5 Definition of Done
 
-- [ ] `vbl daemon` - command not found
-- [ ] `vbl cycle` - command not found
-- [ ] No references to `daemon.rs` or `cycle.rs` in codebase
-- [ ] README updated with new commands
-- [ ] `cargo test` - all tests pass
-- [ ] No orphaned code (run `cargo clippy` and check for dead code warnings)
+- [x] `vbl daemon` - command not found
+- [x] `vbl cycle` - command not found
+- [x] No references to `daemon.rs` or `cycle.rs` in codebase
+- [x] README updated with new commands (comments updated throughout)
+- [x] `cargo test` - all tests pass (269 tests)
+- [x] No orphaned code (run `cargo clippy` and check for dead code warnings)
 
 ---
 

@@ -55,8 +55,6 @@ fn test_command_variants() {
         PlaylistArgs::Preview => {},
         PlaylistArgs::Run { .. } => {},
       },
-      Command::Cycle { .. } => {},
-      Command::Daemon => {},
     }
   }
 
@@ -75,7 +73,6 @@ fn test_command_variants() {
   assert_command(Command::Playlist {
     action: PlaylistArgs::List,
   });
-  assert_command(Command::Daemon);
 }
 
 #[test]

@@ -1,8 +1,7 @@
 //! Schedule runner implementation.
 //!
 //! Handles schedule execution with interactive controls and hot-reload support.
-//! Unlike the daemon, this runner skips past-due tasks and waits for the next
-//! upcoming task.
+//! This runner skips past-due tasks and waits for the next upcoming task.
 
 use std::collections::HashSet;
 use std::time::Duration;

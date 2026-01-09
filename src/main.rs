@@ -3,8 +3,6 @@ mod api_broker;
 mod cli_display;
 mod cli_setup;
 mod config;
-mod cycle;
-mod daemon;
 mod datetime;
 mod errors;
 mod logging;
@@ -17,10 +15,8 @@ mod widgets;
 
 use api_broker::{ handle_message, MessageDestination };
 use cli_display::{ init_output_control, print_error, print_progress, print_success };
-use cli_setup::{ Cli, Command, CycleCommand, PlaylistArgs, ScheduleArgs, WidgetCommand };
-use cycle::run_schedule_cycle;
+use cli_setup::{ Cli, Command, PlaylistArgs, ScheduleArgs, WidgetCommand };
 use std::process;
-use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
 use scheduler::{
@@ -252,91 +248,6 @@ async fn main() {
               1
             }
           }
-        }
-      }
-    }
-    Command::Cycle { command, args } => {
-      // Use repeat args if available, otherwise use main cycle args
-      let (is_repeat, cycle_args) = match command {
-        Some(CycleCommand::Repeat { args: repeat_args }) => (true, repeat_args),
-        None => (false, args),
-      };
-
-      log::info!(
-        "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
-        if is_repeat {
-          "continuous"
-        } else {
-          "single"
-        },
-        cycle_args.interval,
-        cycle_args.delay,
-        cycle_args.dry_run
-      );
-
-      if cycle_args.dry_run {
-        println!("Running {} cycle in preview mode...", if is_repeat {
-          "continuous"
-        } else {
-          "single"
-        });
-      } else {
-        println!(
-          "Starting {} cycle with {} second intervals...",
-          if is_repeat {
-            "continuous"
-          } else {
-            "single"
-          },
-          cycle_args.interval
-        );
-      }
-
-      if is_repeat {
-        println!("Cycle will repeat continuously until stopped (Ctrl-C).");
-      } else {
-        println!("Cycle will run through all scheduled tasks once.");
-      }
-
-      if cycle_args.delay > 0 {
-        println!("Waiting {} seconds before starting...", cycle_args.delay);
-        tokio::time::sleep(tokio::time::Duration::from_secs(cycle_args.delay)).await;
-      }
-
-      // Execute cycle functionality
-      match
-        run_schedule_cycle(
-          cycle_args.interval,
-          cycle_args.dry_run,
-          is_repeat,
-          true // Enable schedule monitoring for file changes
-        ).await
-      {
-        Ok(_) => {
-          log::info!("{} cycle completed successfully", if is_repeat {
-            "Continuous"
-          } else {
-            "Single"
-          });
-        }
-        Err(e) => {
-          log::error!("{} cycle failed: {}", if is_repeat { "Continuous" } else { "Single" }, e);
-          eprintln!("Cycle error: {}", e);
-        }
-      }
-      0 // Return success for now (not implemented yet)
-    }
-    Command::Daemon => {
-      log::info!("Starting daemon mode");
-      match run_daemon().await {
-        Ok(_) => {
-          log::info!("Daemon completed successfully");
-          0
-        }
-        Err(e) => {
-          log::error!("Daemon failed: {}", e);
-          print_error(&e.to_user_message());
-          1
         }
       }
     }

@@ -528,7 +528,7 @@ pub async fn run_playlist(
             Err(e) => {
                 log::error!("Runner error: {}", e);
                 print_error(&e.to_user_message());
-                // Continue running unless fatal - matches cycle.rs behavior
+                // Continue running unless fatal
             }
         }
 

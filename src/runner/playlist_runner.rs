@@ -249,7 +249,7 @@ impl PlaylistRunner {
                     item.widget,
                     e.to_user_message()
                 ));
-                // Continue with error display (matches cycle.rs behavior)
+                // Continue with error display
                 error_to_display_message(&e)
             }
         };
