@@ -479,11 +479,13 @@ impl KeyboardListener {
 
 ### Instance Lock Implementation
 
-**Important**: This implementation uses OS-level file locking (`flock` on Unix, `LockFile` on Windows) to prevent race conditions. The JSON data inside the lock file is for informational purposes only - the actual locking is done by the OS.
+This implementation uses a JSON lock file with PID checking. While not atomic (there's a small race window between checking and acquiring), it's sufficient for the single-user CLI use case.
+
+**Note**: For production use with multiple concurrent access attempts, consider upgrading to OS-level file locking (`flock` on Unix, `LockFileEx` on Windows).
 
 ```rust
-use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write, Seek, SeekFrom};
+use std::fs::{self, File};
+use std::io::Write;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
@@ -497,17 +499,13 @@ struct LockData {
 
 pub struct InstanceLock {
     path: PathBuf,
-    file: File,  // Keep file open to maintain OS lock (flock on Unix, LockFileEx on Windows)
 }
 
 impl InstanceLock {
-    /// Acquire an exclusive lock using OS-level file locking.
-    /// This is atomic and race-condition free.
     pub fn acquire(mode: &str) -> Result<Self, VestaboardError> {
         Self::acquire_at(mode, &PathBuf::from("data/vestaboard.lock"))
     }
 
-    /// Acquire lock at a specific path (useful for testing)
     pub fn acquire_at(mode: &str, path: &PathBuf) -> Result<Self, VestaboardError> {
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
@@ -516,35 +514,26 @@ impl InstanceLock {
             ))?;
         }
 
-        // Open or create the lock file
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path)
-            .map_err(|e| VestaboardError::lock_error(
-                &format!("Cannot open lock file: {}", e)
-            ))?;
-
-        // Try to acquire exclusive lock (non-blocking)
-        if !Self::try_exclusive_lock(&file)? {
-            // Lock is held by another process - read the lock data for error message
-            let content = fs::read_to_string(path).unwrap_or_default();
-            if let Ok(lock_data) = serde_json::from_str::<LockData>(&content) {
-                return Err(VestaboardError::lock_error(&format!(
-                    "{} already running (PID {}, started {})",
-                    lock_data.mode,
-                    lock_data.pid,
-                    lock_data.started_at.format("%H:%M:%S")
-                )));
-            } else {
-                return Err(VestaboardError::lock_error(
-                    "Another instance is already running"
-                ));
+        // Check if lock file exists and is held by a running process
+        if path.exists() {
+            if let Ok(content) = fs::read_to_string(path) {
+                if let Ok(lock_data) = serde_json::from_str::<LockData>(&content) {
+                    // Check if the PID is still running
+                    if is_pid_running(lock_data.pid) {
+                        return Err(VestaboardError::lock_error(&format!(
+                            "{} already running (PID {}, started {})",
+                            lock_data.mode,
+                            lock_data.pid,
+                            lock_data.started_at.format("%H:%M:%S")
+                        )));
+                    }
+                    // PID not running = stale lock, take over
+                    log::info!("Stale lock detected (PID {} not running), taking over", lock_data.pid);
+                }
             }
         }
 
-        // We have the lock - write our info to the file
+        // Write our lock data
         let lock_data = LockData {
             mode: mode.to_string(),
             pid: std::process::id(),
@@ -552,85 +541,44 @@ impl InstanceLock {
         };
 
         let content = serde_json::to_string_pretty(&lock_data)
-            .map_err(|e| VestaboardError::lock_error(
-                &format!("Cannot serialize lock: {}", e)
-            ))?;
+            .map_err(|e| VestaboardError::lock_error(&format!("Cannot serialize lock: {}", e)))?;
 
-        // Truncate and write (we hold the lock, so this is safe)
-        let mut file = file;
-        file.set_len(0).ok();
-        file.seek(SeekFrom::Start(0)).ok();
-        file.write_all(content.as_bytes()).map_err(|e| VestaboardError::lock_error(
-            &format!("Cannot write lock file: {}", e)
-        ))?;
-        file.flush().ok();
+        let mut file = File::create(path)
+            .map_err(|e| VestaboardError::lock_error(&format!("Cannot create lock file: {}", e)))?;
 
-        Ok(Self { path: path.clone(), file })
+        file.write_all(content.as_bytes())
+            .map_err(|e| VestaboardError::lock_error(&format!("Cannot write lock file: {}", e)))?;
+
+        log::info!("Lock acquired for {} at {}", mode, path.display());
+        Ok(Self { path: path.clone() })
     }
-
-    #[cfg(unix)]
-    fn try_exclusive_lock(file: &File) -> Result<bool, VestaboardError> {
-        use std::os::unix::io::AsRawFd;
-        let fd = file.as_raw_fd();
-        // LOCK_EX = exclusive lock, LOCK_NB = non-blocking
-        let result = unsafe { libc::flock(fd, libc::LOCK_EX | libc::LOCK_NB) };
-        if result == 0 {
-            Ok(true)  // Lock acquired
-        } else {
-            let err = std::io::Error::last_os_error();
-            if err.kind() == std::io::ErrorKind::WouldBlock {
-                Ok(false)  // Lock held by another process
-            } else {
-                Err(VestaboardError::lock_error(&format!("flock failed: {}", err)))
-            }
-        }
-    }
-
-    #[cfg(windows)]
-    fn try_exclusive_lock(file: &File) -> Result<bool, VestaboardError> {
-        use std::os::windows::io::AsRawHandle;
-        use winapi::um::fileapi::LockFileEx;
-        use winapi::um::minwinbase::{LOCKFILE_EXCLUSIVE_LOCK, LOCKFILE_FAIL_IMMEDIATELY, OVERLAPPED};
-        use std::mem::zeroed;
-
-        let handle = file.as_raw_handle();
-        let mut overlapped: OVERLAPPED = unsafe { zeroed() };
-
-        let result = unsafe {
-            LockFileEx(
-                handle as *mut _,
-                LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
-                0,
-                1,  // Lock 1 byte
-                0,
-                &mut overlapped,
-            )
-        };
-
-        if result != 0 {
-            Ok(true)  // Lock acquired
-        } else {
-            let err = std::io::Error::last_os_error();
-            if err.raw_os_error() == Some(33) {  // ERROR_LOCK_VIOLATION
-                Ok(false)  // Lock held by another process
-            } else {
-                Err(VestaboardError::lock_error(&format!("LockFileEx failed: {}", err)))
-            }
-        }
-    }
-
-    // Note: is_pid_running() is NOT needed because OS-level flock/LockFile
-    // automatically releases the lock when the process dies. Stale lock
-    // detection is handled by the OS, not by PID checking.
 }
 
 impl Drop for InstanceLock {
     fn drop(&mut self) {
-        // Lock is automatically released when file is closed (on drop)
-        // Remove the lock file for cleanliness
         if let Err(e) = fs::remove_file(&self.path) {
-            log::warn!("Cannot remove lock file: {}", e);
+            if e.kind() != std::io::ErrorKind::NotFound {
+                log::warn!("Cannot remove lock file: {}", e);
+            }
         }
+    }
+}
+
+/// Check if a process with the given PID is running (cross-platform)
+fn is_pid_running(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        // On Unix, signal 0 checks if process exists
+        unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
+    }
+    #[cfg(windows)]
+    {
+        // On Windows, try to open the process
+        // (implementation uses OpenProcess with PROCESS_QUERY_LIMITED_INFORMATION)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        false  // Fail open on unknown platforms
     }
 }
 ```

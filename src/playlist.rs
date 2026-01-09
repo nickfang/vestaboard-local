@@ -42,7 +42,21 @@ impl PlaylistItem {
             input,
         }
     }
+
+    /// Format the input value for display (e.g., in list/preview output)
+    pub fn format_input(&self) -> String {
+        if self.input.is_null() {
+            String::new()
+        } else if let Some(s) = self.input.as_str() {
+            format!(" \"{}\"", s)
+        } else {
+            format!(" {}", self.input)
+        }
+    }
 }
+
+/// Minimum allowed interval between playlist item rotations (60 seconds)
+pub const MIN_INTERVAL_SECONDS: u64 = 60;
 
 /// Default interval between playlist item rotations (5 minutes)
 fn default_interval() -> u64 {
@@ -123,12 +137,13 @@ impl Playlist {
         self.items.iter().position(|item| item.id == id)
     }
 
-    /// Validate that the interval is at least 60 seconds
+    /// Validate that the interval is at least MIN_INTERVAL_SECONDS
     pub fn validate_interval(&self) -> Result<(), VestaboardError> {
-        if self.interval_seconds < 60 {
-            return Err(VestaboardError::validation_error(
-                "Playlist interval must be at least 60 seconds",
-            ));
+        if self.interval_seconds < MIN_INTERVAL_SECONDS {
+            return Err(VestaboardError::validation_error(&format!(
+                "Playlist interval must be at least {} seconds",
+                MIN_INTERVAL_SECONDS
+            )));
         }
         Ok(())
     }
@@ -295,20 +310,12 @@ pub fn list_playlist() -> Result<(), VestaboardError> {
     println!();
 
     for (index, item) in playlist.items.iter().enumerate() {
-        let input_display = if item.input.is_null() {
-            String::new()
-        } else if let Some(s) = item.input.as_str() {
-            format!(" \"{}\"", s)
-        } else {
-            format!(" {}", item.input)
-        };
-
         println!(
             "  {}. [{}] {}{}",
             index + 1,
             item.id,
             item.widget,
-            input_display
+            item.format_input()
         );
     }
 
@@ -357,10 +364,11 @@ pub fn show_playlist_interval() -> Result<(), VestaboardError> {
 
 /// Set the playlist rotation interval
 pub fn set_playlist_interval(seconds: u64) -> Result<(), VestaboardError> {
-    if seconds < 60 {
-        return Err(VestaboardError::validation_error(
-            "Interval must be at least 60 seconds",
-        ));
+    if seconds < MIN_INTERVAL_SECONDS {
+        return Err(VestaboardError::validation_error(&format!(
+            "Interval must be at least {} seconds",
+            MIN_INTERVAL_SECONDS
+        )));
     }
 
     let path = get_playlist_path();
@@ -397,15 +405,7 @@ pub async fn preview_playlist() {
     println!();
 
     for (index, item) in playlist.items.iter().enumerate() {
-        let input_display = if item.input.is_null() {
-            String::new()
-        } else if let Some(s) = item.input.as_str() {
-            format!(" \"{}\"", s)
-        } else {
-            format!(" {}", item.input)
-        };
-
-        println!("--- Item {} of {}: {}{} ---", index + 1, playlist.len(), item.widget, input_display);
+        println!("--- Item {} of {}: {}{} ---", index + 1, playlist.len(), item.widget, item.format_input());
 
         // Execute widget and show preview
         let message = match execute_widget(&item.widget, &item.input).await {
@@ -454,8 +454,11 @@ pub async fn run_playlist(
         return Ok(());
     }
 
-    // Determine starting index
-    let start_idx = match (start_index, start_id) {
+    // Acquire exclusive lock
+    let _lock = InstanceLock::acquire("playlist")?;
+
+    // Create runner with appropriate starting position
+    let mut runner = match (start_index, start_id) {
         (Some(idx), _) => {
             if idx >= playlist.len() {
                 return Err(VestaboardError::validation_error(&format!(
@@ -464,32 +467,23 @@ pub async fn run_playlist(
                     playlist.len()
                 )));
             }
-            idx
+            PlaylistRunner::new(playlist, state_path, idx, once, dry_run)
         }
         (_, Some(id)) => {
-            playlist.find_index_by_id(&id).ok_or_else(|| {
+            let idx = playlist.find_index_by_id(&id).ok_or_else(|| {
                 VestaboardError::validation_error(&format!("Item '{}' not found in playlist", id))
-            })?
+            })?;
+            PlaylistRunner::new(playlist, state_path, idx, once, dry_run)
         }
         (None, None) if resume => {
-            // Restore from saved state (--resume flag)
-            let saved_state = crate::runtime_state::RuntimeState::load(&state_path);
-            if saved_state.playlist_index < playlist.len() {
-                log::info!("Resuming from saved index {}", saved_state.playlist_index);
-                saved_state.playlist_index
-            } else {
-                log::info!("Saved index {} out of range, starting from 0", saved_state.playlist_index);
-                0
-            }
+            // Use restore_from_state to resume from saved position
+            PlaylistRunner::restore_from_state(playlist, state_path, once, dry_run)
         }
-        (None, None) => 0, // Default: start from beginning
+        (None, None) => {
+            // Default: start from beginning
+            PlaylistRunner::new(playlist, state_path, 0, once, dry_run)
+        }
     };
-
-    // Acquire exclusive lock
-    let _lock = InstanceLock::acquire("playlist")?;
-
-    // Create runner
-    let mut runner = PlaylistRunner::new(playlist, state_path, start_idx, once, dry_run);
 
     // Setup keyboard listener
     let mut keyboard = KeyboardListener::new()?;
