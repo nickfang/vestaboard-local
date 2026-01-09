@@ -1,6 +1,3 @@
-#[path = "../scheduler.rs"]
-mod scheduler;
-
 use crate::config::DEFAULT_SCHEDULE_FILE_PATH;
 use crate::errors::VestaboardError;
 use crate::scheduler::{

@@ -36,6 +36,10 @@ pub async fn execute_task(task: &ScheduledTask) -> Result<(), VestaboardError> {
 
 pub async fn run_daemon() -> Result<(), VestaboardError> {
   log::info!("Starting Vestaboard daemon");
+
+  // Deprecation warning
+  print_warning("'vbl daemon' is deprecated. Use 'vbl schedule run' instead.");
+
   print_progress("Starting Vestaboard daemon...");
 
   // Create and setup process controller for graceful shutdown

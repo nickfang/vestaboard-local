@@ -29,6 +29,7 @@ use scheduler::{
   list_schedule,
   preview_schedule,
   remove_task_from_schedule,
+  run_schedule,
 };
 use std::process;
 use widgets::resolver::execute_widget;
@@ -240,6 +241,17 @@ async fn main() {
           log::info!("Running schedule preview");
           preview_schedule().await;
           0
+        }
+        ScheduleArgs::Run { dry_run } => {
+          log::info!("Running schedule - dry_run: {}", dry_run);
+          match run_schedule(dry_run).await {
+            Ok(_) => 0,
+            Err(e) => {
+              log::error!("Schedule run failed: {}", e);
+              print_error(&e.to_user_message());
+              1
+            }
+          }
         }
       }
     }

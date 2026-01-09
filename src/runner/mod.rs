@@ -6,6 +6,7 @@
 pub mod keyboard;
 pub mod lock;
 pub mod playlist_runner;
+pub mod schedule_runner;
 
 use crossterm::event::KeyCode;
 

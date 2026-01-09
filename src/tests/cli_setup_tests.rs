@@ -44,6 +44,7 @@ fn test_command_variants() {
         ScheduleArgs::List => {},
         ScheduleArgs::Clear => {},
         ScheduleArgs::Preview => {},
+        ScheduleArgs::Run { .. } => {},
       },
       Command::Playlist { action } => match action {
         PlaylistArgs::Add { .. } => {},
@@ -287,4 +288,39 @@ fn test_cli_playlist_run_resume_and_index_mutually_exclusive() {
 fn test_cli_playlist_run_resume_and_id_mutually_exclusive() {
   let result = Cli::try_parse_from(["vbl", "playlist", "run", "--resume", "--id", "abc1"]);
   assert!(result.is_err());
+}
+
+// --- Schedule run CLI parsing tests ---
+
+#[test]
+fn test_cli_parses_schedule_run() {
+  let cli = Cli::parse_from(["vbl", "schedule", "run"]);
+  match cli.command {
+    Command::Schedule { action: ScheduleArgs::Run { dry_run } } => {
+      assert!(!dry_run);
+    }
+    _ => panic!("Expected Schedule Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_schedule_run_dry_run() {
+  let cli = Cli::parse_from(["vbl", "schedule", "run", "--dry-run"]);
+  match cli.command {
+    Command::Schedule { action: ScheduleArgs::Run { dry_run } } => {
+      assert!(dry_run);
+    }
+    _ => panic!("Expected Schedule Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_schedule_run_dry_run_short() {
+  let cli = Cli::parse_from(["vbl", "schedule", "run", "-d"]);
+  match cli.command {
+    Command::Schedule { action: ScheduleArgs::Run { dry_run } } => {
+      assert!(dry_run);
+    }
+    _ => panic!("Expected Schedule Run command"),
+  }
 }

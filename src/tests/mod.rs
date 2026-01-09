@@ -13,4 +13,5 @@ mod logging_tests;
 mod playlist_tests;
 mod process_control_tests;
 mod runtime_state_tests;
+mod schedule_runner_tests;
 mod scheduler_tests;

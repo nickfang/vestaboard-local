@@ -462,3 +462,120 @@ pub async fn preview_schedule() {
   log::info!("Schedule dry run completed");
   println!("\n✓ Preview complete");
 }
+
+/// Run the schedule with interactive controls.
+///
+/// Skips past-due tasks and waits for the next upcoming task.
+/// Supports hot-reload of schedule file changes.
+///
+/// # Arguments
+/// * `dry_run` - If true, display to console instead of Vestaboard
+pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
+  use std::time::Duration;
+  use crate::process_control::ProcessController;
+  use crate::runner::keyboard::{InputSource, KeyboardListener};
+  use crate::runner::lock::InstanceLock;
+  use crate::runner::schedule_runner::ScheduleRunner;
+  use crate::runner::{ControlFlow, Runner};
+
+  let config = Config::load_silent().unwrap_or_default();
+  let schedule_path = config.get_schedule_file_path();
+
+  // Load initial schedule
+  let schedule = load_schedule_silent(&schedule_path)?;
+
+  if schedule.tasks.is_empty() {
+    println!("Schedule is empty. Add tasks with: vbl schedule add <time> <widget>");
+    return Ok(());
+  }
+
+  // Acquire exclusive lock
+  let _lock = InstanceLock::acquire("schedule")?;
+
+  // Create schedule monitor for hot-reload
+  let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
+  schedule_monitor.initialize()?;
+
+  // Create runner
+  let mut runner = ScheduleRunner::new(schedule, dry_run);
+
+  // Setup keyboard listener
+  let mut keyboard = KeyboardListener::new()?;
+
+  // Setup Ctrl+C handler
+  let process_controller = ProcessController::new();
+  process_controller.setup_signal_handler()?;
+
+  // Show initial help
+  println!("Press ? for help, q to quit.");
+
+  // Start the runner
+  runner.start();
+
+  // Main loop
+  loop {
+    // Priority 1: Check for shutdown signal (Ctrl+C)
+    if process_controller.should_shutdown() {
+      log::info!("Shutdown requested, stopping schedule runner");
+      println!("\nShutting down...");
+      break;
+    }
+
+    // Priority 2: Check for keyboard input (non-blocking)
+    if let Some(key) = keyboard.try_recv() {
+      match runner.handle_key(key) {
+        ControlFlow::Continue => {}
+        ControlFlow::Exit => {
+          log::info!("User requested exit via keyboard");
+          break;
+        }
+      }
+    }
+
+    // Priority 3: Check for schedule file changes (hot-reload)
+    match schedule_monitor.reload_if_modified() {
+      Ok(true) => {
+        log::info!("Schedule file updated, reloading");
+        let new_schedule = schedule_monitor.get_current_schedule().clone();
+        runner.reload_schedule(new_schedule);
+        print_success(&format!(
+          "Schedule reloaded ({} tasks)",
+          schedule_monitor.get_current_schedule().tasks.len()
+        ));
+      }
+      Ok(false) => {}
+      Err(e) => {
+        log::warn!("Error checking for schedule updates: {}", e);
+      }
+    }
+
+    // Priority 4: Run one iteration of the runner
+    match runner.run_iteration().await {
+      Ok(ControlFlow::Continue) => {}
+      Ok(ControlFlow::Exit) => {
+        log::info!("Runner requested exit");
+        break;
+      }
+      Err(e) => {
+        log::error!("Runner error: {}", e);
+        print_error(&e.to_user_message());
+        // Continue running unless fatal
+      }
+    }
+
+    // Sleep until next task or check interval (whichever is sooner)
+    let sleep_duration = runner
+      .time_until_next_task()
+      .map(|d| d.min(Duration::from_secs(config.get_check_interval_seconds())))
+      .unwrap_or(Duration::from_secs(config.get_check_interval_seconds()));
+
+    // Small sleep to prevent busy-looping and allow keyboard input
+    tokio::time::sleep(sleep_duration.min(Duration::from_millis(100))).await;
+  }
+
+  // Cleanup
+  runner.cleanup();
+  print_success("Schedule runner stopped.");
+
+  Ok(())
+}

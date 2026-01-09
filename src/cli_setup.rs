@@ -146,6 +146,15 @@ pub enum ScheduleArgs {
   Clear,
   #[command(name = "preview", about = "Preview the schedule without updating the Vestaboard")]
   Preview,
+  #[command(
+    name = "run",
+    about = "Run the schedule, executing tasks at their scheduled times",
+    after_help = "Examples:\n  vbl schedule run\n  vbl schedule run --dry-run"
+  )]
+  Run {
+    #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
+    dry_run: bool,
+  },
 }
 
 #[derive(Subcommand, Debug)]
