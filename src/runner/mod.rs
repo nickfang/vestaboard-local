@@ -30,54 +30,54 @@ Schedule Controls:
 /// Control flow decision after handling an event
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ControlFlow {
-    /// Continue running
-    Continue,
-    /// Exit the runner
-    Exit,
+  /// Continue running
+  Continue,
+  /// Exit the runner
+  Exit,
 }
 
 /// Common trait for playlist and schedule runners
 pub trait Runner: Send {
-    /// Called once when the runner starts
-    fn start(&mut self);
+  /// Called once when the runner starts
+  fn start(&mut self);
 
-    /// Run one iteration of the runner (check if work needs to be done, do it)
-    /// Returns quickly if nothing to do (non-blocking)
-    async fn run_iteration(&mut self) -> Result<ControlFlow, VestaboardError>;
+  /// Run one iteration of the runner (check if work needs to be done, do it)
+  /// Returns quickly if nothing to do (non-blocking)
+  async fn run_iteration(&mut self) -> Result<ControlFlow, VestaboardError>;
 
-    /// Handle a keyboard input, return whether to continue
-    fn handle_key(&mut self, key: KeyCode) -> ControlFlow;
+  /// Handle a keyboard input, return whether to continue
+  fn handle_key(&mut self, key: KeyCode) -> ControlFlow;
 
-    /// Get help text for keyboard controls
-    fn help_text(&self) -> &'static str;
+  /// Get help text for keyboard controls
+  fn help_text(&self) -> &'static str;
 
-    /// Called on graceful shutdown
-    fn cleanup(&mut self);
+  /// Called on graceful shutdown
+  fn cleanup(&mut self);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_control_flow_variants() {
-        let cont = ControlFlow::Continue;
-        let exit = ControlFlow::Exit;
-        assert_ne!(cont, exit);
-    }
+  #[test]
+  fn test_control_flow_variants() {
+    let cont = ControlFlow::Continue;
+    let exit = ControlFlow::Exit;
+    assert_ne!(cont, exit);
+  }
 
-    #[test]
-    fn test_playlist_help_contains_expected_keys() {
-        assert!(PLAYLIST_HELP.contains("p"));
-        assert!(PLAYLIST_HELP.contains("r"));
-        assert!(PLAYLIST_HELP.contains("n"));
-        assert!(PLAYLIST_HELP.contains("q"));
-        assert!(PLAYLIST_HELP.contains("?"));
-    }
+  #[test]
+  fn test_playlist_help_contains_expected_keys() {
+    assert!(PLAYLIST_HELP.contains("p"));
+    assert!(PLAYLIST_HELP.contains("r"));
+    assert!(PLAYLIST_HELP.contains("n"));
+    assert!(PLAYLIST_HELP.contains("q"));
+    assert!(PLAYLIST_HELP.contains("?"));
+  }
 
-    #[test]
-    fn test_schedule_help_contains_expected_keys() {
-        assert!(SCHEDULE_HELP.contains("q"));
-        assert!(SCHEDULE_HELP.contains("?"));
-    }
+  #[test]
+  fn test_schedule_help_contains_expected_keys() {
+    assert!(SCHEDULE_HELP.contains("q"));
+    assert!(SCHEDULE_HELP.contains("?"));
+  }
 }

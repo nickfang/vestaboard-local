@@ -1,4 +1,4 @@
-use clap::{ Args, Parser, Subcommand };
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Args, Debug)]
@@ -14,8 +14,10 @@ pub struct FileArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum WidgetCommand {
-  #[command(name = "text", about = "Display a text message")] Text(TextArgs),
-  #[command(name = "file", about = "Display a message from a file")] File(FileArgs),
+  #[command(name = "text", about = "Display a text message")]
+  Text(TextArgs),
+  #[command(name = "file", about = "Display a message from a file")]
+  File(FileArgs),
   #[command(name = "weather", about = "Display the weather")]
   Weather,
   #[command(name = "jokes", about = "Display a random joke")]
@@ -40,7 +42,8 @@ pub enum PlaylistArgs {
     name = "add",
     about = "Add a widget to the playlist",
     after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist add sat-word"
-  )] Add {
+  )]
+  Add {
     #[clap(help = "The widget to add (weather, text, sat-word, jokes, clear)", required = true)]
     widget: String,
     #[clap(help = "Widget input (required for text widget)")]
@@ -48,16 +51,15 @@ pub enum PlaylistArgs {
   },
   #[command(name = "list", about = "List all playlist items")]
   List,
-  #[command(name = "remove", about = "Remove a playlist item by ID")] Remove {
+  #[command(name = "remove", about = "Remove a playlist item by ID")]
+  Remove {
     #[clap(help = "The ID of the playlist item to remove", required = true)]
     id: String,
   },
   #[command(name = "clear", about = "Remove all playlist items")]
   Clear,
-  #[command(
-    name = "interval",
-    about = "Show or set the rotation interval in seconds (minimum 60)"
-  )] Interval {
+  #[command(name = "interval", about = "Show or set the rotation interval in seconds (minimum 60)")]
+  Interval {
     #[clap(help = "Interval in seconds between items (omit to show current)")]
     seconds: Option<u64>,
   },
@@ -67,7 +69,8 @@ pub enum PlaylistArgs {
     name = "run",
     about = "Run the playlist, rotating through items at the set interval",
     after_help = "Examples:\n  vbl playlist run\n  vbl playlist run --resume\n  vbl playlist run --once\n  vbl playlist run --index 2\n  vbl playlist run --id abc1\n  vbl playlist run --dry-run"
-  )] Run {
+  )]
+  Run {
     #[arg(long, help = "Run through playlist once and exit")]
     once: bool,
     #[arg(long, help = "Resume from last position", conflicts_with_all = ["index", "id"])]
@@ -76,11 +79,7 @@ pub enum PlaylistArgs {
     index: Option<usize>,
     #[arg(long, help = "Start from item with this ID", conflicts_with_all = ["index", "resume"])]
     id: Option<String>,
-    #[arg(
-      short = 'd',
-      long = "dry-run",
-      help = "Preview mode - show messages without sending to Vestaboard"
-    )]
+    #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
     dry_run: bool,
   },
 }
@@ -94,7 +93,8 @@ pub enum ScheduleArgs {
     about = "Add a new scheduled message.  Message must be in lowercase letters.",
     arg_required_else_help = true,
     after_help = "Example:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Don\\'t panic!\"\n  vbl schedule add \"2025-05-01 20:00:30\" weather"
-  )] Add {
+  )]
+  Add {
     #[clap(help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.", required = true)]
     time: String,
     #[clap(help = "The widget to use (text, file, weather, sat-word).", required = true)]
@@ -102,10 +102,8 @@ pub enum ScheduleArgs {
     #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
     input: Vec<String>,
   },
-  #[command(
-    name = "remove",
-    about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's"
-  )] Remove {
+  #[command(name = "remove", about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's")]
+  Remove {
     #[clap(help = "The ID of the scheduled task", required = true)]
     id: String,
   },
@@ -117,12 +115,9 @@ pub enum ScheduleArgs {
     name = "run",
     about = "Run the schedule, executing tasks at their scheduled times",
     after_help = "Examples:\n  vbl schedule run\n  vbl schedule run --dry-run"
-  )] Run {
-    #[arg(
-      short = 'd',
-      long = "dry-run",
-      help = "Preview mode - show messages without sending to Vestaboard"
-    )]
+  )]
+  Run {
+    #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
     dry_run: bool,
   },
 }
@@ -132,18 +127,21 @@ pub enum Command {
   #[command(
     about = "Show a message on the Vestaboard",
     after_help = "Examples:\n  vbl show text \"Hello World\"\n  vbl show --dry-run weather\n  vbl show file message.txt"
-  )] Show(ShowArgs),
+  )]
+  Show(ShowArgs),
   #[command(
     about = "Manage scheduled messages",
     after_help = "Examples:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Good morning!\"\n  vbl schedule list\n  vbl schedule preview"
-  )] Schedule {
+  )]
+  Schedule {
     #[command(subcommand)]
     action: ScheduleArgs,
   },
   #[command(
     about = "Manage and run the playlist",
     after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist list\n  vbl playlist remove abc1\n  vbl playlist interval 300"
-  )] Playlist {
+  )]
+  Playlist {
     #[command(subcommand)]
     action: PlaylistArgs,
   },

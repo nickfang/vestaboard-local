@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde_json::json;
 
-use crate::cli_display::{ print_error, print_progress, print_success };
+use crate::cli_display::{print_error, print_progress, print_success};
 use crate::config::DEFAULT_API_TIMEOUT_SECONDS;
 
 static API_KEY: Lazy<String> = Lazy::new(|| {
@@ -40,7 +40,8 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     .post(&url)
     .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
     .json(&body)
-    .send().await;
+    .send()
+    .await;
 
   let duration = start_time.elapsed();
 
@@ -55,11 +56,11 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
         print_error(&format!("Vestaboard error: HTTP {}", status));
       }
       Ok(())
-    }
+    },
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
       Err(e)
-    }
+    },
   }
 }
 
@@ -71,12 +72,12 @@ pub async fn clear_board() -> Result<(), reqwest::Error> {
     Ok(_) => {
       log::info!("Board cleared successfully");
       Ok(())
-    }
+    },
     Err(e) => {
       log::error!("Failed to clear board: {}", e);
       eprintln!("Error: {:?}", e);
       Err(e)
-    }
+    },
   }
 }
 
@@ -88,7 +89,7 @@ pub async fn blank_board() -> Result<(), reqwest::Error> {
     Err(e) => {
       eprintln!("Error: {:?}", e);
       Err(e)
-    }
+    },
   }
 }
 
@@ -97,16 +98,20 @@ pub async fn get_message() -> Result<(), reqwest::Error> {
   let client = &*CLIENT;
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
-  let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &*API_KEY).send().await;
+  let res = client
+    .get(&url)
+    .header("X-Vestaboard-Local-Api-Key", &*API_KEY)
+    .send()
+    .await;
 
   match res {
     Ok(response) => {
       println!("Response: {:?}", response);
       Ok(())
-    }
+    },
     Err(e) => {
       eprintln!("Error: {:?}", e);
       Err(e)
-    }
+    },
   }
 }

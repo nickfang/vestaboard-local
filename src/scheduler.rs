@@ -471,12 +471,12 @@ pub async fn preview_schedule() {
 /// # Arguments
 /// * `dry_run` - If true, display to console instead of Vestaboard
 pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
-  use std::time::Duration;
   use crate::process_control::ProcessController;
   use crate::runner::keyboard::{InputSource, KeyboardListener};
   use crate::runner::lock::InstanceLock;
   use crate::runner::schedule_runner::ScheduleRunner;
   use crate::runner::{ControlFlow, Runner};
+  use std::time::Duration;
 
   let config = Config::load_silent().unwrap_or_default();
   let schedule_path = config.get_schedule_file_path();
@@ -524,11 +524,11 @@ pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
     // Priority 2: Check for keyboard input (non-blocking)
     if let Some(key) = keyboard.try_recv() {
       match runner.handle_key(key) {
-        ControlFlow::Continue => {}
+        ControlFlow::Continue => {},
         ControlFlow::Exit => {
           log::info!("User requested exit via keyboard");
           break;
-        }
+        },
       }
     }
 
@@ -538,29 +538,26 @@ pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
         log::info!("Schedule file updated, reloading");
         let new_schedule = schedule_monitor.get_current_schedule().clone();
         runner.reload_schedule(new_schedule);
-        print_success(&format!(
-          "Schedule reloaded ({} tasks)",
-          schedule_monitor.get_current_schedule().tasks.len()
-        ));
-      }
-      Ok(false) => {}
+        print_success(&format!("Schedule reloaded ({} tasks)", schedule_monitor.get_current_schedule().tasks.len()));
+      },
+      Ok(false) => {},
       Err(e) => {
         log::warn!("Error checking for schedule updates: {}", e);
-      }
+      },
     }
 
     // Priority 4: Run one iteration of the runner
     match runner.run_iteration().await {
-      Ok(ControlFlow::Continue) => {}
+      Ok(ControlFlow::Continue) => {},
       Ok(ControlFlow::Exit) => {
         log::info!("Runner requested exit");
         break;
-      }
+      },
       Err(e) => {
         log::error!("Runner error: {}", e);
         print_error(&e.to_user_message());
         // Continue running unless fatal
-      }
+      },
     }
 
     // Sleep until next task or check interval (whichever is sooner)

@@ -1,7 +1,7 @@
-use crate::cli_display::{ print_error, print_progress, print_success };
+use crate::cli_display::{print_error, print_progress, print_success};
 use crate::errors::VestaboardError;
 use log::LevelFilter;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
@@ -104,18 +104,13 @@ impl Config {
 
     // Ensure data directory exists
     if let Some(parent) = config_path.parent() {
-      fs
-        ::create_dir_all(parent)
-        .map_err(|e| VestaboardError::io_error(e, "creating config directory"))?;
+      fs::create_dir_all(parent).map_err(|e| VestaboardError::io_error(e, "creating config directory"))?;
     }
 
-    let config_content = toml
-      ::to_string_pretty(self)
+    let config_content = toml::to_string_pretty(self)
       .map_err(|e| VestaboardError::other(&format!("Failed to serialize config: {}", e)))?;
 
-    fs
-      ::write(&config_path, config_content)
-      .map_err(|e| VestaboardError::io_error(e, "writing config file"))?;
+    fs::write(&config_path, config_content).map_err(|e| VestaboardError::io_error(e, "writing config file"))?;
 
     log::debug!("Saved config to {}", config_path.display());
     Ok(())
@@ -126,7 +121,8 @@ impl Config {
   }
 
   pub fn get_console_log_level(&self) -> LevelFilter {
-    self.console_log_level
+    self
+      .console_log_level
       .as_ref()
       .map(|level| self.parse_log_level(level))
       .unwrap_or_else(|| self.get_log_level())
@@ -143,7 +139,7 @@ impl Config {
       _ => {
         eprintln!("Invalid log level '{}', defaulting to 'info'", level);
         LevelFilter::Info
-      }
+      },
     }
   }
 
@@ -156,7 +152,12 @@ impl Config {
   }
 
   pub fn get_schedule_backup_path(&self) -> PathBuf {
-    PathBuf::from(self.schedule_backup_path.as_deref().unwrap_or(DEFAULT_SCHEDULE_BACKUP_PATH))
+    PathBuf::from(
+      self
+        .schedule_backup_path
+        .as_deref()
+        .unwrap_or(DEFAULT_SCHEDULE_BACKUP_PATH),
+    )
   }
 
   pub fn get_check_interval_seconds(&self) -> u64 {
