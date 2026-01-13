@@ -71,13 +71,16 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
       log::warn!("Failed to initialize schedule monitor: {}", e);
       print_warning(&format!("Could not load schedule: {}", e.to_user_message()));
       0
-    }
+    },
   };
 
   let mut executed_task_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
   log::info!("Daemon started successfully, monitoring schedule");
-  print_success(&format!("Daemon started ({} tasks, checking every {}s)", initial_task_count, CHECK_INTERVAL_SECONDS));
+  print_success(&format!(
+    "Daemon started ({} tasks, checking every {}s)",
+    initial_task_count, CHECK_INTERVAL_SECONDS
+  ));
 
   loop {
     if process_controller.should_shutdown() {
@@ -94,14 +97,14 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
         log::info!("Schedule file updated and reloaded");
         let task_count = schedule_monitor.get_current_schedule().tasks.len();
         print_success(&format!("Schedule reloaded ({} tasks)", task_count));
-      }
+      },
       Ok(false) => {
         log::trace!("No schedule file changes detected");
-      }
+      },
       Err(e) => {
         log::error!("Error checking for schedule updates: {}", e);
         print_warning(&e.to_user_message());
-      }
+      },
     }
 
     let now = Utc::now();
@@ -115,16 +118,10 @@ pub async fn run_daemon() -> Result<(), VestaboardError> {
     }
 
     if let Some(task) = tasks_to_execute.last() {
-      log::info!(
-        "Found {} task(s) ready for execution",
-        tasks_to_execute.len()
-      );
+      log::info!("Found {} task(s) ready for execution", tasks_to_execute.len());
       match execute_task(task).await {
         Ok(_) => {
-          log::info!(
-            "Task execution successful, marking {} task(s) as executed",
-            tasks_to_execute.len()
-          );
+          log::info!("Task execution successful, marking {} task(s) as executed", tasks_to_execute.len());
           for task in &tasks_to_execute {
             executed_task_ids.insert(task.id.clone());
           }

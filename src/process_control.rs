@@ -129,9 +129,7 @@ impl ProcessController {
       let error_msg = format!("Failed to set Ctrl+C handler: {}", e);
       log::error!("{}", error_msg);
       eprintln!("Error setting up signal handler: {}", e);
-      VestaboardError::Other {
-        message: error_msg,
-      }
+      VestaboardError::Other { message: error_msg }
     })?;
 
     // Mark signal handler as registered

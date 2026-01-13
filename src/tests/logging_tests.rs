@@ -7,8 +7,7 @@ mod tests {
 
   // Import the logging macros - they're exported at crate level
   use crate::{
-    log_api_error, log_api_request, log_api_response, log_widget_error, log_widget_start,
-    log_widget_success,
+    log_api_error, log_api_request, log_api_response, log_widget_error, log_widget_start, log_widget_success,
   };
 
   #[test]
@@ -44,10 +43,7 @@ console_log_level = "info""#,
     let config = Config::default();
     assert_eq!(config.log_level, crate::config::DEFAULT_LOG_LEVEL);
     assert_eq!(config.log_file_path, crate::config::DEFAULT_LOG_FILE_PATH);
-    assert_eq!(
-      config.console_log_level,
-      Some(crate::config::DEFAULT_CONSOLE_LOG_LEVEL.to_string())
-    );
+    assert_eq!(config.console_log_level, Some(crate::config::DEFAULT_CONSOLE_LOG_LEVEL.to_string()));
   }
 
   #[test]
@@ -78,18 +74,9 @@ console_log_level = "info""#,
 
     assert_eq!(config.get_log_level(), log::LevelFilter::Debug);
     assert_eq!(config.get_console_log_level(), log::LevelFilter::Warn);
-    assert_eq!(
-      config.get_log_file_path(),
-      PathBuf::from("custom/path/log.txt")
-    );
-    assert_eq!(
-      config.get_schedule_file_path(),
-      PathBuf::from("custom/schedule.json")
-    );
-    assert_eq!(
-      config.get_schedule_backup_path(),
-      PathBuf::from("custom/backup.json")
-    );
+    assert_eq!(config.get_log_file_path(), PathBuf::from("custom/path/log.txt"));
+    assert_eq!(config.get_schedule_file_path(), PathBuf::from("custom/schedule.json"));
+    assert_eq!(config.get_schedule_backup_path(), PathBuf::from("custom/backup.json"));
   }
 
   #[test]
@@ -129,8 +116,8 @@ console_log_level = "info""#,
 
     // Verify the timestamp format doesn't contain milliseconds or UTC
     // Pattern: YYYY-MM-DD HH:MM:SS [LEVEL] (no milliseconds, no UTC)
-    let timestamp_pattern = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[INFO\]$")
-      .expect("Regex should compile");
+    let timestamp_pattern =
+      regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[INFO\]$").expect("Regex should compile");
 
     assert!(
       timestamp_pattern.is_match(&formatted),
@@ -145,11 +132,7 @@ console_log_level = "info""#,
       formatted
     );
 
-    assert!(
-      !formatted.contains("."),
-      "Timestamp should NOT contain milliseconds (dots), got: {}",
-      formatted
-    );
+    assert!(!formatted.contains("."), "Timestamp should NOT contain milliseconds (dots), got: {}", formatted);
 
     // The format should be exactly: "YYYY-MM-DD HH:MM:SS [INFO]"
     // That's 19 chars for timestamp + 1 space + 6 chars for "[INFO]" = 26 chars total

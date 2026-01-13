@@ -69,8 +69,9 @@ mod tests {
     let result = execute_widget("nonexistent_widget", &serde_json::json!(null)).await;
     assert!(result.is_err()); // Should return error for unknown widget
     let error = result.unwrap_err();
-    assert!(error.to_string().to_lowercase().contains("unknown") ||
-            error.to_string().to_lowercase().contains("not found"));
+    assert!(
+      error.to_string().to_lowercase().contains("unknown") || error.to_string().to_lowercase().contains("not found")
+    );
   }
 
   #[tokio::test]

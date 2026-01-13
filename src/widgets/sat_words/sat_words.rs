@@ -32,23 +32,15 @@ pub fn get_sat_word() -> Result<WidgetOutput, VestaboardError> {
     for line in lines {
       message.push(line);
     }
-    log::debug!(
-      "SAT word widget completed successfully, {} lines generated",
-      message.len()
-    );
+    log::debug!("SAT word widget completed successfully, {} lines generated", message.len());
     Ok(message)
   } else {
     log::error!("No words available in SAT words dictionary");
-    Err(VestaboardError::widget_error(
-      "sat-word",
-      "No words available in dictionary",
-    ))
+    Err(VestaboardError::widget_error("sat-word", "No words available in dictionary"))
   }
 }
 
-pub fn create_words_map<P>(
-  filename: P,
-) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
+pub fn create_words_map<P>(filename: P) -> io::Result<HashMap<String, Vec<(String, String, String)>>>
 where
   P: AsRef<Path>,
 {
@@ -73,11 +65,7 @@ where
           rest = "";
           // rest = rest_of_line.split_once(')').map_or("", |(_, r)| r.trim());
         } else {
-          log::warn!(
-            "Line {} does not follow expected pattern: {}",
-            line_number + 1,
-            line
-          );
+          log::warn!("Line {} does not follow expected pattern: {}", line_number + 1, line);
           break;
         }
       }
@@ -85,11 +73,7 @@ where
         map.insert(key.to_string(), definitions);
       }
     } else {
-      log::warn!(
-        "Line {} does not follow expected pattern: {}",
-        line_number + 1,
-        line
-      );
+      log::warn!("Line {} does not follow expected pattern: {}", line_number + 1, line);
     }
   }
 

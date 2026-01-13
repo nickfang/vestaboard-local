@@ -1,8 +1,8 @@
 #[path = "../api_broker.rs"]
 mod api_broker;
 use api_broker::{
-  display_message, get_valid_characters_description, is_valid_character, message_to_codes,
-  to_codes, validate_message_content,
+  display_message, get_valid_characters_description, is_valid_character, message_to_codes, to_codes,
+  validate_message_content,
 };
 
 #[cfg(test)]
@@ -194,10 +194,7 @@ fn test_validate_message_content_duplicate_invalid() {
 
 #[test]
 fn test_validate_message_content_with_degree_symbol() {
-  let message = vec![
-    "temp is 72D today".to_string(),
-    "it feels like 75D".to_string(),
-  ];
+  let message = vec!["temp is 72D today".to_string(), "it feels like 75D".to_string()];
   assert!(validate_message_content(&message).is_ok());
 }
 

@@ -10,8 +10,7 @@ pub fn init_logging() -> Result<(), VestaboardError> {
   // Ensure log directory exists
   let log_file_path = config.get_log_file_path();
   if let Some(parent) = log_file_path.parent() {
-    std::fs::create_dir_all(parent)
-      .map_err(|e| VestaboardError::io_error(e, "creating log directory"))?;
+    std::fs::create_dir_all(parent).map_err(|e| VestaboardError::io_error(e, "creating log directory"))?;
   }
 
   // Create file logger
@@ -47,11 +46,7 @@ pub fn init_logging() -> Result<(), VestaboardError> {
   // Also set up console logging
   setup_console_logging(&config)?;
 
-  log::info!(
-    "Logging initialized - file: {}, level: {}",
-    log_file_path.display(),
-    config.log_level
-  );
+  log::info!("Logging initialized - file: {}, level: {}", log_file_path.display(), config.log_level);
 
   Ok(())
 }
@@ -59,10 +54,7 @@ pub fn init_logging() -> Result<(), VestaboardError> {
 fn setup_console_logging(config: &Config) -> Result<(), VestaboardError> {
   // For console logging, we'll use a separate approach since env_logger can only have one target
   // We'll use the log macros and manually handle console output for key messages
-  log::info!(
-    "Console logging level: {:?}",
-    config.get_console_log_level()
-  );
+  log::info!("Console logging level: {:?}", config.get_console_log_level());
   Ok(())
 }
 
@@ -77,23 +69,14 @@ macro_rules! log_widget_start {
 #[macro_export]
 macro_rules! log_widget_success {
   ($widget:expr, $duration:expr) => {
-    log::info!(
-      "Widget '{}' completed successfully in {:?}",
-      $widget,
-      $duration
-    );
+    log::info!("Widget '{}' completed successfully in {:?}", $widget, $duration);
   };
 }
 
 #[macro_export]
 macro_rules! log_widget_error {
   ($widget:expr, $error:expr, $duration:expr) => {
-    log::error!(
-      "Widget '{}' failed after {:?}: {}",
-      $widget,
-      $duration,
-      $error
-    );
+    log::error!("Widget '{}' failed after {:?}: {}", $widget, $duration, $error);
   };
 }
 

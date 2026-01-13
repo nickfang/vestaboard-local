@@ -1,7 +1,6 @@
 #[path = "../cli_display.rs"]
 mod cli_display;
 
-
 #[cfg(test)]
 #[test]
 fn print_message_test() {

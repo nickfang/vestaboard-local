@@ -49,10 +49,7 @@ impl Config {
     let config_path = PathBuf::from(CONFIG_FILE_PATH);
 
     if !config_path.exists() {
-      log::info!(
-        "Config file not found, creating default config at {}",
-        config_path.display()
-      );
+      log::info!("Config file not found, creating default config at {}", config_path.display());
       if show_messages {
         print_progress("Creating default configuration...");
       }
@@ -67,23 +64,21 @@ impl Config {
     if show_messages {
       print_progress("Loading configuration...");
     }
-    let config_content = fs::read_to_string(&config_path)
-      .map_err(|e| {
-        let error = VestaboardError::io_error(e, "reading config file");
-        if show_messages {
-          print_error(&format!("Error loading configuration: {}", error.to_user_message()));
-        }
-        error
-      })?;
+    let config_content = fs::read_to_string(&config_path).map_err(|e| {
+      let error = VestaboardError::io_error(e, "reading config file");
+      if show_messages {
+        print_error(&format!("Error loading configuration: {}", error.to_user_message()));
+      }
+      error
+    })?;
 
-    let config: Config = toml::from_str(&config_content)
-      .map_err(|e| {
-        let error = VestaboardError::other(&format!("Invalid config format: {}", e));
-        if show_messages {
-          print_error(&format!("Error loading configuration: {}", error.to_user_message()));
-        }
-        error
-      })?;
+    let config: Config = toml::from_str(&config_content).map_err(|e| {
+      let error = VestaboardError::other(&format!("Invalid config format: {}", e));
+      if show_messages {
+        print_error(&format!("Error loading configuration: {}", error.to_user_message()));
+      }
+      error
+    })?;
 
     log::debug!("Loaded config: {:?}", config);
     if show_messages {
@@ -97,15 +92,13 @@ impl Config {
 
     // Ensure data directory exists
     if let Some(parent) = config_path.parent() {
-      fs::create_dir_all(parent)
-        .map_err(|e| VestaboardError::io_error(e, "creating config directory"))?;
+      fs::create_dir_all(parent).map_err(|e| VestaboardError::io_error(e, "creating config directory"))?;
     }
 
     let config_content = toml::to_string_pretty(self)
       .map_err(|e| VestaboardError::other(&format!("Failed to serialize config: {}", e)))?;
 
-    fs::write(&config_path, config_content)
-      .map_err(|e| VestaboardError::io_error(e, "writing config file"))?;
+    fs::write(&config_path, config_content).map_err(|e| VestaboardError::io_error(e, "writing config file"))?;
 
     log::debug!("Saved config to {}", config_path.display());
     Ok(())
@@ -143,12 +136,7 @@ impl Config {
   }
 
   pub fn get_schedule_file_path(&self) -> PathBuf {
-    PathBuf::from(
-      self
-        .schedule_file_path
-        .as_deref()
-        .unwrap_or(DEFAULT_SCHEDULE_FILE_PATH),
-    )
+    PathBuf::from(self.schedule_file_path.as_deref().unwrap_or(DEFAULT_SCHEDULE_FILE_PATH))
   }
 
   pub fn get_schedule_backup_path(&self) -> PathBuf {

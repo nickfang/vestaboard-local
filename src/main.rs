@@ -14,24 +14,18 @@ mod widgets;
 use api_broker::{handle_message, MessageDestination};
 use cli_display::{init_output_control, print_error, print_progress, print_success};
 use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
-use std::process;
 use daemon::run_daemon;
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
-use scheduler::{
-  add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule,
-};
+use scheduler::{add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule};
+use std::process;
 use widgets::resolver::execute_widget;
 use widgets::widget_utils::error_to_display_message;
 
 use clap::Parser;
 use serde_json::json;
 
-
-async fn process_widget_command(
-  widget_command: &WidgetCommand,
-  dry_run: bool,
-) -> Result<(), VestaboardError> {
+async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -> Result<(), VestaboardError> {
   let (widget_name, input_value) = match widget_command {
     WidgetCommand::Text(args) => ("text", json!(&args.message)),
     WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
@@ -59,7 +53,7 @@ async fn process_widget_command(
       log::error!("Failed to handle message: {}", e);
       print_error(&e.to_user_message());
       Err(e)
-    }
+    },
   }
 }
 
@@ -80,10 +74,7 @@ async fn main() {
 
   let exit_code = match cli.command {
     Command::Show(show_args) => {
-      log::info!(
-        "Processing show command with dry_run: {}",
-        show_args.dry_run
-      );
+      log::info!("Processing show command with dry_run: {}", show_args.dry_run);
 
       match process_widget_command(&show_args.widget_command, show_args.dry_run).await {
         Ok(_) => 0,
@@ -91,23 +82,14 @@ async fn main() {
           log::error!("Failed to process widget command: {}", e);
           print_error(&e.to_user_message());
           1
-        }
+        },
       }
     },
     Command::Schedule { action } => {
       log::info!("Processing schedule command");
       match action {
-        ScheduleArgs::Add {
-          time,
-          widget,
-          input,
-        } => {
-          log::info!(
-            "Adding scheduled task - time: {}, widget: {}, input: {:?}",
-            time,
-            widget,
-            input
-          );
+        ScheduleArgs::Add { time, widget, input } => {
+          log::info!("Adding scheduled task - time: {}, widget: {}, input: {:?}", time, widget, input);
           let datetime_utc = match datetime_to_utc(&time) {
             Ok(dt) => {
               log::debug!("Parsed datetime: {}", dt);
@@ -257,10 +239,7 @@ async fn main() {
       );
 
       if cycle_args.dry_run {
-        println!(
-          "Running {} cycle in preview mode...",
-          if is_repeat { "continuous" } else { "single" }
-        );
+        println!("Running {} cycle in preview mode...", if is_repeat { "continuous" } else { "single" });
       } else {
         println!(
           "Starting {} cycle with {} second intervals...",
@@ -281,14 +260,8 @@ async fn main() {
       }
 
       // TODO: Implement cycle functionality
-      log::warn!(
-        "{} cycle functionality not yet implemented",
-        if is_repeat { "Continuous" } else { "Single" }
-      );
-      println!(
-        "{} cycle functionality is not yet implemented.",
-        if is_repeat { "Continuous" } else { "Single" }
-      );
+      log::warn!("{} cycle functionality not yet implemented", if is_repeat { "Continuous" } else { "Single" });
+      println!("{} cycle functionality is not yet implemented.", if is_repeat { "Continuous" } else { "Single" });
       println!("This command will read from schedule.json and execute tasks in order:");
       println!("  - Ignoring scheduled datetime constraints");
       println!("  - Using {} second intervals between tasks", cycle_args.interval);
@@ -297,7 +270,7 @@ async fn main() {
       } else {
         println!("  - Running through the schedule once");
       }
-      0  // Return success for now (not implemented yet)
+      0 // Return success for now (not implemented yet)
     },
     Command::Daemon => {
       log::info!("Starting daemon mode");

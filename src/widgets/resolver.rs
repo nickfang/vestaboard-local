@@ -1,6 +1,6 @@
+use serde_json::Value;
 use std::path::PathBuf;
 use std::time::Instant;
-use serde_json::Value;
 
 use crate::cli_display::{print_error, print_progress};
 use crate::errors::VestaboardError;
@@ -24,10 +24,7 @@ use crate::{log_widget_error, log_widget_start, log_widget_success};
 /// # Returns
 /// * `Ok(Vec<String>)` - The generated message lines (NOT validated)
 /// * `Err(VestaboardError)` - Widget execution error
-pub async fn execute_widget(
-  widget_type: &str,
-  input: &Value,
-) -> Result<Vec<String>, VestaboardError> {
+pub async fn execute_widget(widget_type: &str, input: &Value) -> Result<Vec<String>, VestaboardError> {
   let start_time = Instant::now();
 
   // Extract input string for logging
@@ -66,10 +63,7 @@ pub async fn execute_widget(
     "sat-word" => get_sat_word(),
     "clear" => Ok(vec![String::from("")]), // Clear command
     _ => {
-      let error = VestaboardError::widget_error(
-        widget_type,
-        &format!("Unknown widget type: {}", widget_type),
-      );
+      let error = VestaboardError::widget_error(widget_type, &format!("Unknown widget type: {}", widget_type));
       return Err(error);
     },
   };
@@ -88,11 +82,7 @@ pub async fn execute_widget(
     },
   };
 
-  log::debug!(
-    "Widget '{}' execution successful, message length: {} lines",
-    widget_type,
-    message.len()
-  );
+  log::debug!("Widget '{}' execution successful, message length: {} lines", widget_type, message.len());
 
   Ok(message)
 }
