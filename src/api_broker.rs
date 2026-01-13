@@ -134,9 +134,7 @@ pub async fn display_message(message: Vec<String>) -> Result<(), VestaboardError
   let codes = message_to_codes(message);
   log::debug!("Converted message to character codes");
 
-  send_codes(codes)
-    .await
-    .map_err(|e| VestaboardError::reqwest_error(e, "Vestaboard"))
+  send_codes(codes).await
 }
 
 /// Checks if a character is valid for Vestaboard display

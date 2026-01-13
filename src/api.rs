@@ -1,4 +1,5 @@
 use crate::cli_display::{print_error, print_progress, print_success};
+use crate::errors::VestaboardError;
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 use reqwest::Client;
@@ -32,7 +33,7 @@ static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
 /// Uses connection pooling for better performance with repeated requests.
 static CLIENT: Lazy<Client> = Lazy::new(create_client);
 
-pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
+pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
   let start_time = std::time::Instant::now();
   print_progress("Sending to Vestaboard...");
 
@@ -66,48 +67,28 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     },
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
-      let error = crate::errors::VestaboardError::reqwest_error(e, "Vestaboard");
+      let error = VestaboardError::reqwest_error(e, "Vestaboard");
       print_error(&error.to_user_message());
-      // Extract the original reqwest error from the VestaboardError
-      match error {
-        crate::errors::VestaboardError::ReqwestError { source, .. } => Err(source),
-        _ => unreachable!(),
-      }
+      Err(error)
     },
   }
 }
 
 #[allow(dead_code)]
-pub async fn clear_board() -> Result<(), reqwest::Error> {
+pub async fn clear_board() -> Result<(), VestaboardError> {
   log::info!("Clearing Vestaboard");
   let message = [[0; 22]; 6];
-  match send_codes(message).await {
-    Ok(_) => {
-      log::info!("Board cleared successfully");
-      Ok(())
-    },
-    Err(e) => {
-      log::error!("Failed to clear board: {}", e);
-      eprintln!("Error: {:?}", e);
-      Err(e)
-    },
-  }
+  send_codes(message).await
 }
 
 #[allow(dead_code)]
-pub async fn blank_board() -> Result<(), reqwest::Error> {
+pub async fn blank_board() -> Result<(), VestaboardError> {
   let message = [[70; 22]; 6];
-  match send_codes(message).await {
-    Ok(_) => Ok(()),
-    Err(e) => {
-      eprintln!("Error: {:?}", e);
-      Err(e)
-    },
-  }
+  send_codes(message).await
 }
 
 #[allow(dead_code)]
-pub async fn get_message() -> Result<(), reqwest::Error> {
+pub async fn get_message() -> Result<(), VestaboardError> {
   let client = &*CLIENT;
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
@@ -123,8 +104,9 @@ pub async fn get_message() -> Result<(), reqwest::Error> {
       Ok(())
     },
     Err(e) => {
-      eprintln!("Error: {:?}", e);
-      Err(e)
+      let error = VestaboardError::reqwest_error(e, "Vestaboard");
+      print_error(&error.to_user_message());
+      Err(error)
     },
   }
 }
