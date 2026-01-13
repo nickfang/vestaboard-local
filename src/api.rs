@@ -1,13 +1,23 @@
-use std::env;
-use std::time::Duration;
-
+use crate::cli_display::{print_error, print_progress, print_success};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde_json::json;
+use std::env;
+use std::time::Duration;
 
-use crate::cli_display::{print_error, print_progress, print_success};
-use crate::config::DEFAULT_API_TIMEOUT_SECONDS;
+/// Default timeout for Vestaboard API requests (10 seconds)
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Creates an HTTP client configured with appropriate timeouts for Vestaboard API requests.
+/// This prevents the application from hanging indefinitely when the Vestaboard is unreachable.
+pub fn create_client() -> Client {
+  Client::builder()
+    .timeout(DEFAULT_TIMEOUT)
+    .connect_timeout(DEFAULT_TIMEOUT)
+    .build()
+    .expect("Failed to build HTTP client")
+}
 
 static API_KEY: Lazy<String> = Lazy::new(|| {
   dotenv().ok();
@@ -17,13 +27,10 @@ static IP_ADDRESS: Lazy<String> = Lazy::new(|| {
   dotenv().ok();
   env::var("IP_ADDRESS").expect("IP_ADDRESS not set")
 });
-static CLIENT: Lazy<Client> = Lazy::new(|| {
-  Client::builder()
-    .timeout(Duration::from_secs(DEFAULT_API_TIMEOUT_SECONDS))
-    .connect_timeout(Duration::from_secs(DEFAULT_API_TIMEOUT_SECONDS))
-    .build()
-    .expect("Failed to create HTTP client")
-});
+
+/// Shared HTTP client for all Vestaboard API requests.
+/// Uses connection pooling for better performance with repeated requests.
+static CLIENT: Lazy<Client> = Lazy::new(create_client);
 
 pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
   let start_time = std::time::Instant::now();
@@ -59,7 +66,13 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
     },
     Err(e) => {
       log::error!("API request failed after {:?}: {}", duration, e);
-      Err(e)
+      let error = crate::errors::VestaboardError::reqwest_error(e, "Vestaboard");
+      print_error(&error.to_user_message());
+      // Extract the original reqwest error from the VestaboardError
+      match error {
+        crate::errors::VestaboardError::ReqwestError { source, .. } => Err(source),
+        _ => unreachable!(),
+      }
     },
   }
 }
