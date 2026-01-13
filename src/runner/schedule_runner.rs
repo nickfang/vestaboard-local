@@ -9,13 +9,11 @@ use std::time::Duration;
 use chrono::Utc;
 use crossterm::event::KeyCode;
 
-use crate::api_broker::{handle_message, MessageDestination};
-use crate::cli_display::{print_error, print_progress, print_success};
+use crate::cli_display::print_progress;
 use crate::errors::VestaboardError;
+use crate::runner::common::execute_and_send;
 use crate::runner::{ControlFlow, Runner, SCHEDULE_HELP};
 use crate::scheduler::{Schedule, ScheduledTask};
-use crate::widgets::resolver::execute_widget;
-use crate::widgets::widget_utils::error_to_display_message;
 
 /// Schedule runner that handles schedule execution with keyboard controls.
 pub struct ScheduleRunner {
@@ -109,33 +107,9 @@ impl ScheduleRunner {
     log::info!("Executing scheduled task: {} ({})", task.widget, task.id);
     print_progress(&format!("Executing task {} ({})...", task.id, task.widget));
 
-    // Execute the widget to get the message
-    let message = match execute_widget(&task.widget, &task.input).await {
-      Ok(msg) => msg,
-      Err(e) => {
-        log::error!("Widget '{}' failed: {}", task.widget, e);
-        print_error(&format!("Widget {} failed: {}", task.widget, e.to_user_message()));
-        error_to_display_message(&e)
-      },
-    };
-
-    // Send to Vestaboard or console
-    let destination = if self.dry_run {
-      MessageDestination::Console
-    } else {
-      MessageDestination::Vestaboard
-    };
-
-    match handle_message(message, destination).await {
-      Ok(_) => {
-        log::info!("Task {} completed successfully", task.id);
-        print_success(&format!("Task {} completed", task.id));
-      },
-      Err(e) => {
-        log::error!("Failed to send message: {}", e);
-        print_error(&e.to_user_message());
-      },
-    }
+    let label = format!("Task {}", task.id);
+    // Ignore the result - we want to continue even if sending fails
+    let _ = execute_and_send(&task.widget, &task.input, self.dry_run, &label).await;
 
     Ok(())
   }

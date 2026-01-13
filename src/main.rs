@@ -22,7 +22,6 @@ use scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule, run_schedule,
 };
 use std::process;
-use std::process;
 use widgets::resolver::execute_widget;
 use widgets::widget_utils::error_to_display_message;
 

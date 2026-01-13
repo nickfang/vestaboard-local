@@ -3,6 +3,7 @@
 //! This module provides shared infrastructure for running playlists and schedules
 //! with keyboard controls, instance locking, and graceful shutdown.
 
+pub mod common;
 pub mod keyboard;
 pub mod lock;
 pub mod playlist_runner;

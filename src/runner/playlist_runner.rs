@@ -8,14 +8,12 @@ use std::time::Instant;
 
 use crossterm::event::KeyCode;
 
-use crate::api_broker::{handle_message, MessageDestination};
-use crate::cli_display::{print_error, print_progress, print_success};
+use crate::cli_display::print_progress;
 use crate::errors::VestaboardError;
 use crate::playlist::Playlist;
+use crate::runner::common::execute_and_send;
 use crate::runner::{ControlFlow, Runner, PLAYLIST_HELP};
 use crate::runtime_state::{PlaylistState, RuntimeState};
-use crate::widgets::resolver::execute_widget;
-use crate::widgets::widget_utils::error_to_display_message;
 
 /// Playlist runner that handles playlist execution with keyboard controls.
 pub struct PlaylistRunner {
@@ -220,37 +218,12 @@ impl PlaylistRunner {
     // Save state BEFORE display (ensures we retry on crash)
     self.save_state();
 
-    // Execute widget to generate message
-    let message = match execute_widget(&item.widget, &item.input).await {
-      Ok(msg) => msg,
-      Err(e) => {
-        log::error!("Widget '{}' failed: {}", item.widget, e);
-        print_error(&format!("Widget {} failed: {}", item.widget, e.to_user_message()));
-        // Continue with error display
-        error_to_display_message(&e)
-      },
-    };
+    let label = format!("Item {}", item.widget);
+    // Ignore the result - we want to continue even if sending fails
+    let _ = execute_and_send(&item.widget, &item.input, self.dry_run, &label).await;
 
-    // Send to Vestaboard or console (dry-run)
-    let destination = if self.dry_run {
-      MessageDestination::Console
-    } else {
-      MessageDestination::Vestaboard
-    };
-
-    match handle_message(message, destination).await {
-      Ok(_) => {
-        log::info!("Successfully displayed item {}", item.id);
-        self.last_display_time = Some(Instant::now());
-        print_success(&format!("Displayed: {}", item.widget));
-      },
-      Err(e) => {
-        log::error!("Failed to send message: {}", e);
-        print_error(&e.to_user_message());
-        // Don't fail the whole runner - continue to next item
-        self.last_display_time = Some(Instant::now());
-      },
-    }
+    // Always update display time to maintain interval timing
+    self.last_display_time = Some(Instant::now());
 
     Ok(())
   }
