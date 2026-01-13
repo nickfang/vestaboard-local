@@ -3,10 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Args, Debug)]
 pub struct TextArgs {
-  #[arg(
-    required = true,
-    help = "The message to display (use quotes if there are spaces)"
-  )]
+  #[arg(required = true, help = "The message to display (use quotes if there are spaces)")]
   pub message: String,
 }
 
@@ -35,22 +32,13 @@ pub enum WidgetCommand {
 pub struct ShowArgs {
   #[command(subcommand)]
   pub widget_command: WidgetCommand,
-  #[arg(
-    short = 'd',
-    long = "dry-run",
-    help = "Preview message without updating Vestaboard"
-  )]
+  #[arg(short = 'd', long = "dry-run", help = "Preview message without updating Vestaboard")]
   pub dry_run: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct CycleArgs {
-  #[arg(
-    short = 'i',
-    long = "interval",
-    default_value = "60",
-    help = "Delay in seconds between messages"
-  )]
+  #[arg(short = 'i', long = "interval", default_value = "60", help = "Delay in seconds between messages")]
   pub interval: u64,
   #[arg(
     short = 'w',
@@ -59,11 +47,7 @@ pub struct CycleArgs {
     help = "Delay in seconds before showing first message"
   )]
   pub delay: u64,
-  #[arg(
-    short = 'd',
-    long = "dry-run",
-    help = "Preview mode - show messages without updating Vestaboard"
-  )]
+  #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without updating Vestaboard")]
   pub dry_run: bool,
 }
 
@@ -91,33 +75,21 @@ pub enum ScheduleArgs {
     after_help = "Example:\n  vbl schedule add \"2025-05-01 08:30:30\" text \"Don\\'t panic!\"\n  vbl schedule add \"2025-05-01 20:00:30\" weather"
   )]
   Add {
-    #[clap(
-      help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.",
-      required = true
-    )]
+    #[clap(help = "The time to (YYYY-MM-DD HH:MM:SS) in military time.", required = true)]
     time: String,
-    #[clap(
-      help = "The widget to use (text, file, weather, sat-word).",
-      required = true
-    )]
+    #[clap(help = "The widget to use (text, file, weather, sat-word).", required = true)]
     widget: String,
     #[clap(help = "Widget input (optional).  To use quotes use \\' or \\\".")]
     input: Vec<String>,
   },
-  #[command(
-    name = "remove",
-    about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's"
-  )]
+  #[command(name = "remove", about = "Remove a scheduled message by ID.  Run vbl schdule list to see the ID's")]
   Remove {
     #[clap(help = "The ID of the scheduled task", required = true)]
     id: String,
   },
   #[command(name = "clear", about = "Clear all scheduled messages")]
   Clear,
-  #[command(
-    name = "preview",
-    about = "Preview the schedule without updating the Vestaboard"
-  )]
+  #[command(name = "preview", about = "Preview the schedule without updating the Vestaboard")]
   Preview,
 }
 
@@ -163,19 +135,9 @@ pub struct Cli {
   #[clap(subcommand)]
   pub command: Command,
 
-  #[arg(
-    short = 'q',
-    long = "quiet",
-    global = true,
-    help = "Suppress all non-error output"
-  )]
+  #[arg(short = 'q', long = "quiet", global = true, help = "Suppress all non-error output")]
   pub quiet: bool,
 
-  #[arg(
-    short = 'v',
-    long = "verbose",
-    global = true,
-    help = "Show detailed progress information"
-  )]
+  #[arg(short = 'v', long = "verbose", global = true, help = "Show detailed progress information")]
   pub verbose: bool,
 }

@@ -1,13 +1,8 @@
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
 
 pub fn datetime_to_utc(time_str: &str) -> Result<DateTime<Utc>, String> {
-  let naive_datetime =
-    NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S").map_err(|e| {
-      format!(
-        "Invalid time format for '{}'. Please use YYYY-MM-DD HH:MM:SS. Details: {}",
-        time_str, e
-      )
-    })?;
+  let naive_datetime = NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+    .map_err(|e| format!("Invalid time format for '{}'. Please use YYYY-MM-DD HH:MM:SS. Details: {}", time_str, e))?;
   let local_datetime = Local.from_local_datetime(&naive_datetime)
         .single()
         .ok_or_else(|| {

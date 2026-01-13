@@ -1,19 +1,23 @@
-use std::{fs, path::{Path, PathBuf}, time::SystemTime};
+use std::{
+  fs,
+  path::{Path, PathBuf},
+  time::SystemTime,
+};
 
 use chrono::{DateTime, Local, Utc};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_progress, print_success, print_warning};
 use crate::widgets::resolver::execute_widget;
 use crate::widgets::widget_utils;
-use crate::api_broker::{handle_message, MessageDestination};
 use crate::{config::Config, errors::VestaboardError};
 
 pub const CUSTOM_ALPHABET: &[char] = &[
-  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-  't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+  'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 ];
 pub const ID_LENGTH: usize = 4;
 
@@ -112,12 +116,12 @@ impl ScheduleMonitor {
       Some(last_mod_time) if current_mod_time == last_mod_time => {
         // No change detected
         Ok(false)
-      }
+      },
       _ => {
         // File has been modified or this is the first check
         log::info!("Schedule file modification detected");
         Ok(true)
-      }
+      },
     }
   }
 
@@ -149,47 +153,51 @@ impl ScheduleMonitor {
         self.current_schedule = schedule;
         log::info!("Schedule reloaded successfully, {} tasks loaded", self.current_schedule.tasks.len());
         Ok(())
-      }
+      },
       Err(e) => {
         log::error!("Failed to reload schedule: {}", e);
         // Keep the existing schedule on reload failure
         Err(e)
-      }
+      },
     }
   }
 
   /// Get the file modification time, handling various error cases
   fn get_file_mod_time(&self) -> Result<SystemTime, VestaboardError> {
     match fs::metadata(&self.schedule_file_path) {
-      Ok(metadata) => {
-        match metadata.modified() {
-          Ok(modified_time) => {
-            log::trace!("File modification time: {:?}", modified_time);
-            Ok(modified_time)
-          }
-          Err(e) => {
-            log::warn!("Could not get file modification time: {}", e);
-            Err(VestaboardError::io_error(e, &format!("getting mod time for {}", self.schedule_file_path.display())))
-          }
-        }
-      }
+      Ok(metadata) => match metadata.modified() {
+        Ok(modified_time) => {
+          log::trace!("File modification time: {:?}", modified_time);
+          Ok(modified_time)
+        },
+        Err(e) => {
+          log::warn!("Could not get file modification time: {}", e);
+          Err(VestaboardError::io_error(e, &format!("getting mod time for {}", self.schedule_file_path.display())))
+        },
+      },
       Err(e) => {
         match e.kind() {
           std::io::ErrorKind::NotFound => {
             log::debug!("Schedule file not found: {:?}", self.schedule_file_path);
             // Return a default time for non-existent files
             Ok(SystemTime::UNIX_EPOCH)
-          }
+          },
           std::io::ErrorKind::PermissionDenied => {
             log::error!("Permission denied accessing schedule file: {:?}", self.schedule_file_path);
-            Err(VestaboardError::io_error(e, &format!("accessing schedule file {}", self.schedule_file_path.display())))
-          }
+            Err(VestaboardError::io_error(
+              e,
+              &format!("accessing schedule file {}", self.schedule_file_path.display()),
+            ))
+          },
           _ => {
             log::error!("Error accessing schedule file metadata: {}", e);
-            Err(VestaboardError::io_error(e, &format!("accessing schedule file {}", self.schedule_file_path.display())))
-          }
+            Err(VestaboardError::io_error(
+              e,
+              &format!("accessing schedule file {}", self.schedule_file_path.display()),
+            ))
+          },
         }
-      }
+      },
     }
   }
 
@@ -210,11 +218,7 @@ pub fn save_schedule_silent(schedule: &Schedule, path: &PathBuf) -> Result<(), V
 }
 
 fn save_schedule_internal(schedule: &Schedule, path: &PathBuf, silent: bool) -> Result<(), VestaboardError> {
-  log::debug!(
-    "Saving schedule with {} tasks to {}",
-    schedule.tasks.len(),
-    path.display()
-  );
+  log::debug!("Saving schedule with {} tasks to {}", schedule.tasks.len(), path.display());
 
   if !silent {
     print_progress("Saving schedule...");
@@ -250,20 +254,13 @@ fn load_schedule_internal(path: &PathBuf, silent: bool) -> Result<Schedule, Vest
   match fs::read_to_string(&path) {
     Ok(content) => {
       if content.trim().is_empty() {
-        log::info!(
-          "Schedule file {} is empty, creating new schedule",
-          path.display()
-        );
+        log::info!("Schedule file {} is empty, creating new schedule", path.display());
         Ok(Schedule::default())
       } else {
         match serde_json::from_str::<Schedule>(&content) {
           Ok(mut schedule) => {
             schedule.tasks.sort_by_key(|task| task.time);
-            log::info!(
-              "Successfully loaded {} tasks from schedule {}",
-              schedule.tasks.len(),
-              path.display()
-            );
+            log::info!("Successfully loaded {} tasks from schedule {}", schedule.tasks.len(), path.display());
             Ok(schedule)
           },
           Err(e) => {
@@ -276,10 +273,7 @@ fn load_schedule_internal(path: &PathBuf, silent: bool) -> Result<Schedule, Vest
       }
     },
     Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-      log::info!(
-        "Schedule file {} not found, creating new schedule",
-        path.display()
-      );
+      log::info!("Schedule file {} not found, creating new schedule", path.display());
       let schedule = Schedule::default();
       // Save silently since this is an internal auto-create
       match save_schedule_silent(&schedule, path) {
@@ -303,11 +297,7 @@ fn load_schedule_internal(path: &PathBuf, silent: bool) -> Result<Schedule, Vest
   }
 }
 
-pub fn add_task_to_schedule(
-  time: DateTime<Utc>,
-  widget: String,
-  input: Value,
-) -> Result<String, VestaboardError> {
+pub fn add_task_to_schedule(time: DateTime<Utc>, widget: String, input: Value) -> Result<String, VestaboardError> {
   log::info!(
     "Adding task to schedule - time: {}, widget: {}, input: {}",
     time,
@@ -325,11 +315,7 @@ pub fn add_task_to_schedule(
 
   match save_schedule_silent(&schedule, &schedule_path) {
     Ok(_) => {
-      log::info!(
-        "Successfully added task {} for widget '{}'",
-        task_id,
-        widget
-      );
+      log::info!("Successfully added task {} for widget '{}'", task_id, widget);
       Ok(task_id)
     },
     Err(e) => {
@@ -412,20 +398,13 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   }
 
   println!("Scheduled Tasks ({}):", schedule.tasks.len());
-  println!(
-    "{:<6} | {:<22} | {:<15} | {}",
-    "ID", "Time (Local)", "Widget", "Input"
-  );
+  println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
   println!("{:-<80}", ""); // Separator line
   for task in schedule.tasks {
     let local_time = task.time.with_timezone(&Local::now().timezone());
     let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
-    let input_str =
-      serde_json::to_string(&task.input).unwrap_or_else(|_| "Invalid JSON".to_string());
-    println!(
-      "{:<6} | {:<22} | {:<15} | {}",
-      task.id, formatted_time, task.widget, input_str
-    );
+    let input_str = serde_json::to_string(&task.input).unwrap_or_else(|_| "Invalid JSON".to_string());
+    println!("{:<6} | {:<22} | {:<15} | {}", task.id, formatted_time, task.widget, input_str);
   }
   println!("{:-<80}", ""); // Footer separator line
   Ok(())
@@ -437,19 +416,13 @@ pub async fn preview_schedule() {
   let config = match Config::load_silent() {
     Ok(c) => c,
     Err(e) => {
-      log::warn!(
-        "Failed to load config for schedule dry run: {}, using defaults",
-        e
-      );
+      log::warn!("Failed to load config for schedule dry run: {}, using defaults", e);
       Config::default()
     },
   };
   let schedule_path = config.get_schedule_file_path();
   let schedule = load_schedule_silent(&schedule_path).unwrap_or_else(|e| {
-    log::warn!(
-      "Failed to load schedule for dry run: {}, using empty schedule",
-      e
-    );
+    log::warn!("Failed to load schedule for dry run: {}, using empty schedule", e);
     Schedule::default()
   });
 
@@ -460,10 +433,7 @@ pub async fn preview_schedule() {
 
   println!("Previewing {} scheduled tasks:\n", schedule.tasks.len());
 
-  log::info!(
-    "Executing dry run for {} scheduled tasks",
-    schedule.tasks.len()
-  );
+  log::info!("Executing dry run for {} scheduled tasks", schedule.tasks.len());
 
   for task in schedule.tasks.iter() {
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
@@ -485,7 +455,7 @@ pub async fn preview_schedule() {
       Err(e) => {
         log::error!("Failed to handle message for task {}: {}", task.id, e);
         eprintln!("Error handling message for task {}: {}", task.id, e);
-      }
+      },
     }
   }
 

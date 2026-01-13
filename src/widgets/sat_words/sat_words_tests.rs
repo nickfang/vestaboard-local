@@ -29,16 +29,9 @@ mod tests {
   #[test]
   fn test_create_words_map_with_valid_file() {
     let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-    write!(
-      temp_file,
-      "abhor (verb) to hate strongly (I abhor reality television shows)\n"
-    )
-    .expect("Failed to write");
-    write!(
-      temp_file,
-      "bigot (noun) a person who is intolerant (My uncle is a bigot who refuses to listen)\n"
-    )
-    .expect("Failed to write");
+    write!(temp_file, "abhor (verb) to hate strongly (I abhor reality television shows)\n").expect("Failed to write");
+    write!(temp_file, "bigot (noun) a person who is intolerant (My uncle is a bigot who refuses to listen)\n")
+      .expect("Failed to write");
     temp_file.flush().expect("Failed to flush");
 
     let result = create_words_map(temp_file.path());
@@ -136,10 +129,7 @@ mod tests {
       for line in &lines {
         for ch in line.chars() {
           assert!(
-            ch.is_ascii()
-              && (ch.is_alphanumeric()
-                || ch.is_whitespace()
-                || "!\"#$%&'()*+,-./:;?@()".contains(ch)),
+            ch.is_ascii() && (ch.is_alphanumeric() || ch.is_whitespace() || "!\"#$%&'()*+,-./:;?@()".contains(ch)),
             "Invalid character '{}' found in line '{}'",
             ch,
             line

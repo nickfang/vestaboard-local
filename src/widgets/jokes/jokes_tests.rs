@@ -11,18 +11,11 @@ mod tests {
     assert!(!lines.is_empty(), "Joke should produce some output");
 
     // The joke should be formatted properly (6 lines for Vestaboard)
-    assert_eq!(
-      lines.len(),
-      6,
-      "Joke should be formatted to 6 lines for Vestaboard"
-    );
+    assert_eq!(lines.len(), 6, "Joke should be formatted to 6 lines for Vestaboard");
 
     // Check that the joke content is present somewhere in the output
     let combined_text = lines.join("");
-    assert!(
-      combined_text.to_lowercase().contains("supplies"),
-      "Joke should contain the punchline 'supplies'"
-    );
+    assert!(combined_text.to_lowercase().contains("supplies"), "Joke should contain the punchline 'supplies'");
   }
 
   #[test]
@@ -61,8 +54,7 @@ mod tests {
     for line in &lines {
       for ch in line.chars() {
         assert!(
-          ch.is_ascii()
-            && (ch.is_alphanumeric() || ch.is_whitespace() || "!\"#$%&'()*+,-./:;?@".contains(ch)),
+          ch.is_ascii() && (ch.is_alphanumeric() || ch.is_whitespace() || "!\"#$%&'()*+,-./:;?@".contains(ch)),
           "Invalid character '{}' found in line '{}'",
           ch,
           line

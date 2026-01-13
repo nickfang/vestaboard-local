@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
   use crate::config::{
-    Config, DEFAULT_CONSOLE_LOG_LEVEL, DEFAULT_LOG_FILE_PATH, DEFAULT_LOG_LEVEL,
-    DEFAULT_SCHEDULE_BACKUP_PATH, DEFAULT_SCHEDULE_FILE_PATH,
+    Config, DEFAULT_CONSOLE_LOG_LEVEL, DEFAULT_LOG_FILE_PATH, DEFAULT_LOG_LEVEL, DEFAULT_SCHEDULE_BACKUP_PATH,
+    DEFAULT_SCHEDULE_FILE_PATH,
   };
   use log::LevelFilter;
   use std::path::PathBuf;
@@ -12,32 +12,17 @@ mod tests {
     let config = Config::default();
     assert_eq!(config.log_level, DEFAULT_LOG_LEVEL);
     assert_eq!(config.log_file_path, DEFAULT_LOG_FILE_PATH);
-    assert_eq!(
-      config.console_log_level,
-      Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string())
-    );
-    assert_eq!(
-      config.schedule_file_path,
-      Some(DEFAULT_SCHEDULE_FILE_PATH.to_string())
-    );
-    assert_eq!(
-      config.schedule_backup_path,
-      Some(DEFAULT_SCHEDULE_BACKUP_PATH.to_string())
-    );
+    assert_eq!(config.console_log_level, Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()));
+    assert_eq!(config.schedule_file_path, Some(DEFAULT_SCHEDULE_FILE_PATH.to_string()));
+    assert_eq!(config.schedule_backup_path, Some(DEFAULT_SCHEDULE_BACKUP_PATH.to_string()));
   }
 
   #[test]
   fn test_schedule_path_getters() {
     // Test with default config
     let default_config = Config::default();
-    assert_eq!(
-      default_config.get_schedule_file_path(),
-      PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH)
-    );
-    assert_eq!(
-      default_config.get_schedule_backup_path(),
-      PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH)
-    );
+    assert_eq!(default_config.get_schedule_file_path(), PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH));
+    assert_eq!(default_config.get_schedule_backup_path(), PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH));
 
     // Test with custom paths
     let custom_config = Config {
@@ -47,14 +32,8 @@ mod tests {
       schedule_file_path: Some("custom/schedule.json".to_string()),
       schedule_backup_path: Some("custom/backup.json".to_string()),
     };
-    assert_eq!(
-      custom_config.get_schedule_file_path(),
-      PathBuf::from("custom/schedule.json")
-    );
-    assert_eq!(
-      custom_config.get_schedule_backup_path(),
-      PathBuf::from("custom/backup.json")
-    );
+    assert_eq!(custom_config.get_schedule_file_path(), PathBuf::from("custom/schedule.json"));
+    assert_eq!(custom_config.get_schedule_backup_path(), PathBuf::from("custom/backup.json"));
 
     // Test with missing fields (backward compatibility)
     let minimal_config = Config {
@@ -64,14 +43,8 @@ mod tests {
       schedule_file_path: None,
       schedule_backup_path: None,
     };
-    assert_eq!(
-      minimal_config.get_schedule_file_path(),
-      PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH)
-    );
-    assert_eq!(
-      minimal_config.get_schedule_backup_path(),
-      PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH)
-    );
+    assert_eq!(minimal_config.get_schedule_file_path(), PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH));
+    assert_eq!(minimal_config.get_schedule_backup_path(), PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH));
   }
 
   #[test]
@@ -102,14 +75,8 @@ mod tests {
         assert!(!config.log_file_path.is_empty());
 
         // Schedule paths should resolve to something reasonable
-        assert!(config
-          .get_schedule_file_path()
-          .to_string_lossy()
-          .contains("schedule"));
-        assert!(config
-          .get_schedule_backup_path()
-          .to_string_lossy()
-          .contains("backup"));
+        assert!(config.get_schedule_file_path().to_string_lossy().contains("schedule"));
+        assert!(config.get_schedule_backup_path().to_string_lossy().contains("backup"));
       },
       Err(e) => {
         // Config loading should not fail

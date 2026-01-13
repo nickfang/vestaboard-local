@@ -85,7 +85,7 @@ mod tests {
 
   #[test]
   fn test_error_message_patterns_io_not_found() {
-    use std::io::{ Error as IoError, ErrorKind };
+    use std::io::{Error as IoError, ErrorKind};
 
     let io_err = IoError::new(ErrorKind::NotFound, "file not found");
     let vb_error = VestaboardError::io_error(io_err, "reading text file /test/path.txt");

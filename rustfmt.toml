@@ -8,8 +8,8 @@ newline_style = "Unix"
 use_small_heuristics = "Default"
 
 # Function call formatting
-fn_call_width = 120
-attr_fn_like_width = 120
+fn_call_width = 100
+attr_fn_like_width = 100
 
 # Other stable formatting preferences
 match_block_trailing_comma = true

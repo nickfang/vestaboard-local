@@ -165,9 +165,7 @@ pub fn error_to_display_message(error: &VestaboardError) -> Vec<String> {
       "sat-word" => format_error_with_header("Dictionary unavailable", "widget error"),
       _ => format_error_with_header(&format!("{} error", widget), "widget error"),
     },
-    VestaboardError::ScheduleError { .. } => {
-      format_error_with_header("Schedule error", "schedule error")
-    },
+    VestaboardError::ScheduleError { .. } => format_error_with_header("Schedule error", "schedule error"),
     VestaboardError::ApiError { code, .. } => match code {
       Some(404) => format_error_with_header("Service not found", "api error"),
       Some(401) | Some(403) => format_error_with_header("Access denied", "api error"),

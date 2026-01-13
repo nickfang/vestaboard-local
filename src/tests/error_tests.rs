@@ -40,10 +40,7 @@ mod tests {
     let vb_error = VestaboardError::widget_error(widget, message);
 
     match vb_error {
-      VestaboardError::WidgetError {
-        widget: w,
-        message: m,
-      } => {
+      VestaboardError::WidgetError { widget: w, message: m } => {
         assert_eq!(w, "weather");
         assert_eq!(m, "API key not found");
       },
@@ -76,10 +73,7 @@ mod tests {
     let vb_error = VestaboardError::api_error(code, message);
 
     match vb_error {
-      VestaboardError::ApiError {
-        code: c,
-        message: msg,
-      } => {
+      VestaboardError::ApiError { code: c, message: msg } => {
         assert_eq!(c, Some(404));
         assert_eq!(msg, "Not found");
       },
@@ -94,10 +88,7 @@ mod tests {
     let vb_error = VestaboardError::config_error(field, message);
 
     match vb_error {
-      VestaboardError::ConfigError {
-        field: f,
-        message: msg,
-      } => {
+      VestaboardError::ConfigError { field: f, message: msg } => {
         assert_eq!(f, "api_key");
         assert_eq!(msg, "missing required field");
       },
@@ -187,8 +178,7 @@ mod tests {
     let io_err2 = IoError::new(ErrorKind::NotFound, "file2");
     let vb_error1 = VestaboardError::io_error(io_err1, "context1");
     let vb_error2 = VestaboardError::io_error(io_err2, "context1");
-    let vb_error3 =
-      VestaboardError::io_error(IoError::new(ErrorKind::NotFound, "file1"), "context2");
+    let vb_error3 = VestaboardError::io_error(IoError::new(ErrorKind::NotFound, "file1"), "context2");
 
     assert_eq!(vb_error1, vb_error2); // Same context
     assert_ne!(vb_error1, vb_error3); // Different context

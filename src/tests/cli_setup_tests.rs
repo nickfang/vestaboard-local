@@ -24,9 +24,7 @@ fn test_widget_command_variants() {
   assert_widget_command(WidgetCommand::Text(TextArgs {
     message: String::from("example"),
   }));
-  assert_widget_command(WidgetCommand::File(FileArgs {
-    name: PathBuf::new(),
-  }));
+  assert_widget_command(WidgetCommand::File(FileArgs { name: PathBuf::new() }));
   assert_widget_command(WidgetCommand::Weather);
   assert_widget_command(WidgetCommand::Jokes);
   assert_widget_command(WidgetCommand::Clear);

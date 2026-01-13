@@ -7,9 +7,9 @@ use crate::errors::VestaboardError;
 
 #[derive(Debug)]
 pub enum MessageDestination {
-    Vestaboard,
-    Console,
-    ConsoleWithTitle(String),
+  Vestaboard,
+  Console,
+  ConsoleWithTitle(String),
 }
 
 static CHARACTER_CODES: Lazy<HashMap<char, u8>> = Lazy::new(|| {
@@ -148,8 +148,7 @@ pub fn is_valid_character(c: char) -> bool {
 
 /// Gets all valid characters as a formatted string for error messages
 pub fn get_valid_characters_description() -> String {
-  "a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK)"
-    .to_string()
+  "a-z, 0-9, space, punctuation (!@#$()-+&=;:'\"%,./?), D (degree), and color codes (ROYGBVWK)".to_string()
 }
 
 /// Validates that all characters in the message are valid for Vestaboard
@@ -171,13 +170,9 @@ pub fn validate_message_content(message: &[String]) -> Result<(), VestaboardErro
       code: Some(400),
       message: format!(
         "Invalid characters found: {}. Valid characters are: {}.",
-        chars
-          .iter()
-          .map(|c| format!("'{}'", c))
-          .collect::<Vec<_>>()
-          .join(", "),
+        chars.iter().map(|c| format!("'{}'", c)).collect::<Vec<_>>().join(", "),
         get_valid_characters_description()
-      )
+      ),
     });
   }
 
@@ -196,21 +191,21 @@ pub async fn handle_message(message: Vec<String>, destination: MessageDestinatio
       log::error!("Message validation failed: {}", e);
       print_error(&e.to_user_message());
       return Err(e);
-    }
+    },
   }
 
   match destination {
     MessageDestination::Vestaboard => {
       display_message(message).await;
-    }
+    },
     MessageDestination::Console => {
       print_progress("Displaying message preview:");
       print_message(message, "");
-    }
+    },
     MessageDestination::ConsoleWithTitle(title) => {
       print_progress("Displaying message preview:");
       print_message(message, &title);
-    }
+    },
   }
 
   Ok(())

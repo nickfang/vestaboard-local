@@ -7,9 +7,6 @@ pub fn get_joke() -> Result<Vec<String>, VestaboardError> {
   log::info!("Selected joke: {}", joke);
   // Widget just formats the message - validation happens at the main level
   let formatted = widget_utils::format_message(joke);
-  log::debug!(
-    "Jokes widget completed successfully, {} lines generated",
-    formatted.len()
-  );
+  log::debug!("Jokes widget completed successfully, {} lines generated", formatted.len());
   Ok(formatted)
 }

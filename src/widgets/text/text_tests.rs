@@ -87,8 +87,7 @@ mod tests {
   #[test]
   fn test_get_text_with_long_lines() {
     // Test text that will need to be wrapped (using lowercase)
-    let long_text =
-      "this is a very long line that should be wrapped because it exceeds the maximum length";
+    let long_text = "this is a very long line that should be wrapped because it exceeds the maximum length";
     let result = get_text(long_text);
 
     assert!(result.is_ok());

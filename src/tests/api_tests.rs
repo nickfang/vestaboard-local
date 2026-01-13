@@ -7,24 +7,12 @@ use api::{blank_board, clear_board, get_message, send_codes};
 #[ignore]
 async fn test_send_codes() {
   let message = [
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
-    [
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   ];
   let result = send_codes(message);
   assert!(result.await.is_ok());
@@ -82,10 +70,7 @@ mod timeout_tests {
   fn test_create_client_returns_valid_client() {
     let client = create_client();
     // If we get here without panic, the client was created successfully
-    assert!(
-      std::mem::size_of_val(&client) > 0,
-      "Client should be a valid object"
-    );
+    assert!(std::mem::size_of_val(&client) > 0, "Client should be a valid object");
   }
 
   /// Test that create_client() produces a client with timeout configured.
@@ -109,20 +94,11 @@ mod timeout_tests {
 
     // Request should complete within DEFAULT_TIMEOUT + buffer (not hang forever)
     let max_expected = DEFAULT_TIMEOUT + Duration::from_secs(5);
-    assert!(
-      elapsed < max_expected,
-      "Request should timeout within {:?}, but took {:?}",
-      max_expected,
-      elapsed
-    );
+    assert!(elapsed < max_expected, "Request should timeout within {:?}, but took {:?}", max_expected, elapsed);
 
     // Verify it's a timeout or connection error
     let err = result.unwrap_err();
-    assert!(
-      err.is_timeout() || err.is_connect(),
-      "Error should be timeout or connection error, got: {}",
-      err
-    );
+    assert!(err.is_timeout() || err.is_connect(), "Error should be timeout or connection error, got: {}", err);
   }
 
   /// Test that a short timeout actually limits connection time.
@@ -140,11 +116,7 @@ mod timeout_tests {
 
     assert!(result.is_err());
     // Should fail quickly due to connect timeout
-    assert!(
-      elapsed < Duration::from_secs(3),
-      "Connect timeout should trigger quickly, took {:?}",
-      elapsed
-    );
+    assert!(elapsed < Duration::from_secs(3), "Connect timeout should trigger quickly, took {:?}", elapsed);
   }
 
   /// Test that the error type is correctly identified as a connection/timeout error
@@ -161,9 +133,6 @@ mod timeout_tests {
     // The error should be identifiable as a connection or timeout issue
     // This is what errors.rs checks in to_user_message()
     let is_network_error = err.is_timeout() || err.is_connect();
-    assert!(
-      is_network_error,
-      "Error should be identifiable as network error for user messaging"
-    );
+    assert!(is_network_error, "Error should be identifiable as network error for user messaging");
   }
 }

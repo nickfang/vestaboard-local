@@ -1,53 +1,23 @@
 #[derive(Debug)]
 pub enum VestaboardError {
-  IOError {
-    source: std::io::Error,
-    context: String,
-  },
-  JsonError {
-    source: serde_json::Error,
-    context: String,
-  },
-  ReqwestError {
-    source: reqwest::Error,
-    context: String,
-  },
-  WidgetError {
-    widget: String,
-    message: String,
-  },
-  ScheduleError {
-    operation: String,
-    message: String,
-  },
-  ApiError {
-    code: Option<u16>,
-    message: String,
-  },
-  ConfigError {
-    field: String,
-    message: String,
-  },
-  Other {
-    message: String,
-  },
+  IOError { source: std::io::Error, context: String },
+  JsonError { source: serde_json::Error, context: String },
+  ReqwestError { source: reqwest::Error, context: String },
+  WidgetError { widget: String, message: String },
+  ScheduleError { operation: String, message: String },
+  ApiError { code: Option<u16>, message: String },
+  ConfigError { field: String, message: String },
+  Other { message: String },
 }
 
 impl PartialEq for VestaboardError {
   fn eq(&self, other: &Self) -> bool {
     match (self, other) {
-      (
-        VestaboardError::IOError { context: c1, .. },
-        VestaboardError::IOError { context: c2, .. },
-      ) => c1 == c2,
-      (
-        VestaboardError::JsonError { context: c1, .. },
-        VestaboardError::JsonError { context: c2, .. },
-      ) => c1 == c2,
-      (
-        VestaboardError::ReqwestError { context: c1, .. },
-        VestaboardError::ReqwestError { context: c2, .. },
-      ) => c1 == c2,
+      (VestaboardError::IOError { context: c1, .. }, VestaboardError::IOError { context: c2, .. }) => c1 == c2,
+      (VestaboardError::JsonError { context: c1, .. }, VestaboardError::JsonError { context: c2, .. }) => c1 == c2,
+      (VestaboardError::ReqwestError { context: c1, .. }, VestaboardError::ReqwestError { context: c2, .. }) => {
+        c1 == c2
+      },
       (
         VestaboardError::WidgetError {
           widget: w1,
@@ -68,25 +38,12 @@ impl PartialEq for VestaboardError {
           message: m2,
         },
       ) => o1 == o2 && m1 == m2,
+      (VestaboardError::ApiError { code: c1, message: m1 }, VestaboardError::ApiError { code: c2, message: m2 }) => {
+        c1 == c2 && m1 == m2
+      },
       (
-        VestaboardError::ApiError {
-          code: c1,
-          message: m1,
-        },
-        VestaboardError::ApiError {
-          code: c2,
-          message: m2,
-        },
-      ) => c1 == c2 && m1 == m2,
-      (
-        VestaboardError::ConfigError {
-          field: f1,
-          message: m1,
-        },
-        VestaboardError::ConfigError {
-          field: f2,
-          message: m2,
-        },
+        VestaboardError::ConfigError { field: f1, message: m1 },
+        VestaboardError::ConfigError { field: f2, message: m2 },
       ) => f1 == f2 && m1 == m2,
       (VestaboardError::Other { message: m1 }, VestaboardError::Other { message: m2 }) => m1 == m2,
       _ => false,
@@ -242,7 +199,9 @@ impl VestaboardError {
           } else {
             format!("Network error: Unable to connect to {}. Check your internet connection.", context)
           }
-        } else if source.status() == Some(reqwest::StatusCode::UNAUTHORIZED) || source.status() == Some(reqwest::StatusCode::FORBIDDEN) {
+        } else if source.status() == Some(reqwest::StatusCode::UNAUTHORIZED)
+          || source.status() == Some(reqwest::StatusCode::FORBIDDEN)
+        {
           if context.contains("weather") {
             "Authentication error: Check WEATHER_API_KEY".to_string()
           } else if context.contains("Vestaboard") || context.contains("local-api") {
@@ -250,7 +209,9 @@ impl VestaboardError {
           } else {
             format!("Authentication error: Check API credentials")
           }
-        } else if source.status() == Some(reqwest::StatusCode::BAD_GATEWAY) || source.status() == Some(reqwest::StatusCode::GATEWAY_TIMEOUT) {
+        } else if source.status() == Some(reqwest::StatusCode::BAD_GATEWAY)
+          || source.status() == Some(reqwest::StatusCode::GATEWAY_TIMEOUT)
+        {
           if context.contains("weather") {
             "Weather service temporarily unavailable".to_string()
           } else {

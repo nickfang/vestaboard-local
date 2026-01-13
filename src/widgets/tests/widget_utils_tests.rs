@@ -2,9 +2,7 @@
 mod widget_utils;
 use crate::errors::VestaboardError;
 use std::io::{Error as IoError, ErrorKind};
-use widget_utils::{
-  center_line, error_to_display_message, format_error, format_message, full_justify_line,
-};
+use widget_utils::{center_line, error_to_display_message, format_error, format_message, full_justify_line};
 
 #[cfg(test)]
 mod tests {
@@ -31,14 +29,7 @@ mod tests {
   fn test_format_message_long_word() {
     let message = "thisisaverylongwordthatshouldwrap";
     let formatted = format_message(message);
-    let expected = vec![
-      "",
-      "",
-      "thisisaverylongwordtha",
-      "     tshouldwrap      ",
-      "",
-      "",
-    ];
+    let expected = vec!["", "", "thisisaverylongwordtha", "     tshouldwrap      ", "", ""];
     assert_eq!(formatted, expected);
   }
 
@@ -317,8 +308,7 @@ mod tests {
 
   #[test]
   fn test_error_to_display_message_other_error_long() {
-    let long_message =
-      "This is a very long error message that exceeds forty characters and should be truncated";
+    let long_message = "This is a very long error message that exceeds forty characters and should be truncated";
     let error = VestaboardError::other(long_message);
     let display = error_to_display_message(&error);
 
