@@ -4,6 +4,20 @@ use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde_json::json;
 use std::env;
+use std::time::Duration;
+
+/// Default timeout for Vestaboard API requests (10 seconds)
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Creates an HTTP client configured with appropriate timeouts for Vestaboard API requests.
+/// This prevents the application from hanging indefinitely when the Vestaboard is unreachable.
+pub fn create_client() -> Client {
+  Client::builder()
+    .timeout(DEFAULT_TIMEOUT)
+    .connect_timeout(DEFAULT_TIMEOUT)
+    .build()
+    .expect("Failed to build HTTP client")
+}
 
 static API_KEY: Lazy<String> = Lazy::new(|| {
   dotenv().ok();
@@ -18,7 +32,7 @@ pub async fn send_codes(message: [[u8; 22]; 6]) -> Result<(), reqwest::Error> {
   let start_time = std::time::Instant::now();
   print_progress("Sending to Vestaboard...");
 
-  let client = Client::new();
+  let client = create_client();
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
   let body = json!(message);
 
@@ -90,7 +104,7 @@ pub async fn blank_board() -> Result<(), reqwest::Error> {
 
 #[allow(dead_code)]
 pub async fn get_message() -> Result<(), reqwest::Error> {
-  let client = Client::new();
+  let client = create_client();
   let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
   let res = client
