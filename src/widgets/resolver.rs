@@ -15,7 +15,7 @@ use crate::{log_widget_error, log_widget_start, log_widget_success};
 /// Execute a widget by type string with unified error handling and logging
 ///
 /// This function provides a single entry point for executing all widget types,
-/// eliminating code duplication across main.rs, daemon.rs, and scheduler.rs.
+/// eliminating code duplication across main.rs, scheduler.rs, and playlist.rs.
 ///
 /// # Arguments
 /// * `widget_type` - The type of widget to execute ("text", "file", "weather", etc.)

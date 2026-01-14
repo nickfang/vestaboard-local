@@ -7,6 +7,9 @@ pub enum VestaboardError {
   ScheduleError { operation: String, message: String },
   ApiError { code: Option<u16>, message: String },
   ConfigError { field: String, message: String },
+  LockError { message: String },
+  InputError { message: String },
+  ValidationError { message: String },
   Other { message: String },
 }
 
@@ -45,6 +48,9 @@ impl PartialEq for VestaboardError {
         VestaboardError::ConfigError { field: f1, message: m1 },
         VestaboardError::ConfigError { field: f2, message: m2 },
       ) => f1 == f2 && m1 == m2,
+      (VestaboardError::LockError { message: m1 }, VestaboardError::LockError { message: m2 }) => m1 == m2,
+      (VestaboardError::InputError { message: m1 }, VestaboardError::InputError { message: m2 }) => m1 == m2,
+      (VestaboardError::ValidationError { message: m1 }, VestaboardError::ValidationError { message: m2 }) => m1 == m2,
       (VestaboardError::Other { message: m1 }, VestaboardError::Other { message: m2 }) => m1 == m2,
       _ => false,
     }
@@ -75,6 +81,15 @@ impl std::fmt::Display for VestaboardError {
       },
       VestaboardError::ConfigError { field, message } => {
         write!(f, "Configuration Error [{}]: {}", field, message)
+      },
+      VestaboardError::LockError { message } => {
+        write!(f, "Lock Error: {}", message)
+      },
+      VestaboardError::InputError { message } => {
+        write!(f, "Input Error: {}", message)
+      },
+      VestaboardError::ValidationError { message } => {
+        write!(f, "Validation Error: {}", message)
       },
       VestaboardError::Other { message } => {
         write!(f, "Error: {}", message)
@@ -147,6 +162,24 @@ impl VestaboardError {
 
   pub fn other(message: &str) -> Self {
     VestaboardError::Other {
+      message: message.to_string(),
+    }
+  }
+
+  pub fn lock_error(message: &str) -> Self {
+    VestaboardError::LockError {
+      message: message.to_string(),
+    }
+  }
+
+  pub fn input_error(message: &str) -> Self {
+    VestaboardError::InputError {
+      message: message.to_string(),
+    }
+  }
+
+  pub fn validation_error(message: &str) -> Self {
+    VestaboardError::ValidationError {
       message: message.to_string(),
     }
   }
@@ -240,6 +273,9 @@ impl VestaboardError {
       VestaboardError::ConfigError { field, message } => {
         format!("Configuration error [{}]: {}", field, message)
       },
+      VestaboardError::LockError { message } => message.clone(),
+      VestaboardError::InputError { message } => message.clone(),
+      VestaboardError::ValidationError { message } => message.clone(),
       VestaboardError::Other { message } => message.clone(),
     }
   }

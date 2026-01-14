@@ -12,6 +12,9 @@ pub const DEFAULT_LOG_FILE_PATH: &str = "data/vestaboard.log";
 pub const DEFAULT_CONSOLE_LOG_LEVEL: &str = "info";
 pub const DEFAULT_SCHEDULE_FILE_PATH: &str = "data/schedule.json";
 pub const DEFAULT_SCHEDULE_BACKUP_PATH: &str = "data/schedule_backup.json";
+pub const DEFAULT_PLAYLIST_FILE_PATH: &str = "data/playlist.json";
+pub const DEFAULT_RUNTIME_STATE_PATH: &str = "data/runtime_state.json";
+pub const DEFAULT_LOCK_FILE_PATH: &str = "data/vestaboard.lock";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -20,6 +23,10 @@ pub struct Config {
   pub console_log_level: Option<String>,
   pub schedule_file_path: Option<String>,
   pub schedule_backup_path: Option<String>,
+  pub check_interval_seconds: Option<u64>,
+  pub playlist_file_path: Option<String>,
+  pub runtime_state_path: Option<String>,
+  pub lock_file_path: Option<String>,
 }
 
 impl Default for Config {
@@ -30,6 +37,10 @@ impl Default for Config {
       console_log_level: Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()),
       schedule_file_path: Some(DEFAULT_SCHEDULE_FILE_PATH.to_string()),
       schedule_backup_path: Some(DEFAULT_SCHEDULE_BACKUP_PATH.to_string()),
+      check_interval_seconds: Some(3),
+      playlist_file_path: Some(DEFAULT_PLAYLIST_FILE_PATH.to_string()),
+      runtime_state_path: Some(DEFAULT_RUNTIME_STATE_PATH.to_string()),
+      lock_file_path: Some(DEFAULT_LOCK_FILE_PATH.to_string()),
     }
   }
 }
@@ -146,5 +157,21 @@ impl Config {
         .as_deref()
         .unwrap_or(DEFAULT_SCHEDULE_BACKUP_PATH),
     )
+  }
+
+  pub fn get_check_interval_seconds(&self) -> u64 {
+    self.check_interval_seconds.unwrap_or(3)
+  }
+
+  pub fn get_playlist_file_path(&self) -> PathBuf {
+    PathBuf::from(self.playlist_file_path.as_deref().unwrap_or(DEFAULT_PLAYLIST_FILE_PATH))
+  }
+
+  pub fn get_runtime_state_path(&self) -> PathBuf {
+    PathBuf::from(self.runtime_state_path.as_deref().unwrap_or(DEFAULT_RUNTIME_STATE_PATH))
+  }
+
+  pub fn get_lock_file_path(&self) -> PathBuf {
+    PathBuf::from(self.lock_file_path.as_deref().unwrap_or(DEFAULT_LOCK_FILE_PATH))
   }
 }

@@ -11,7 +11,7 @@ use std::sync::Arc;
 /// - Thread-safe shutdown flag management
 ///
 /// Following SOLID principles, this has a single responsibility for process lifecycle management
-/// and can be reused across daemon, cycle, and other long-running commands.
+/// and can be reused across schedule, playlist, and other long-running commands.
 ///
 /// # Examples
 ///

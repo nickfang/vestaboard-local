@@ -36,31 +36,51 @@ pub struct ShowArgs {
   pub dry_run: bool,
 }
 
-#[derive(Args, Debug)]
-pub struct CycleArgs {
-  #[arg(short = 'i', long = "interval", default_value = "60", help = "Delay in seconds between messages")]
-  pub interval: u64,
-  #[arg(
-    short = 'w',
-    long = "delay",
-    default_value = "0",
-    help = "Delay in seconds before showing first message"
-  )]
-  pub delay: u64,
-  #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without updating Vestaboard")]
-  pub dry_run: bool,
-}
-
 #[derive(Subcommand, Debug)]
-pub enum CycleCommand {
+pub enum PlaylistArgs {
   #[command(
-    name = "repeat",
-    about = "Continuously repeat the cycle until stopped (Ctrl-C)",
-    after_help = "Examples:\n  vbl cycle repeat\n  vbl cycle repeat --interval 300\n  vbl cycle repeat --delay 30 --dry-run"
+    name = "add",
+    about = "Add a widget to the playlist",
+    after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist add sat-word"
   )]
-  Repeat {
-    #[command(flatten)]
-    args: CycleArgs,
+  Add {
+    #[clap(help = "The widget to add (weather, text, sat-word, jokes, clear)", required = true)]
+    widget: String,
+    #[clap(help = "Widget input (required for text widget)")]
+    input: Vec<String>,
+  },
+  #[command(name = "list", about = "List all playlist items")]
+  List,
+  #[command(name = "remove", about = "Remove a playlist item by ID")]
+  Remove {
+    #[clap(help = "The ID of the playlist item to remove", required = true)]
+    id: String,
+  },
+  #[command(name = "clear", about = "Remove all playlist items")]
+  Clear,
+  #[command(name = "interval", about = "Show or set the rotation interval in seconds (minimum 60)")]
+  Interval {
+    #[clap(help = "Interval in seconds between items (omit to show current)")]
+    seconds: Option<u64>,
+  },
+  #[command(name = "preview", about = "Preview all playlist items without sending to Vestaboard")]
+  Preview,
+  #[command(
+    name = "run",
+    about = "Run the playlist, rotating through items at the set interval",
+    after_help = "Examples:\n  vbl playlist run\n  vbl playlist run --resume\n  vbl playlist run --once\n  vbl playlist run --index 2\n  vbl playlist run --id abc1\n  vbl playlist run --dry-run"
+  )]
+  Run {
+    #[arg(long, help = "Run through playlist once and exit")]
+    once: bool,
+    #[arg(long, help = "Resume from last position", conflicts_with_all = ["index", "id"])]
+    resume: bool,
+    #[arg(long, help = "Start from this index (0-based)", conflicts_with_all = ["id", "resume"])]
+    index: Option<usize>,
+    #[arg(long, help = "Start from item with this ID", conflicts_with_all = ["index", "resume"])]
+    id: Option<String>,
+    #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
+    dry_run: bool,
   },
 }
 
@@ -91,6 +111,15 @@ pub enum ScheduleArgs {
   Clear,
   #[command(name = "preview", about = "Preview the schedule without updating the Vestaboard")]
   Preview,
+  #[command(
+    name = "run",
+    about = "Run the schedule, executing tasks at their scheduled times",
+    after_help = "Examples:\n  vbl schedule run\n  vbl schedule run --dry-run"
+  )]
+  Run {
+    #[arg(short = 'd', long = "dry-run", help = "Preview mode - show messages without sending to Vestaboard")]
+    dry_run: bool,
+  },
 }
 
 #[derive(Subcommand, Debug)]
@@ -109,27 +138,22 @@ pub enum Command {
     action: ScheduleArgs,
   },
   #[command(
-    about = "Cycle through scheduled tasks at set intervals",
-    long_about = "Execute all tasks from the schedule.json file in order. The datetime constraints are ignored - tasks are executed based only on the specified interval. Use 'cycle repeat' for continuous cycling, or 'cycle' alone to run once.",
-    after_help = "Examples:\n  vbl cycle                                    # Default: 60 second intervals, run once\n  vbl cycle --delay 30                        # Wait 30 seconds before starting\n  vbl cycle --interval 300                     # 5 minute intervals, run once\n  vbl cycle repeat                             # Continuous cycling\n  vbl cycle repeat --dry-run                   # Preview continuous mode\n\nNote: Uses tasks from schedule.json, ignoring their scheduled times."
+    about = "Manage and run the playlist",
+    after_help = "Examples:\n  vbl playlist add weather\n  vbl playlist add text \"Hello world\"\n  vbl playlist list\n  vbl playlist remove abc1\n  vbl playlist interval 300"
   )]
-  Cycle {
+  Playlist {
     #[command(subcommand)]
-    command: Option<CycleCommand>,
-    #[command(flatten)]
-    args: CycleArgs,
+    action: PlaylistArgs,
   },
-  #[command(about = "Run as a background daemon")]
-  Daemon,
 }
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "Vestaboard CLI",
-    author = "Nicholas Fang",
-    version = "1.0",
-    about = "CLI for updating a local Vestaboard",
-    long_about = None
+  name = "Vestaboard CLI",
+  author = "Nicholas Fang",
+  version = "1.0",
+  about = "CLI for updating a local Vestaboard",
+  long_about = None
 )]
 pub struct Cli {
   #[clap(subcommand)]

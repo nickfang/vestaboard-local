@@ -184,5 +184,8 @@ pub fn error_to_display_message(error: &VestaboardError) -> Vec<String> {
       };
       format_error_with_header(&display_msg, "error")
     },
+    VestaboardError::LockError { message } => format_error_with_header(message, "lock error"),
+    VestaboardError::InputError { message } => format_error_with_header(message, "input error"),
+    VestaboardError::ValidationError { message } => format_error_with_header(message, "validation error"),
   }
 }

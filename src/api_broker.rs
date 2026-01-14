@@ -127,17 +127,14 @@ pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
   codes
 }
 
-pub async fn display_message(message: Vec<String>) {
+pub async fn display_message(message: Vec<String>) -> Result<(), VestaboardError> {
   log::info!("Processing message for display, {} lines", message.len());
   log::debug!("Message content: {:?}", message);
 
   let codes = message_to_codes(message);
   log::debug!("Converted message to character codes");
 
-  send_codes(codes).await.unwrap_or_else(|e| {
-    log::error!("Failed to send message to Vestaboard: {}", e);
-    eprintln!("Error sending codes to Vestaboard: {}", e);
-  });
+  send_codes(codes).await
 }
 
 /// Checks if a character is valid for Vestaboard display
@@ -196,7 +193,7 @@ pub async fn handle_message(message: Vec<String>, destination: MessageDestinatio
 
   match destination {
     MessageDestination::Vestaboard => {
-      display_message(message).await;
+      display_message(message).await?;
     },
     MessageDestination::Console => {
       print_progress("Displaying message preview:");

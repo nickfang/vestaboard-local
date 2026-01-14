@@ -3,21 +3,24 @@ mod api_broker;
 mod cli_display;
 mod cli_setup;
 mod config;
-mod daemon;
 mod datetime;
 mod errors;
 mod logging;
+mod playlist;
 mod process_control;
+mod runner;
+mod runtime_state;
 mod scheduler;
 mod widgets;
 
 use api_broker::{handle_message, MessageDestination};
 use cli_display::{init_output_control, print_error, print_progress, print_success};
-use cli_setup::{Cli, Command, CycleCommand, ScheduleArgs, WidgetCommand};
-use daemon::run_daemon;
+use cli_setup::{Cli, Command, PlaylistArgs, ScheduleArgs, WidgetCommand};
 use datetime::datetime_to_utc;
 use errors::VestaboardError;
-use scheduler::{add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule};
+use scheduler::{
+  add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule, run_schedule,
+};
 use std::process;
 use widgets::resolver::execute_widget;
 use widgets::widget_utils::error_to_display_message;
@@ -221,68 +224,181 @@ async fn main() {
           preview_schedule().await;
           0
         },
+        ScheduleArgs::Run { dry_run } => {
+          log::info!("Running schedule - dry_run: {}", dry_run);
+          match run_schedule(dry_run).await {
+            Ok(_) => 0,
+            Err(e) => {
+              log::error!("Schedule run failed: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
+        },
       }
     },
-    Command::Cycle { command, args } => {
-      // Use repeat args if available, otherwise use main cycle args
-      let (is_repeat, cycle_args) = match command {
-        Some(CycleCommand::Repeat { args: repeat_args }) => (true, repeat_args),
-        None => (false, args),
-      };
+    Command::Playlist { action } => {
+      log::info!("Processing playlist command");
+      match action {
+        PlaylistArgs::Add { widget, input } => {
+          log::info!("Adding playlist item - widget: {}, input: {:?}", widget, input);
 
-      log::info!(
-        "Starting {} cycle mode - interval: {}s, delay: {}s, dry_run: {}",
-        if is_repeat { "continuous" } else { "single" },
-        cycle_args.interval,
-        cycle_args.delay,
-        cycle_args.dry_run
-      );
+          // Validate widget type and build input
+          let widget_lower = widget.to_lowercase();
+          let input_json = match widget_lower.as_str() {
+            "weather" | "sat-word" | "jokes" | "clear" => json!(null),
+            "text" => {
+              if input.is_empty() {
+                print_error("Input is required for text widgets.");
+                process::exit(1);
+              }
+              json!(input.join(" "))
+            },
+            "file" => {
+              if input.is_empty() {
+                print_error("Input is required for file widgets.");
+                process::exit(1);
+              }
+              json!(input.join(" "))
+            },
+            _ => {
+              print_error(&format!(
+                "Unsupported widget type: {}. Supported: weather, text, sat-word, jokes, clear, file",
+                widget
+              ));
+              process::exit(1);
+            },
+          };
 
-      if cycle_args.dry_run {
-        println!("Running {} cycle in preview mode...", if is_repeat { "continuous" } else { "single" });
-      } else {
-        println!(
-          "Starting {} cycle with {} second intervals...",
-          if is_repeat { "continuous" } else { "single" },
-          cycle_args.interval
-        );
-      }
+          // Validate the widget can produce a valid message (dry-run mode)
+          let widget_command = match widget_lower.as_str() {
+            "weather" => WidgetCommand::Weather,
+            "sat-word" => WidgetCommand::SATWord,
+            "jokes" => WidgetCommand::Jokes,
+            "clear" => WidgetCommand::Clear,
+            "text" => WidgetCommand::Text(cli_setup::TextArgs {
+              message: input.join(" "),
+            }),
+            "file" => WidgetCommand::File(cli_setup::FileArgs {
+              name: std::path::PathBuf::from(input.join(" ")),
+            }),
+            _ => unreachable!(), // Already handled above
+          };
 
-      if is_repeat {
-        println!("Cycle will repeat continuously until stopped (Ctrl-C).");
-      } else {
-        println!("Cycle will run through all scheduled tasks once.");
-      }
+          print_progress("Validating widget...");
+          if let Err(e) = process_widget_command(&widget_command, true).await {
+            log::error!("Widget validation failed: {}", e);
+            print_error(&e.to_user_message());
+            process::exit(1);
+          }
 
-      if cycle_args.delay > 0 {
-        println!("Waiting {} seconds before starting...", cycle_args.delay);
-        tokio::time::sleep(tokio::time::Duration::from_secs(cycle_args.delay)).await;
-      }
-
-      // TODO: Implement cycle functionality
-      log::warn!("{} cycle functionality not yet implemented", if is_repeat { "Continuous" } else { "Single" });
-      println!("{} cycle functionality is not yet implemented.", if is_repeat { "Continuous" } else { "Single" });
-      println!("This command will read from schedule.json and execute tasks in order:");
-      println!("  - Ignoring scheduled datetime constraints");
-      println!("  - Using {} second intervals between tasks", cycle_args.interval);
-      if is_repeat {
-        println!("  - Continuously repeating the cycle until Ctrl-C");
-      } else {
-        println!("  - Running through the schedule once");
-      }
-      0 // Return success for now (not implemented yet)
-    },
-    Command::Daemon => {
-      log::info!("Starting daemon mode");
-      match run_daemon().await {
-        Ok(_) => {
-          log::info!("Daemon completed successfully");
+          match playlist::add_item_to_playlist(&widget_lower, input_json) {
+            Ok(item_id) => {
+              log::info!("Successfully added item {} to playlist", item_id);
+              print_success(&format!("Added {} to playlist (ID: {})", widget_lower, item_id));
+              0
+            },
+            Err(e) => {
+              log::error!("Failed to add item to playlist: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
+        },
+        PlaylistArgs::List => {
+          log::info!("Listing playlist items");
+          match playlist::list_playlist() {
+            Ok(_) => 0,
+            Err(e) => {
+              log::error!("Failed to list playlist: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
+        },
+        PlaylistArgs::Remove { id } => {
+          log::info!("Removing playlist item: {}", id);
+          match playlist::remove_item_from_playlist(&id) {
+            Ok(_) => {
+              print_success(&format!("Removed item {}", id));
+              0
+            },
+            Err(e) => {
+              log::error!("Failed to remove item: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
+        },
+        PlaylistArgs::Clear => {
+          log::info!("Clearing all playlist items");
+          match playlist::clear_playlist() {
+            Ok(_) => {
+              print_success("Playlist cleared.");
+              0
+            },
+            Err(e) => {
+              log::error!("Failed to clear playlist: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
+        },
+        PlaylistArgs::Interval { seconds } => match seconds {
+          Some(secs) => {
+            log::info!("Setting playlist interval to {} seconds", secs);
+            match playlist::set_playlist_interval(secs) {
+              Ok(_) => {
+                print_success(&format!("Playlist interval set to {} seconds.", secs));
+                0
+              },
+              Err(e) => {
+                log::error!("Failed to set interval: {}", e);
+                print_error(&e.to_user_message());
+                1
+              },
+            }
+          },
+          None => {
+            log::info!("Showing current playlist interval");
+            match playlist::show_playlist_interval() {
+              Ok(_) => 0,
+              Err(e) => {
+                log::error!("Failed to get interval: {}", e);
+                print_error(&e.to_user_message());
+                1
+              },
+            }
+          },
+        },
+        PlaylistArgs::Preview => {
+          log::info!("Previewing playlist");
+          playlist::preview_playlist().await;
           0
         },
-        Err(e) => {
-          log::error!("Daemon failed: {}", e);
-          print_error(&e.to_user_message());
-          1
+        PlaylistArgs::Run {
+          once,
+          resume,
+          index,
+          id,
+          dry_run,
+        } => {
+          log::info!(
+            "Running playlist - once: {}, resume: {}, index: {:?}, id: {:?}, dry_run: {}",
+            once,
+            resume,
+            index,
+            id,
+            dry_run
+          );
+          match playlist::run_playlist(once, resume, index, id, dry_run).await {
+            Ok(_) => 0,
+            Err(e) => {
+              log::error!("Playlist run failed: {}", e);
+              print_error(&e.to_user_message());
+              1
+            },
+          }
         },
       }
     },
