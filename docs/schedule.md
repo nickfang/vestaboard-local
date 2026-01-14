@@ -75,6 +75,7 @@ src/
 ├── scheduler.rs             # Schedule data model, CRUD, ScheduleMonitor
 ├── runner/
 │   ├── mod.rs               # Runner trait, ControlFlow enum
+│   ├── common.rs            # Shared execute_and_send function
 │   ├── schedule_runner.rs   # Core execution logic
 │   ├── lock.rs              # Instance lock (prevents multiple runs)
 │   └── keyboard.rs          # Keyboard input handling

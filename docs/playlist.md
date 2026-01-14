@@ -94,6 +94,7 @@ src/
 ├── runtime_state.rs         # State persistence (best-effort)
 ├── runner/
 │   ├── mod.rs               # Runner trait, ControlFlow enum
+│   ├── common.rs            # Shared execute_and_send function
 │   ├── playlist_runner.rs   # Core execution logic
 │   ├── lock.rs              # Instance lock (prevents multiple runs)
 │   └── keyboard.rs          # Keyboard input handling
