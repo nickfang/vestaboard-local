@@ -2,7 +2,7 @@
 //!
 //! Uses the Vestaboard Local API which requires being on the same network as the device.
 
-use crate::cli_display::{print_error, print_progress, print_success};
+use crate::cli_display::{ print_error, print_progress, print_success };
 use crate::errors::VestaboardError;
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
@@ -37,23 +37,25 @@ impl LocalTransport {
     dotenv().ok();
 
     // Get the API key, returning a helpful error if not set or empty
-    let api_key = env::var("LOCAL_API_KEY")
+    let api_key = env
+      ::var("LOCAL_API_KEY")
       .ok()
       .filter(|s| !s.is_empty())
       .ok_or_else(|| {
         VestaboardError::config_error(
           "LOCAL_API_KEY",
-          "Environment variable not set. Set it with: export LOCAL_API_KEY=your-key (or add to .env file). Find your local API key in the Vestaboard app under Settings.",
+          "Environment variable not set. Set it with: export LOCAL_API_KEY=your-key (or add to .env file)."
         )
       })?;
 
-    let ip_address = env::var("IP_ADDRESS")
+    let ip_address = env
+      ::var("IP_ADDRESS")
       .ok()
       .filter(|s| !s.is_empty())
       .ok_or_else(|| {
         VestaboardError::config_error(
           "IP_ADDRESS",
-          "Environment variable not set. Set it with: export IP_ADDRESS=192.168.x.x (or add to .env file). Find your Vestaboard's IP address in the Vestaboard app under Settings.",
+          "Environment variable not set. Set it with: export IP_ADDRESS=192.168.x.x (or add to .env file)."
         )
       })?;
 
@@ -76,8 +78,7 @@ impl LocalTransport {
       .post(&url)
       .header("X-Vestaboard-Local-Api-Key", &self.api_key)
       .json(&body)
-      .send()
-      .await;
+      .send().await;
 
     let duration = start_time.elapsed();
 
@@ -92,13 +93,13 @@ impl LocalTransport {
           print_error(&format!("Vestaboard error: HTTP {}", status));
         }
         Ok(())
-      },
+      }
       Err(e) => {
         log::error!("API request failed after {:?}: {}", duration, e);
         let error = VestaboardError::reqwest_error(e, "Vestaboard");
         print_error(&error.to_user_message());
         Err(error)
-      },
+      }
     }
   }
 
@@ -112,22 +113,18 @@ impl LocalTransport {
 
     log::debug!("Getting message from local API at {}", url);
 
-    let res = client
-      .get(&url)
-      .header("X-Vestaboard-Local-Api-Key", &self.api_key)
-      .send()
-      .await;
+    let res = client.get(&url).header("X-Vestaboard-Local-Api-Key", &self.api_key).send().await;
 
     match res {
       Ok(response) => {
         log::debug!("Response: {:?}", response);
         Ok(())
-      },
+      }
       Err(e) => {
         let error = VestaboardError::reqwest_error(e, "Vestaboard");
         print_error(&error.to_user_message());
         Err(error)
-      },
+      }
     }
   }
 }

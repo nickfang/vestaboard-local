@@ -3,7 +3,7 @@
 //! Uses the Vestaboard Read/Write API which works over the internet
 //! without requiring local network access to the device.
 
-use crate::cli_display::{print_error, print_progress, print_success};
+use crate::cli_display::{ print_error, print_progress, print_success };
 use crate::errors::VestaboardError;
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
@@ -40,13 +40,14 @@ impl InternetTransport {
     dotenv().ok();
 
     // Get the API key, returning a helpful error if not set or empty
-    let api_key = env::var("INTERNET_API_KEY")
+    let api_key = env
+      ::var("INTERNET_API_KEY")
       .ok()
       .filter(|s| !s.is_empty())
       .ok_or_else(|| {
         VestaboardError::config_error(
           "INTERNET_API_KEY",
-          "Environment variable not set. Set it with: export INTERNET_API_KEY=your-key (or add to .env file). Get your Read/Write API key from the Vestaboard app under Settings > Integrations.",
+          "Environment variable not set. Set it with: export INTERNET_API_KEY=your-key (or add to .env file)."
         )
       })?;
 
@@ -68,8 +69,7 @@ impl InternetTransport {
       .post(INTERNET_API_URL)
       .header("X-Vestaboard-Read-Write-Key", &self.api_key)
       .json(&body)
-      .send()
-      .await;
+      .send().await;
 
     let duration = start_time.elapsed();
 
@@ -79,7 +79,9 @@ impl InternetTransport {
         log::info!("API response received: {} in {:?}", status, duration);
 
         // Get response body for all cases
-        let response_body = response.text().await.unwrap_or_else(|_| "Unable to read response".to_string());
+        let response_body = response
+          .text().await
+          .unwrap_or_else(|_| "Unable to read response".to_string());
 
         if status.is_success() {
           print_success("Sent to Vestaboard");
@@ -94,13 +96,13 @@ impl InternetTransport {
           print_error(&format!("Vestaboard error: HTTP {} - {}", status, response_body));
           Err(VestaboardError::api_error(Some(status.as_u16()), &response_body))
         }
-      },
+      }
       Err(e) => {
         log::error!("API request failed after {:?}: {}", duration, e);
         let error = VestaboardError::reqwest_error(e, "Vestaboard");
         print_error(&error.to_user_message());
         Err(error)
-      },
+      }
     }
   }
 
@@ -116,19 +118,18 @@ impl InternetTransport {
     let res = client
       .get(INTERNET_API_URL)
       .header("X-Vestaboard-Read-Write-Key", &self.api_key)
-      .send()
-      .await;
+      .send().await;
 
     match res {
       Ok(response) => {
         log::debug!("Response: {:?}", response);
         Ok(())
-      },
+      }
       Err(e) => {
         let error = VestaboardError::reqwest_error(e, "Vestaboard");
         print_error(&error.to_user_message());
         Err(error)
-      },
+      }
     }
   }
 }
