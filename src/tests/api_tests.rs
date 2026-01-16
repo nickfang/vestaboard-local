@@ -1,4 +1,4 @@
-use crate::api::{create_client, get_message, send_codes, DEFAULT_TIMEOUT};
+use crate::api::{create_client, send_codes, DEFAULT_TIMEOUT};
 
 // TODO: figure out how to test the api functions
 #[cfg(test)]
@@ -20,8 +20,10 @@ async fn test_send_codes() {
 #[tokio::test]
 #[ignore]
 async fn test_get_message() {
-  let result = get_message();
-  assert!(result.await.is_ok());
+  use crate::api::{Transport, TransportType};
+  let transport = Transport::new(TransportType::Local).expect("Failed to create transport");
+  let result = transport.get_message().await;
+  assert!(result.is_ok());
 }
 
 // Tests for timeout behavior (Issue #52)
@@ -163,10 +165,13 @@ mod transport_tests {
   }
 
   #[test]
-  fn test_transport_internet_not_yet_implemented() {
+  fn test_transport_internet_requires_api_key() {
+    // Internet transport requires INTERNET_API_KEY env var
+    // Without it set, should fail with config error
+    std::env::remove_var("INTERNET_API_KEY");
     let result = Transport::new(TransportType::Internet);
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.to_string().contains("not yet implemented"));
+    assert!(err.to_string().contains("INTERNET_API_KEY"), "Error should mention missing env var");
   }
 }

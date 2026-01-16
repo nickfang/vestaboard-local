@@ -7,7 +7,7 @@
 - **Execution Layer**: `scheduler.rs`, `daemon.rs`, `cycle.rs` - Different execution modes
 - **Widgets Module**: Self-contained content generation with resolver interface
 - **Translation Layer**: `api_broker.rs` - Message-to-code conversion and validation
-- **Communication Layer**: `api.rs` - Direct Vestaboard API calls
+- **Communication Layer**: `api/` module - Transport abstraction for Vestaboard API calls
 - **Logging Layer**: `logging.rs` - File, console, and Vestaboard display logging
 
 ### Core Rules
@@ -30,7 +30,11 @@ src/
 ├── scheduler.rs         # Schedule management (Execution Layer)
 ├── cycle.rs             # Loop execution (Execution Layer)
 ├── api_broker.rs        # Message translation (Translation Layer)
-├── api.rs               # Vestaboard API (Communication Layer)
+├── api/                 # Vestaboard API (Communication Layer)
+│   ├── mod.rs           # Transport enum and dispatch
+│   ├── common.rs        # Shared HTTP client and constants
+│   ├── local.rs         # LocalTransport (local network API)
+│   └── internet.rs      # InternetTransport (Read/Write API)
 └── widgets/             # Self-contained content generation
     ├── resolver.rs      # Central widget execution
     ├── widget_utils.rs  # Shared utilities
@@ -74,6 +78,45 @@ use crate::widgets::widget_utils::{widget_error, io_error, network_error};
 // ❌ Don't import errors directly in widgets
 use crate::errors::VestaboardError;  // WRONG - breaks isolation
 ```
+
+### Transport Abstraction Pattern
+
+The `api/` module uses an enum dispatch pattern for transport abstraction. All transport operations must be:
+
+1. **Methods on transport structs** (`LocalTransport`, `InternetTransport`)
+2. **Dispatched through the `Transport` enum**
+3. **Never standalone functions** exported from modules
+
+```rust
+// ✅ CORRECT: Method on transport struct, dispatched via enum
+impl LocalTransport {
+    pub async fn send_codes(&self, codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> { ... }
+    pub async fn get_message(&self) -> Result<(), VestaboardError> { ... }
+}
+
+impl InternetTransport {
+    pub async fn send_codes(&self, codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> { ... }
+    pub async fn get_message(&self) -> Result<(), VestaboardError> { ... }
+}
+
+impl Transport {
+    pub async fn send_codes(&self, codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
+        match self {
+            Transport::Local(t) => t.send_codes(codes).await,
+            Transport::Internet(t) => t.send_codes(codes).await,
+        }
+    }
+}
+
+// ❌ WRONG: Standalone function exported separately
+pub async fn get_message() -> Result<(), VestaboardError> { ... }
+pub use local::get_message;  // Breaks abstraction
+```
+
+When adding new transport operations:
+1. Add the method to both `LocalTransport` and `InternetTransport`
+2. Add dispatch in the `Transport` enum
+3. Do NOT add standalone functions
 
 ### Dry-Run Support
 All execution modes support dry-run: Send (`--dry-run`), Scheduler (`preview`), Cycle (future)
@@ -195,5 +238,7 @@ mod tests {
 ## References
 - [Widget Execution Refactoring](./20250719-widget-execution-refactoring.md)
 - [ProcessController Usage Guide](./20250721-process-controller-usage.md) - Signal handling and graceful shutdown patterns
+- [AI Agent Guidelines](./agents.md) - Guidelines for AI agents working on this codebase
 - `src/widgets/resolver.rs` - Central execution logic
 - `src/logging.rs` - Logging patterns
+- `src/api/mod.rs` - Transport abstraction patterns

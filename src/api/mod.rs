@@ -2,7 +2,7 @@
 //!
 //! This module provides different transports for sending messages to Vestaboard:
 //! - `LocalTransport` - Uses the local network API (requires same network as device)
-//! - `InternetTransport` - Uses the Read/Write API over the internet (future)
+//! - `InternetTransport` - Uses the Read/Write API over the internet
 //!
 //! # Architecture
 //!
@@ -11,13 +11,15 @@
 //! ```
 
 pub mod common;
+pub mod internet;
 pub mod local;
 
 use crate::errors::VestaboardError;
 use serde::{Deserialize, Serialize};
 
 pub use common::{create_client, DEFAULT_TIMEOUT};
-pub use local::{get_message, LocalTransport};
+pub use internet::InternetTransport;
+pub use local::LocalTransport;
 
 /// Transport type for configuration and CLI selection.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +39,8 @@ pub enum TransportType {
 pub enum Transport {
   /// Local network transport
   Local(LocalTransport),
-  // InternetTransport will be added in issue #92
+  /// Internet transport via Read/Write API
+  Internet(InternetTransport),
 }
 
 impl Transport {
@@ -48,12 +51,7 @@ impl Transport {
   pub fn new(transport_type: TransportType) -> Result<Self, VestaboardError> {
     match transport_type {
       TransportType::Local => Ok(Transport::Local(LocalTransport::new()?)),
-      TransportType::Internet => {
-        // InternetTransport will be implemented in issue #92
-        Err(VestaboardError::other(
-          "Internet transport not yet implemented. This will be available in a future release.",
-        ))
-      },
+      TransportType::Internet => Ok(Transport::Internet(InternetTransport::new()?)),
     }
   }
 
@@ -61,6 +59,18 @@ impl Transport {
   pub async fn send_codes(&self, codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
     match self {
       Transport::Local(t) => t.send_codes(codes).await,
+      Transport::Internet(t) => t.send_codes(codes).await,
+    }
+  }
+
+  /// Get the current message displayed on the Vestaboard.
+  ///
+  /// Note: This method is kept for future features but is not yet fully implemented.
+  /// The return type should eventually return the actual message data.
+  pub async fn get_message(&self) -> Result<(), VestaboardError> {
+    match self {
+      Transport::Local(t) => t.get_message().await,
+      Transport::Internet(t) => t.get_message().await,
     }
   }
 
@@ -68,6 +78,7 @@ impl Transport {
   pub fn name(&self) -> &'static str {
     match self {
       Transport::Local(_) => "local",
+      Transport::Internet(_) => "internet",
     }
   }
 }
@@ -76,6 +87,7 @@ impl std::fmt::Debug for Transport {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Transport::Local(_) => write!(f, "Transport::Local"),
+      Transport::Internet(_) => write!(f, "Transport::Internet"),
     }
   }
 }
@@ -92,9 +104,8 @@ impl std::fmt::Debug for Transport {
 pub async fn send_codes(codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
   // Use a static LocalTransport to maintain connection pooling behavior
   use once_cell::sync::Lazy;
-  static LOCAL_TRANSPORT: Lazy<LocalTransport> = Lazy::new(|| {
-    LocalTransport::new().expect("Failed to initialize local transport")
-  });
+  static LOCAL_TRANSPORT: Lazy<LocalTransport> =
+    Lazy::new(|| LocalTransport::new().expect("Failed to initialize local transport"));
 
   LOCAL_TRANSPORT.send_codes(codes).await
 }

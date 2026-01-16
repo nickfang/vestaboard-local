@@ -98,32 +98,33 @@ impl LocalTransport {
       },
     }
   }
-}
 
-/// Get the current message displayed on the Vestaboard.
-///
-/// Note: This function is kept for future features but is not yet fully implemented.
-/// The return type should eventually return the actual message data.
-#[allow(dead_code)]
-pub async fn get_message() -> Result<(), VestaboardError> {
-  let client = &*LOCAL_CLIENT;
-  let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
+  /// Get the current message displayed on the Vestaboard via local network.
+  ///
+  /// Note: This method is kept for future features but is not yet fully implemented.
+  /// The return type should eventually return the actual message data.
+  pub async fn get_message(&self) -> Result<(), VestaboardError> {
+    let client = &*LOCAL_CLIENT;
+    let url = format!("http://{}:7000/local-api/message", &*IP_ADDRESS);
 
-  let res = client
-    .get(&url)
-    .header("X-Vestaboard-Local-Api-Key", &*LOCAL_API_KEY)
-    .send()
-    .await;
+    log::debug!("Getting message from local API at {}", url);
 
-  match res {
-    Ok(response) => {
-      println!("Response: {:?}", response);
-      Ok(())
-    },
-    Err(e) => {
-      let error = VestaboardError::reqwest_error(e, "Vestaboard");
-      print_error(&error.to_user_message());
-      Err(error)
-    },
+    let res = client
+      .get(&url)
+      .header("X-Vestaboard-Local-Api-Key", &*LOCAL_API_KEY)
+      .send()
+      .await;
+
+    match res {
+      Ok(response) => {
+        println!("Response: {:?}", response);
+        Ok(())
+      },
+      Err(e) => {
+        let error = VestaboardError::reqwest_error(e, "Vestaboard");
+        print_error(&error.to_user_message());
+        Err(error)
+      },
+    }
   }
 }
