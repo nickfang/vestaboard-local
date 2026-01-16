@@ -89,4 +89,32 @@ impl InternetTransport {
       },
     }
   }
+
+  /// Get the current message displayed on the Vestaboard via internet.
+  ///
+  /// Note: This method is kept for future features but is not yet fully implemented.
+  /// The return type should eventually return the actual message data.
+  pub async fn get_message(&self) -> Result<(), VestaboardError> {
+    let client = &*INTERNET_CLIENT;
+
+    log::debug!("Getting message from internet API at {}", INTERNET_API_URL);
+
+    let res = client
+      .get(INTERNET_API_URL)
+      .header("X-Vestaboard-Read-Write-Key", &*INTERNET_API_KEY)
+      .send()
+      .await;
+
+    match res {
+      Ok(response) => {
+        println!("Response: {:?}", response);
+        Ok(())
+      },
+      Err(e) => {
+        let error = VestaboardError::reqwest_error(e, "Vestaboard");
+        print_error(&error.to_user_message());
+        Err(error)
+      },
+    }
+  }
 }

@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 pub use common::{create_client, DEFAULT_TIMEOUT};
 pub use internet::InternetTransport;
-pub use local::{get_message, LocalTransport};
+pub use local::LocalTransport;
 
 /// Transport type for configuration and CLI selection.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +63,17 @@ impl Transport {
     }
   }
 
+  /// Get the current message displayed on the Vestaboard.
+  ///
+  /// Note: This method is kept for future features but is not yet fully implemented.
+  /// The return type should eventually return the actual message data.
+  pub async fn get_message(&self) -> Result<(), VestaboardError> {
+    match self {
+      Transport::Local(t) => t.get_message().await,
+      Transport::Internet(t) => t.get_message().await,
+    }
+  }
+
   /// Get the name of this transport for logging.
   pub fn name(&self) -> &'static str {
     match self {
@@ -93,9 +104,8 @@ impl std::fmt::Debug for Transport {
 pub async fn send_codes(codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
   // Use a static LocalTransport to maintain connection pooling behavior
   use once_cell::sync::Lazy;
-  static LOCAL_TRANSPORT: Lazy<LocalTransport> = Lazy::new(|| {
-    LocalTransport::new().expect("Failed to initialize local transport")
-  });
+  static LOCAL_TRANSPORT: Lazy<LocalTransport> =
+    Lazy::new(|| LocalTransport::new().expect("Failed to initialize local transport"));
 
   LOCAL_TRANSPORT.send_codes(codes).await
 }
