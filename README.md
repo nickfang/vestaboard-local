@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml/badge.svg)](https://github.com/nfang/vestaboard-local/actions/workflows/rust.yml)
 [![License](https://img.shields.io/crates/l/vestaboard_local.svg)](https://crates.io/crates/vestaboard_local) -->
 
-This project allows a user to connect to their vesta board locally
+This project allows a user to connect to their Vestaboard locally or via the internet (Read/Write API).
 
 ## Table of Contents
 
@@ -16,6 +16,7 @@ This project allows a user to connect to their vesta board locally
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
@@ -30,11 +31,34 @@ This project allows a user to connect to their vesta board locally
 
 ### Prerequisites
 
+#### Environment Setup
+
+Copy the example environment file and fill in your values:
+```sh
+cp .env.example .env
+```
+
+#### Local API (default)
+
 Enable Local API on your Vestaboard: https://docs-v1.vestaboard.com/local
 
-Add these environment variables a `.env` file:
-- `LOCAL_API_KEY` - Key received after enabling Local API<br>
+Add these environment variables to your `.env` file:
+- `LOCAL_API_KEY` - Key received after enabling Local API
 - `IP_ADDRESS` - Local IP address of the Vestaboard
+
+#### Internet API (optional)
+
+To use the Vestaboard from anywhere (not just your local network), you can use the Read/Write API:
+
+1. Open the Vestaboard app on your phone
+2. Go to Settings > Integrations
+3. Enable the Read/Write API
+4. Copy your Read/Write API key
+
+Add this environment variable to your `.env` file:
+- `INTERNET_API_KEY` - Read/Write API key from the Vestaboard app
+
+#### Widget API Keys
 
 Optional environment variables for widgets:
 - `WEATHER_API_KEY` - https://www.weatherapi.com/docs/ (Getting Started)
@@ -73,6 +97,7 @@ The application uses a configuration file located at `data/vblconfig.toml`. This
 | `console_log_level` | String (optional) | Same as `log_level` | Controls console output verbosity. If not specified, uses `log_level` |
 | `schedule_file_path` | String | `"data/schedule.json"` | Path to the schedule file for storing scheduled tasks |
 | `schedule_backup_path` | String | `"data/schedule_backup.json"` | Path to the schedule backup file |
+| `transport` | String (optional) | `"local"` | Default transport type. Options: `"local"`, `"internet"` |
 
 ### Example Configuration
 
@@ -99,6 +124,12 @@ console_log_level = "info"
 # Default: "data/schedule.json" and "data/schedule_backup.json"
 schedule_file_path = "data/schedule.json"
 schedule_backup_path = "data/schedule_backup.json"
+
+# Default transport type for API communication
+# Options: "local", "internet"
+# Default: "local" (uses LOCAL_API_KEY and IP_ADDRESS)
+# Set to "internet" to use INTERNET_API_KEY and connect from anywhere
+# transport = "internet"
 ```
 
 ### Configuration Notes
@@ -108,6 +139,21 @@ schedule_backup_path = "data/schedule_backup.json"
 - **Automatic Creation**: If no configuration file exists, the application creates one with default values on first run.
 
 ### Usage
+
+#### Transport Selection
+
+By default, `vbl` uses the local network API. You can override this:
+
+1. **CLI flag (highest priority)**: Use `--internet` flag with any command
+   ```sh
+   vbl --internet show text "hello from anywhere"
+   ```
+
+2. **Config file**: Set `transport = "internet"` in `data/vblconfig.toml`
+
+3. **Default**: Uses local transport if neither CLI flag nor config is set
+
+#### Character Set
 
 Messages can be passed in as a text file or a string. Only characters below are allowed.
 
@@ -138,26 +184,95 @@ Messages can be passed in as a text file or a string. Only characters below are 
 
 
 ## Examples
-See possible commands.
+
+See possible commands:
+```sh
+vbl --help
 ```
-vbl
+
+### Local Usage (default)
+
+Send a center-aligned string to the Vestaboard:
+```sh
+vbl show text "hello from vestaboard local"
 ```
-To send a center-aligned string to the Vestaboard:
+
+Send a message from a text file:
+```sh
+vbl show file ./text.txt
 ```
-vbl send text "hello from vestaboard local."
+
+Show the weather:
+```sh
+vbl show weather
 ```
-Sending a message to the Vestaboard in the arrangement that is in the text file.
+
+Preview a message without sending (dry-run):
+```sh
+vbl show -d sat-word
 ```
-vbl send file ./text.txt
+
+### Remote Usage (via Internet API)
+
+Send a message from anywhere using the internet transport:
+```sh
+vbl --internet show text "hello from afar"
 ```
-Using the weather widget.
+
+Run a playlist remotely:
+```sh
+vbl --internet playlist run
 ```
-vbl send weather
+
+Run the schedule remotely:
+```sh
+vbl --internet schedule run
 ```
-Preview message.
-```
-cargo run -- send -d sat-word
-```
+
+## Troubleshooting
+
+### "Configuration error [INTERNET_API_KEY]: Environment variable not set"
+
+This error means the Read/Write API key is not configured:
+
+1. Get your Read/Write API key from the Vestaboard app (Settings > Integrations)
+2. Add it to your `.env` file:
+   ```sh
+   export INTERNET_API_KEY=your-read-write-key
+   ```
+   Or add to `.env` file:
+   ```
+   INTERNET_API_KEY=your-read-write-key
+   ```
+
+### "Configuration error [LOCAL_API_KEY]: Environment variable not set"
+
+This error means the Local API key is not configured:
+
+1. Enable the Local API on your Vestaboard: https://docs-v1.vestaboard.com/local
+2. Add your Local API key and IP address to your `.env` file:
+   ```
+   LOCAL_API_KEY=your-local-api-key
+   IP_ADDRESS=192.168.x.x
+   ```
+
+### Network Connectivity Issues
+
+If you're having trouble connecting:
+
+**For Local API:**
+- Ensure your computer is on the same network as your Vestaboard
+- Verify the IP address is correct (check your router's device list)
+- Check that the Local API is enabled on the Vestaboard
+
+**For Internet API:**
+- Check your internet connection
+- Verify the Read/Write API is enabled in the Vestaboard app
+- Ensure your API key is correct (no extra spaces or characters)
+
+### "Message unchanged (already sent via internet API)"
+
+This is not an error. The Vestaboard Read/Write API tracks the last message sent via internet and returns HTTP 304 if you send the same message again. This is normal behavior when the message content hasn't changed.
 
 ## Contributing
 
