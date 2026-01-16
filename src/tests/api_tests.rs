@@ -1,6 +1,5 @@
-#[path = "../api.rs"]
-mod api;
-use api::{blank_board, clear_board, get_message, send_codes};
+use crate::api::{create_client, get_message, send_codes, DEFAULT_TIMEOUT};
+
 // TODO: figure out how to test the api functions
 #[cfg(test)]
 #[tokio::test]
@@ -20,18 +19,6 @@ async fn test_send_codes() {
 
 #[tokio::test]
 #[ignore]
-async fn test_clear_board() {
-  let result = clear_board();
-  assert!(result.await.is_ok());
-}
-#[tokio::test]
-#[ignore]
-async fn test_blank_board() {
-  let result = blank_board();
-  assert!(result.await.is_ok());
-}
-#[tokio::test]
-#[ignore]
 async fn test_get_message() {
   let result = get_message();
   assert!(result.await.is_ok());
@@ -43,7 +30,7 @@ async fn test_get_message() {
 
 #[cfg(test)]
 mod timeout_tests {
-  use super::api::{create_client, DEFAULT_TIMEOUT};
+  use super::*;
   use reqwest::Client;
   use std::time::{Duration, Instant};
 
@@ -143,5 +130,43 @@ mod timeout_tests {
     // This is what errors.rs checks in to_user_message()
     let is_network_error = err.is_timeout() || err.is_connect();
     assert!(is_network_error, "Error should be identifiable as network error for user messaging");
+  }
+}
+
+// Tests for TransportType and Transport
+#[cfg(test)]
+mod transport_tests {
+  use crate::api::{Transport, TransportType};
+
+  #[test]
+  fn test_transport_type_default_is_local() {
+    let default = TransportType::default();
+    assert_eq!(default, TransportType::Local);
+  }
+
+  #[test]
+  fn test_transport_type_serde_local() {
+    let json = serde_json::to_string(&TransportType::Local).unwrap();
+    assert_eq!(json, "\"local\"");
+
+    let parsed: TransportType = serde_json::from_str("\"local\"").unwrap();
+    assert_eq!(parsed, TransportType::Local);
+  }
+
+  #[test]
+  fn test_transport_type_serde_internet() {
+    let json = serde_json::to_string(&TransportType::Internet).unwrap();
+    assert_eq!(json, "\"internet\"");
+
+    let parsed: TransportType = serde_json::from_str("\"internet\"").unwrap();
+    assert_eq!(parsed, TransportType::Internet);
+  }
+
+  #[test]
+  fn test_transport_internet_not_yet_implemented() {
+    let result = Transport::new(TransportType::Internet);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("not yet implemented"));
   }
 }
