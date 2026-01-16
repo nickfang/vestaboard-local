@@ -17,7 +17,6 @@ pub mod local;
 use crate::errors::VestaboardError;
 use serde::{Deserialize, Serialize};
 
-pub use common::{create_client, DEFAULT_TIMEOUT};
 pub use internet::InternetTransport;
 pub use local::LocalTransport;
 
@@ -49,14 +48,17 @@ impl Transport {
   /// # Errors
   /// Returns an error if required environment variables are not set for the transport.
   pub fn new(transport_type: TransportType) -> Result<Self, VestaboardError> {
-    match transport_type {
-      TransportType::Local => Ok(Transport::Local(LocalTransport::new()?)),
-      TransportType::Internet => Ok(Transport::Internet(InternetTransport::new()?)),
-    }
+    let transport = match transport_type {
+      TransportType::Local => Transport::Local(LocalTransport::new()?),
+      TransportType::Internet => Transport::Internet(InternetTransport::new()?),
+    };
+    log::info!("Created {} transport", transport.name());
+    Ok(transport)
   }
 
   /// Send character codes to the Vestaboard.
   pub async fn send_codes(&self, codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
+    log::debug!("Sending codes via {} transport", self.name());
     match self {
       Transport::Local(t) => t.send_codes(codes).await,
       Transport::Internet(t) => t.send_codes(codes).await,
@@ -68,6 +70,7 @@ impl Transport {
   /// Note: This method is kept for future features but is not yet fully implemented.
   /// The return type should eventually return the actual message data.
   pub async fn get_message(&self) -> Result<(), VestaboardError> {
+    log::debug!("Getting message via {} transport", self.name());
     match self {
       Transport::Local(t) => t.get_message().await,
       Transport::Internet(t) => t.get_message().await,
@@ -90,22 +93,4 @@ impl std::fmt::Debug for Transport {
       Transport::Internet(_) => write!(f, "Transport::Internet"),
     }
   }
-}
-
-// ============================================================================
-// Backward compatibility layer
-// These functions maintain the existing API until callers are updated in #93/#95
-// ============================================================================
-
-/// Send character codes to the Vestaboard using local transport.
-///
-/// This is a convenience function that maintains backward compatibility.
-/// For new code, prefer using `Transport::new()` and `transport.send_codes()`.
-pub async fn send_codes(codes: [[u8; 22]; 6]) -> Result<(), VestaboardError> {
-  // Use a static LocalTransport to maintain connection pooling behavior
-  use once_cell::sync::Lazy;
-  static LOCAL_TRANSPORT: Lazy<LocalTransport> =
-    Lazy::new(|| LocalTransport::new().expect("Failed to initialize local transport"));
-
-  LOCAL_TRANSPORT.send_codes(codes).await
 }

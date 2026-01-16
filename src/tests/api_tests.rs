@@ -1,10 +1,12 @@
-use crate::api::{create_client, send_codes, DEFAULT_TIMEOUT};
+use crate::api::common::{create_client, DEFAULT_TIMEOUT};
 
 // TODO: figure out how to test the api functions
 #[cfg(test)]
 #[tokio::test]
 #[ignore]
 async fn test_send_codes() {
+  use crate::api::{Transport, TransportType};
+  let transport = Transport::new(TransportType::Local).expect("Failed to create transport");
   let message = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -13,8 +15,8 @@ async fn test_send_codes() {
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   ];
-  let result = send_codes(message);
-  assert!(result.await.is_ok());
+  let result = transport.send_codes(message).await;
+  assert!(result.is_ok());
 }
 
 #[tokio::test]
@@ -315,11 +317,20 @@ mod transport_tests {
   }
 
   #[test]
+  #[serial]
   fn test_error_message_is_user_friendly_internet() {
+    // Save original value
+    let orig_api_key = std::env::var("INTERNET_API_KEY").ok();
+
     // Test that error messages provide actionable guidance
     std::env::set_var("INTERNET_API_KEY", "");
     let result = Transport::new(TransportType::Internet);
-    std::env::remove_var("INTERNET_API_KEY");
+
+    // Restore original value
+    match orig_api_key {
+      Some(v) => std::env::set_var("INTERNET_API_KEY", v),
+      None => std::env::remove_var("INTERNET_API_KEY"),
+    }
 
     let err = result.unwrap_err();
     let msg = err.to_user_message();
