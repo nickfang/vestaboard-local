@@ -165,7 +165,13 @@ vbl schedule preview
 - **DRY Principle**: Extract common patterns before duplicating code
 
 ### Testing Organization
+
+**IMPORTANT:** All tests MUST be in separate test files. Do NOT add inline `#[cfg(test)] mod tests { }` blocks to source files.
+
 Tests are organized in separate files within a `tests/` folder at the same level as the source files:
+
+1. **Top-level modules** → `src/tests/*_tests.rs`
+2. **Widget submodules** → `src/widgets/[name]/*_tests.rs`
 
 ```
 src/
@@ -175,8 +181,9 @@ src/
 ├── tests/
 │   ├── mod.rs           # Test module declarations
 │   ├── config_tests.rs  # Tests for config.rs
-│   ├── daemon_tests.rs  # Tests for daemon.rs
-│   └── scheduler_tests.rs
+│   ├── scheduler_tests.rs
+│   ├── playlist_runner_tests.rs
+│   └── schedule_runner_tests.rs
 └── widgets/
     ├── resolver.rs
     ├── widget_utils.rs
@@ -186,26 +193,28 @@ src/
         └── widget_utils_tests.rs
 ```
 
-**Benefits of this approach:**
-- Keeps source files focused on implementation
-- Allows for better organization of large test suites
-- Clear separation between production and test code
-- Enables test-specific helper functions and imports
-
-**Test file structure:**
+**Test file structure (in `src/tests/`):**
 ```rust
-#[cfg(test)]
-mod tests {
-  use crate::module_name::{function_to_test, StructToTest};
+//! Tests for the ModuleName.
 
-  #[test]
-  fn test_function_behavior() {
-    // Test implementation
-  }
+use crate::module_name::{function_to_test, StructToTest};
+
+#[test]
+fn test_function_behavior() {
+  // Test implementation
 }
 ```
 
-**Note:** For small modules or utility functions, inline tests with `#[cfg(test)]` at the bottom of the source file are also acceptable and follow standard Rust conventions.
+**Adding new test files:**
+1. Create `src/tests/module_name_tests.rs`
+2. Add `mod module_name_tests;` to `src/tests/mod.rs`
+
+**Why separate files:**
+- Keeps source files focused on implementation
+- Consistent pattern across codebase
+- Clear separation between production and test code
+- Enables test-specific helper functions and imports
+- Easier code review (tests vs implementation changes)
 
 ## Common Mistakes
 
@@ -215,6 +224,7 @@ mod tests {
 - Duplicate execution logic across files
 - Skip dry-run testing
 - Copy-paste similar code blocks
+- Add inline tests to source files: `#[cfg(test)] mod tests { }` in source files
 
 ✅ **Do**:
 - Use resolver: `execute_widget(type, input)`
@@ -222,6 +232,7 @@ mod tests {
 - Follow layer boundaries: UI → Execution → Widgets
 - Implement 3-tier logging for new components
 - Extract common patterns into reusable functions
+- Put tests in separate files: `src/tests/*_tests.rs`
 
 ## Developer Checklist
 
