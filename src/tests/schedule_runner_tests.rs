@@ -4,9 +4,22 @@ use chrono::{Duration, Utc};
 use crossterm::event::KeyCode;
 use serde_json::json;
 
+use crate::api::{Transport, TransportType};
 use crate::runner::schedule_runner::ScheduleRunner;
 use crate::runner::{ControlFlow, Runner};
 use crate::scheduler::{Schedule, ScheduledTask};
+
+/// Create a test transport. Sets env vars if needed.
+fn create_test_transport() -> Transport {
+  // Set env vars for testing (these are only used if actually sending, which tests don't do)
+  if std::env::var("LOCAL_API_KEY").is_err() {
+    std::env::set_var("LOCAL_API_KEY", "test-api-key");
+  }
+  if std::env::var("IP_ADDRESS").is_err() {
+    std::env::set_var("IP_ADDRESS", "127.0.0.1");
+  }
+  Transport::new(TransportType::Local).expect("Failed to create test transport")
+}
 
 fn create_task(id: &str, hours_offset: i64, widget: &str) -> ScheduledTask {
   let now = Utc::now();
@@ -32,7 +45,8 @@ fn create_test_schedule() -> Schedule {
 #[test]
 fn test_schedule_runner_identifies_next_task() {
   let schedule = create_test_schedule();
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
 
   let next = runner.next_pending_task();
   assert!(next.is_some());
@@ -59,7 +73,8 @@ fn test_schedule_runner_skips_past_tasks() {
     ],
   };
 
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
   let next = runner.next_pending_task();
 
   assert!(next.is_none()); // All tasks in past
@@ -68,7 +83,8 @@ fn test_schedule_runner_skips_past_tasks() {
 #[test]
 fn test_schedule_runner_q_key_exits() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   let result = runner.handle_key(KeyCode::Char('q'));
   assert_eq!(result, ControlFlow::Exit);
@@ -77,7 +93,8 @@ fn test_schedule_runner_q_key_exits() {
 #[test]
 fn test_schedule_runner_capital_q_key_exits() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   let result = runner.handle_key(KeyCode::Char('Q'));
   assert_eq!(result, ControlFlow::Exit);
@@ -86,7 +103,8 @@ fn test_schedule_runner_capital_q_key_exits() {
 #[test]
 fn test_schedule_runner_help_text() {
   let schedule = create_test_schedule();
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
 
   let help = runner.help_text();
   assert!(help.contains("q"));
@@ -96,7 +114,8 @@ fn test_schedule_runner_help_text() {
 #[test]
 fn test_schedule_runner_unknown_key_continues() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   let result = runner.handle_key(KeyCode::Char('x'));
   assert_eq!(result, ControlFlow::Continue);
@@ -105,7 +124,8 @@ fn test_schedule_runner_unknown_key_continues() {
 #[test]
 fn test_schedule_runner_help_key_continues() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   let result = runner.handle_key(KeyCode::Char('?'));
   assert_eq!(result, ControlFlow::Continue);
@@ -131,7 +151,8 @@ fn test_schedule_runner_returns_tasks_in_chronological_order() {
     ],
   };
 
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
   let next = runner.next_pending_task();
 
   // Should return the sooner task (1 hour from now), not the later one
@@ -142,7 +163,8 @@ fn test_schedule_runner_returns_tasks_in_chronological_order() {
 #[test]
 fn test_schedule_runner_empty_schedule() {
   let schedule = Schedule { tasks: vec![] };
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
 
   let next = runner.next_pending_task();
   assert!(next.is_none());
@@ -151,7 +173,8 @@ fn test_schedule_runner_empty_schedule() {
 #[test]
 fn test_schedule_runner_marks_task_executed() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   // Initially, the future task should be pending
   let next = runner.next_pending_task();
@@ -169,7 +192,8 @@ fn test_schedule_runner_marks_task_executed() {
 #[test]
 fn test_schedule_runner_time_until_next_with_future_task() {
   let schedule = create_test_schedule();
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
 
   let duration = runner.time_until_next_task();
   assert!(duration.is_some());
@@ -181,7 +205,8 @@ fn test_schedule_runner_time_until_next_with_future_task() {
 #[test]
 fn test_schedule_runner_time_until_next_with_no_tasks() {
   let schedule = Schedule { tasks: vec![] };
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
 
   let duration = runner.time_until_next_task();
   assert!(duration.is_none());
@@ -199,7 +224,8 @@ fn test_schedule_runner_time_until_next_all_past() {
     }],
   };
 
-  let runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, false, &transport);
   let duration = runner.time_until_next_task();
   assert!(duration.is_none());
 }
@@ -207,7 +233,8 @@ fn test_schedule_runner_time_until_next_all_past() {
 #[test]
 fn test_schedule_runner_dry_run_mode() {
   let schedule = create_test_schedule();
-  let runner = ScheduleRunner::new(schedule, true);
+  let transport = create_test_transport();
+  let runner = ScheduleRunner::new(schedule, true, &transport);
 
   assert!(runner.is_dry_run());
 }
@@ -215,7 +242,8 @@ fn test_schedule_runner_dry_run_mode() {
 #[test]
 fn test_schedule_runner_reload_schedule() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   // Create a new schedule with different tasks
   let new_schedule = Schedule {
@@ -232,7 +260,8 @@ fn test_schedule_runner_reload_schedule() {
 #[test]
 fn test_schedule_runner_reload_clears_executed_set() {
   let schedule = create_test_schedule();
-  let mut runner = ScheduleRunner::new(schedule, false);
+  let transport = create_test_transport();
+  let mut runner = ScheduleRunner::new(schedule, false, &transport);
 
   // Mark the future task as executed
   runner.mark_executed("future");

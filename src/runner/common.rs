@@ -2,6 +2,7 @@
 
 use serde_json::Value;
 
+use crate::api::Transport;
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_success};
 use crate::errors::VestaboardError;
@@ -21,6 +22,7 @@ use crate::widgets::widget_utils::error_to_display_message;
 /// * `input` - JSON input for the widget
 /// * `dry_run` - If true, display to console instead of Vestaboard
 /// * `label` - A label for logging (e.g., "task abc123", "item weather")
+/// * `transport` - The transport to use for sending to Vestaboard
 ///
 /// # Returns
 /// * `Ok(())` - Message was sent successfully
@@ -30,6 +32,7 @@ pub async fn execute_and_send(
   input: &Value,
   dry_run: bool,
   label: &str,
+  transport: &Transport,
 ) -> Result<(), VestaboardError> {
   // Execute widget, converting errors to display messages
   let message = match execute_widget(widget, input).await {
@@ -49,7 +52,7 @@ pub async fn execute_and_send(
   };
 
   // Send message
-  match handle_message(message, destination).await {
+  match handle_message(message, destination, transport).await {
     Ok(_) => {
       log::info!("{} completed successfully", label);
       print_success(&format!("{} completed", label));

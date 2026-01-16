@@ -9,6 +9,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::api::{Transport, TransportType};
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_progress, print_success, print_warning};
 use crate::widgets::resolver::execute_widget;
@@ -431,6 +432,16 @@ pub async fn preview_schedule() {
     return;
   }
 
+  // TODO: #95 will wire transport through from config/CLI
+  // For Console destination, transport isn't used but we need to pass one
+  let transport = match Transport::new(TransportType::Local) {
+    Ok(t) => t,
+    Err(e) => {
+      print_error(&format!("Failed to create transport: {}", e.to_user_message()));
+      return;
+    },
+  };
+
   println!("Previewing {} scheduled tasks:\n", schedule.tasks.len());
 
   log::info!("Executing dry run for {} scheduled tasks", schedule.tasks.len());
@@ -450,7 +461,7 @@ pub async fn preview_schedule() {
     };
 
     let destination = MessageDestination::ConsoleWithTitle(formatted_time);
-    match handle_message(message, destination).await {
+    match handle_message(message, destination, &transport).await {
       Ok(_) => {},
       Err(e) => {
         log::error!("Failed to handle message for task {}: {}", task.id, e);
@@ -492,12 +503,15 @@ pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
   // Acquire exclusive lock
   let _lock = InstanceLock::acquire("schedule")?;
 
+  // TODO: #95 will wire transport through from config/CLI
+  let transport = Transport::new(TransportType::Local)?;
+
   // Create schedule monitor for hot-reload
   let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
   schedule_monitor.initialize()?;
 
   // Create runner
-  let mut runner = ScheduleRunner::new(schedule, dry_run);
+  let mut runner = ScheduleRunner::new(schedule, dry_run, &transport);
 
   // Setup keyboard listener
   let mut keyboard = KeyboardListener::new()?;

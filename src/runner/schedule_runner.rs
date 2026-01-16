@@ -9,6 +9,7 @@ use std::time::Duration;
 use chrono::Utc;
 use crossterm::event::KeyCode;
 
+use crate::api::Transport;
 use crate::cli_display::print_progress;
 use crate::errors::VestaboardError;
 use crate::runner::common::execute_and_send;
@@ -16,23 +17,26 @@ use crate::runner::{ControlFlow, Runner, SCHEDULE_HELP};
 use crate::scheduler::{Schedule, ScheduledTask};
 
 /// Schedule runner that handles schedule execution with keyboard controls.
-pub struct ScheduleRunner {
+pub struct ScheduleRunner<'a> {
   schedule: Schedule,
   executed_task_ids: HashSet<String>,
   dry_run: bool,
+  transport: &'a Transport,
 }
 
-impl ScheduleRunner {
+impl<'a> ScheduleRunner<'a> {
   /// Create a new schedule runner.
   ///
   /// # Arguments
   /// * `schedule` - The schedule to run
   /// * `dry_run` - If true, display to console instead of Vestaboard
-  pub fn new(schedule: Schedule, dry_run: bool) -> Self {
+  /// * `transport` - The transport to use for sending to Vestaboard
+  pub fn new(schedule: Schedule, dry_run: bool, transport: &'a Transport) -> Self {
     Self {
       schedule,
       executed_task_ids: HashSet::new(),
       dry_run,
+      transport,
     }
   }
 
@@ -109,13 +113,13 @@ impl ScheduleRunner {
 
     let label = format!("Task {}", task.id);
     // Ignore the result - we want to continue even if sending fails
-    let _ = execute_and_send(&task.widget, &task.input, self.dry_run, &label).await;
+    let _ = execute_and_send(&task.widget, &task.input, self.dry_run, &label, self.transport).await;
 
     Ok(())
   }
 }
 
-impl Runner for ScheduleRunner {
+impl<'a> Runner for ScheduleRunner<'a> {
   fn start(&mut self) {
     log::info!("Schedule runner started with {} tasks", self.schedule.tasks.len());
 

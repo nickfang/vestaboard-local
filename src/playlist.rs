@@ -254,6 +254,7 @@ impl Playlist {
 
 use std::time::Duration;
 
+use crate::api::{Transport, TransportType};
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::config::Config;
 use crate::process_control::ProcessController;
@@ -376,6 +377,16 @@ pub async fn preview_playlist() {
     return;
   }
 
+  // TODO: #95 will wire transport through from config/CLI
+  // For Console destination, transport isn't used but we need to pass one
+  let transport = match Transport::new(TransportType::Local) {
+    Ok(t) => t,
+    Err(e) => {
+      print_error(&format!("Failed to create transport: {}", e.to_user_message()));
+      return;
+    },
+  };
+
   println!("Previewing {} playlist items ({} second interval):", playlist.len(), playlist.interval_seconds);
   println!();
 
@@ -392,7 +403,7 @@ pub async fn preview_playlist() {
     };
 
     // Display to console (dry-run)
-    if let Err(e) = handle_message(message, MessageDestination::Console).await {
+    if let Err(e) = handle_message(message, MessageDestination::Console, &transport).await {
       println!("  Display error: {}", e.to_user_message());
     }
 
@@ -432,6 +443,9 @@ pub async fn run_playlist(
   // Acquire exclusive lock
   let _lock = InstanceLock::acquire("playlist")?;
 
+  // TODO: #95 will wire transport through from config/CLI
+  let transport = Transport::new(TransportType::Local)?;
+
   // Create runner with appropriate starting position
   let mut runner = match (start_index, start_id) {
     (Some(idx), _) => {
@@ -442,21 +456,21 @@ pub async fn run_playlist(
           playlist.len()
         )));
       }
-      PlaylistRunner::new(playlist, state_path, idx, once, dry_run)
+      PlaylistRunner::new(playlist, state_path, idx, once, dry_run, &transport)
     },
     (_, Some(id)) => {
       let idx = playlist
         .find_index_by_id(&id)
         .ok_or_else(|| VestaboardError::validation_error(&format!("Item '{}' not found in playlist", id)))?;
-      PlaylistRunner::new(playlist, state_path, idx, once, dry_run)
+      PlaylistRunner::new(playlist, state_path, idx, once, dry_run, &transport)
     },
     (None, None) if resume => {
       // Use restore_from_state to resume from saved position
-      PlaylistRunner::restore_from_state(playlist, state_path, once, dry_run)
+      PlaylistRunner::restore_from_state(playlist, state_path, once, dry_run, &transport)
     },
     (None, None) => {
       // Default: start from beginning
-      PlaylistRunner::new(playlist, state_path, 0, once, dry_run)
+      PlaylistRunner::new(playlist, state_path, 0, once, dry_run, &transport)
     },
   };
 

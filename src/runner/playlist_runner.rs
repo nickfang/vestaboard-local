@@ -8,6 +8,7 @@ use std::time::Instant;
 
 use crossterm::event::KeyCode;
 
+use crate::api::Transport;
 use crate::cli_display::print_progress;
 use crate::errors::VestaboardError;
 use crate::playlist::Playlist;
@@ -16,7 +17,7 @@ use crate::runner::{ControlFlow, Runner, PLAYLIST_HELP};
 use crate::runtime_state::{PlaylistState, RuntimeState};
 
 /// Playlist runner that handles playlist execution with keyboard controls.
-pub struct PlaylistRunner {
+pub struct PlaylistRunner<'a> {
   playlist: Playlist,
   state: PlaylistState,
   current_index: usize,
@@ -29,9 +30,10 @@ pub struct PlaylistRunner {
   /// Tracks when we paused, for preserving remaining interval time on resume
   paused_at: Option<Instant>,
   dry_run: bool,
+  transport: &'a Transport,
 }
 
-impl PlaylistRunner {
+impl<'a> PlaylistRunner<'a> {
   /// Create a new playlist runner.
   ///
   /// # Arguments
@@ -40,7 +42,15 @@ impl PlaylistRunner {
   /// * `start_index` - Index to start from (0-based)
   /// * `run_once` - If true, exit after completing one full cycle
   /// * `dry_run` - If true, display to console instead of Vestaboard
-  pub fn new(playlist: Playlist, state_path: PathBuf, start_index: usize, run_once: bool, dry_run: bool) -> Self {
+  /// * `transport` - The transport to use for sending to Vestaboard
+  pub fn new(
+    playlist: Playlist,
+    state_path: PathBuf,
+    start_index: usize,
+    run_once: bool,
+    dry_run: bool,
+    transport: &'a Transport,
+  ) -> Self {
     Self {
       playlist,
       state: PlaylistState::Stopped,
@@ -51,11 +61,18 @@ impl PlaylistRunner {
       last_display_time: None,
       paused_at: None,
       dry_run,
+      transport,
     }
   }
 
   /// Restore from saved state if available.
-  pub fn restore_from_state(playlist: Playlist, state_path: PathBuf, run_once: bool, dry_run: bool) -> Self {
+  pub fn restore_from_state(
+    playlist: Playlist,
+    state_path: PathBuf,
+    run_once: bool,
+    dry_run: bool,
+    transport: &'a Transport,
+  ) -> Self {
     let saved_state = RuntimeState::load(&state_path);
 
     let start_index = if saved_state.playlist_index < playlist.len() {
@@ -66,7 +83,7 @@ impl PlaylistRunner {
 
     log::info!("Restored playlist state: index={}", start_index);
 
-    Self::new(playlist, state_path, start_index, run_once, dry_run)
+    Self::new(playlist, state_path, start_index, run_once, dry_run, transport)
   }
 
   /// Get the current index in the playlist.
@@ -220,7 +237,7 @@ impl PlaylistRunner {
 
     let label = format!("Item {}", item.widget);
     // Ignore the result - we want to continue even if sending fails
-    let _ = execute_and_send(&item.widget, &item.input, self.dry_run, &label).await;
+    let _ = execute_and_send(&item.widget, &item.input, self.dry_run, &label, self.transport).await;
 
     // Always update display time to maintain interval timing
     self.last_display_time = Some(Instant::now());
@@ -229,7 +246,7 @@ impl PlaylistRunner {
   }
 }
 
-impl Runner for PlaylistRunner {
+impl<'a> Runner for PlaylistRunner<'a> {
   fn start(&mut self) {
     if self.playlist.is_empty() {
       log::warn!("Cannot start empty playlist");
@@ -309,9 +326,22 @@ impl Runner for PlaylistRunner {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::api::TransportType;
   use crate::playlist::PlaylistItem;
   use serde_json::json;
   use tempfile::tempdir;
+
+  /// Create a test transport. Sets env vars if needed.
+  fn create_test_transport() -> Transport {
+    // Set env vars for testing (these are only used if actually sending, which tests don't do)
+    if std::env::var("LOCAL_API_KEY").is_err() {
+      std::env::set_var("LOCAL_API_KEY", "test-api-key");
+    }
+    if std::env::var("IP_ADDRESS").is_err() {
+      std::env::set_var("IP_ADDRESS", "127.0.0.1");
+    }
+    Transport::new(TransportType::Local).expect("Failed to create test transport")
+  }
 
   fn create_test_playlist() -> Playlist {
     let mut playlist = Playlist::default();
@@ -339,7 +369,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     assert_eq!(runner.current_index(), 0);
   }
@@ -349,7 +380,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let runner = PlaylistRunner::new(playlist, state_path, 2, false, true);
+    let transport = create_test_transport();
+    let runner = PlaylistRunner::new(playlist, state_path, 2, false, true, &transport);
 
     assert_eq!(runner.current_index(), 2);
   }
@@ -359,7 +391,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     assert_eq!(runner.state(), PlaylistState::Stopped);
   }
@@ -369,7 +402,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
 
@@ -381,7 +415,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     runner.pause();
@@ -394,7 +429,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     runner.pause();
@@ -408,7 +444,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.pause(); // Should not crash
 
@@ -420,7 +457,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     runner.skip_to_next();
@@ -433,7 +471,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist(); // 3 items
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     runner.skip_to_next(); // 0 -> 1
@@ -448,7 +487,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist(); // 3 items
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, true, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, true, true, &transport);
 
     runner.start();
     assert!(!runner.is_complete());
@@ -468,7 +508,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     let result = runner.handle_key(KeyCode::Char('p'));
@@ -482,7 +523,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     runner.pause();
@@ -497,7 +539,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     let result = runner.handle_key(KeyCode::Char('n'));
@@ -512,7 +555,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     let result = runner.handle_key(KeyCode::Char('q'));
@@ -525,7 +569,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     runner.start();
     let initial_state = runner.state();
@@ -543,7 +588,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let mut runner = PlaylistRunner::new(playlist, state_path.clone(), 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path.clone(), 0, false, true, &transport);
 
     runner.start();
     runner.skip_to_next();
@@ -567,7 +613,8 @@ mod tests {
     state.save(&state_path);
 
     let playlist = create_test_playlist();
-    let runner = PlaylistRunner::restore_from_state(playlist, state_path, false, true);
+    let transport = create_test_transport();
+    let runner = PlaylistRunner::restore_from_state(playlist, state_path, false, true, &transport);
 
     assert_eq!(runner.current_index(), 2);
   }
@@ -577,7 +624,8 @@ mod tests {
     let temp_dir = tempdir().unwrap();
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist();
-    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
 
     let help = runner.help_text();
     assert!(help.contains("p"));
@@ -601,7 +649,8 @@ mod tests {
 
     // Start at index 1 (simulating: we just displayed A at index 0, advanced to 1)
     // Now the user wants to see B (the current item) immediately by pressing 'n'
-    let mut runner = PlaylistRunner::new(playlist, state_path, 1, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 1, false, true, &transport);
     runner.start();
 
     // User presses 'n' to see the current item (B) immediately
@@ -625,7 +674,8 @@ mod tests {
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist(); // [A, B, C]
 
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
     runner.start();
 
     // Simulate having displayed an item (sets last_display_time to Some)
@@ -654,7 +704,8 @@ mod tests {
     let state_path = temp_dir.path().join("state.json");
     let playlist = create_test_playlist(); // [A, B, C]
 
-    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true);
+    let transport = create_test_transport();
+    let mut runner = PlaylistRunner::new(playlist, state_path, 0, false, true, &transport);
     runner.start();
     runner.pause();
 

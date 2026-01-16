@@ -13,6 +13,7 @@ mod runtime_state;
 mod scheduler;
 mod widgets;
 
+use api::{Transport, TransportType};
 use api_broker::{handle_message, MessageDestination};
 use cli_display::{init_output_control, print_error, print_progress, print_success};
 use cli_setup::{Cli, Command, PlaylistArgs, ScheduleArgs, WidgetCommand};
@@ -50,7 +51,10 @@ async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -
     MessageDestination::Vestaboard
   };
 
-  match handle_message(message.clone(), destination).await {
+  // TODO: #95 will wire transport through from config/CLI
+  let transport = Transport::new(TransportType::Local)?;
+
+  match handle_message(message.clone(), destination, &transport).await {
     Ok(_) => Ok(()),
     Err(e) => {
       log::error!("Failed to handle message: {}", e);

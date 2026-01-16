@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-use crate::api::send_codes;
+use crate::api::Transport;
 use crate::cli_display::{print_error, print_message, print_progress};
 use crate::errors::VestaboardError;
 
@@ -127,14 +127,14 @@ pub fn message_to_codes(message: Vec<String>) -> [[u8; 22]; 6] {
   codes
 }
 
-pub async fn display_message(message: Vec<String>) -> Result<(), VestaboardError> {
+pub async fn display_message(message: Vec<String>, transport: &Transport) -> Result<(), VestaboardError> {
   log::info!("Processing message for display, {} lines", message.len());
   log::debug!("Message content: {:?}", message);
 
   let codes = message_to_codes(message);
   log::debug!("Converted message to character codes");
 
-  send_codes(codes).await
+  transport.send_codes(codes).await
 }
 
 /// Checks if a character is valid for Vestaboard display
@@ -176,7 +176,11 @@ pub fn validate_message_content(message: &[String]) -> Result<(), VestaboardErro
   Ok(())
 }
 
-pub async fn handle_message(message: Vec<String>, destination: MessageDestination) -> Result<(), VestaboardError> {
+pub async fn handle_message(
+  message: Vec<String>,
+  destination: MessageDestination,
+  transport: &Transport,
+) -> Result<(), VestaboardError> {
   log::debug!("Handling message for destination: {:?}", destination);
 
   // Validate the message content
@@ -193,7 +197,7 @@ pub async fn handle_message(message: Vec<String>, destination: MessageDestinatio
 
   match destination {
     MessageDestination::Vestaboard => {
-      display_message(message).await?;
+      display_message(message, transport).await?;
     },
     MessageDestination::Console => {
       print_progress("Displaying message preview:");
