@@ -164,4 +164,7 @@ pub struct Cli {
 
   #[arg(short = 'v', long = "verbose", global = true, help = "Show detailed progress information")]
   pub verbose: bool,
+
+  #[arg(long, global = true, help = "Use internet API instead of local network")]
+  pub internet: bool,
 }

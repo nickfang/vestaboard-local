@@ -371,3 +371,62 @@ fn test_cli_parses_schedule_run_dry_run_short() {
     _ => panic!("Expected Schedule Run command"),
   }
 }
+
+// --- Internet flag CLI parsing tests ---
+
+#[test]
+fn test_cli_parses_internet_flag_before_command() {
+  let cli = Cli::parse_from(["vbl", "--internet", "show", "text", "hello"]);
+  assert!(cli.internet);
+}
+
+#[test]
+fn test_cli_parses_without_internet_flag() {
+  let cli = Cli::parse_from(["vbl", "show", "text", "hello"]);
+  assert!(!cli.internet);
+}
+
+#[test]
+fn test_cli_parses_internet_flag_after_subcommand() {
+  // Global flags can appear after subcommand
+  let cli = Cli::parse_from(["vbl", "show", "--internet", "text", "hello"]);
+  assert!(cli.internet);
+}
+
+#[test]
+fn test_cli_parses_playlist_run_with_internet_flag() {
+  let cli = Cli::parse_from(["vbl", "playlist", "run", "--internet"]);
+  assert!(cli.internet);
+  match cli.command {
+    Command::Playlist {
+      action: PlaylistArgs::Run { .. },
+    } => {},
+    _ => panic!("Expected Playlist Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_schedule_run_with_internet_flag() {
+  let cli = Cli::parse_from(["vbl", "schedule", "run", "--internet"]);
+  assert!(cli.internet);
+  match cli.command {
+    Command::Schedule {
+      action: ScheduleArgs::Run { .. },
+    } => {},
+    _ => panic!("Expected Schedule Run command"),
+  }
+}
+
+#[test]
+fn test_cli_parses_playlist_add_with_internet_flag() {
+  let cli = Cli::parse_from(["vbl", "--internet", "playlist", "add", "weather"]);
+  assert!(cli.internet);
+  match cli.command {
+    Command::Playlist {
+      action: PlaylistArgs::Add { widget, .. },
+    } => {
+      assert_eq!(widget, "weather");
+    },
+    _ => panic!("Expected Playlist Add command"),
+  }
+}
