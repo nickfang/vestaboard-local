@@ -1,3 +1,4 @@
+use crate::api::TransportType;
 use crate::cli_display::{print_error, print_progress, print_success};
 use crate::errors::VestaboardError;
 use log::LevelFilter;
@@ -27,6 +28,8 @@ pub struct Config {
   pub playlist_file_path: Option<String>,
   pub runtime_state_path: Option<String>,
   pub lock_file_path: Option<String>,
+  /// Default transport for API communication (local or internet)
+  pub transport: Option<TransportType>,
 }
 
 impl Default for Config {
@@ -41,6 +44,7 @@ impl Default for Config {
       playlist_file_path: Some(DEFAULT_PLAYLIST_FILE_PATH.to_string()),
       runtime_state_path: Some(DEFAULT_RUNTIME_STATE_PATH.to_string()),
       lock_file_path: Some(DEFAULT_LOCK_FILE_PATH.to_string()),
+      transport: None, // Defaults to Local via get_transport()
     }
   }
 }
@@ -173,5 +177,10 @@ impl Config {
 
   pub fn get_lock_file_path(&self) -> PathBuf {
     PathBuf::from(self.lock_file_path.as_deref().unwrap_or(DEFAULT_LOCK_FILE_PATH))
+  }
+
+  /// Get the configured transport type, defaulting to Local if not specified.
+  pub fn get_transport(&self) -> TransportType {
+    self.transport.unwrap_or_default()
   }
 }

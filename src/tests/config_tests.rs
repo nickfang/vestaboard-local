@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+  use crate::api::TransportType;
   use crate::config::{
     Config, DEFAULT_CONSOLE_LOG_LEVEL, DEFAULT_LOG_FILE_PATH, DEFAULT_LOG_LEVEL, DEFAULT_SCHEDULE_BACKUP_PATH,
     DEFAULT_SCHEDULE_FILE_PATH,
@@ -15,6 +16,7 @@ mod tests {
     assert_eq!(config.console_log_level, Some(DEFAULT_CONSOLE_LOG_LEVEL.to_string()));
     assert_eq!(config.schedule_file_path, Some(DEFAULT_SCHEDULE_FILE_PATH.to_string()));
     assert_eq!(config.schedule_backup_path, Some(DEFAULT_SCHEDULE_BACKUP_PATH.to_string()));
+    assert_eq!(config.transport, None);
   }
 
   #[test]
@@ -35,6 +37,7 @@ mod tests {
       playlist_file_path: None,
       runtime_state_path: None,
       lock_file_path: None,
+      transport: None,
     };
     assert_eq!(custom_config.get_schedule_file_path(), PathBuf::from("custom/schedule.json"));
     assert_eq!(custom_config.get_schedule_backup_path(), PathBuf::from("custom/backup.json"));
@@ -50,6 +53,7 @@ mod tests {
       playlist_file_path: None,
       runtime_state_path: None,
       lock_file_path: None,
+      transport: None,
     };
     assert_eq!(minimal_config.get_schedule_file_path(), PathBuf::from(DEFAULT_SCHEDULE_FILE_PATH));
     assert_eq!(minimal_config.get_schedule_backup_path(), PathBuf::from(DEFAULT_SCHEDULE_BACKUP_PATH));
@@ -77,6 +81,7 @@ mod tests {
         let _backup_path = config.get_schedule_backup_path();
         let _log_level = config.get_log_level();
         let _console_level = config.get_console_log_level();
+        let _transport = config.get_transport();
 
         // Basic validation - should be sensible defaults
         assert!(!config.log_level.is_empty());
@@ -91,5 +96,96 @@ mod tests {
         panic!("Failed to load config: {}", e);
       },
     }
+  }
+
+  // Transport configuration tests
+
+  #[test]
+  fn test_get_transport_defaults_to_local() {
+    let config = Config::default();
+    assert_eq!(config.get_transport(), TransportType::Local);
+  }
+
+  #[test]
+  fn test_get_transport_returns_configured_value() {
+    let mut config = Config::default();
+
+    config.transport = Some(TransportType::Local);
+    assert_eq!(config.get_transport(), TransportType::Local);
+
+    config.transport = Some(TransportType::Internet);
+    assert_eq!(config.get_transport(), TransportType::Internet);
+  }
+
+  #[test]
+  fn test_transport_none_defaults_to_local() {
+    let config = Config {
+      log_level: DEFAULT_LOG_LEVEL.to_string(),
+      log_file_path: DEFAULT_LOG_FILE_PATH.to_string(),
+      console_log_level: None,
+      schedule_file_path: None,
+      schedule_backup_path: None,
+      check_interval_seconds: None,
+      playlist_file_path: None,
+      runtime_state_path: None,
+      lock_file_path: None,
+      transport: None,
+    };
+    assert_eq!(config.get_transport(), TransportType::Local);
+  }
+
+  #[test]
+  fn test_transport_toml_parsing_local() {
+    let toml_str = r#"
+      log_level = "info"
+      log_file_path = "data/vestaboard.log"
+      transport = "local"
+    "#;
+    let config: Config = toml::from_str(toml_str).expect("Failed to parse TOML");
+    assert_eq!(config.transport, Some(TransportType::Local));
+    assert_eq!(config.get_transport(), TransportType::Local);
+  }
+
+  #[test]
+  fn test_transport_toml_parsing_internet() {
+    let toml_str = r#"
+      log_level = "info"
+      log_file_path = "data/vestaboard.log"
+      transport = "internet"
+    "#;
+    let config: Config = toml::from_str(toml_str).expect("Failed to parse TOML");
+    assert_eq!(config.transport, Some(TransportType::Internet));
+    assert_eq!(config.get_transport(), TransportType::Internet);
+  }
+
+  #[test]
+  fn test_transport_toml_parsing_missing_defaults_to_local() {
+    let toml_str = r#"
+      log_level = "info"
+      log_file_path = "data/vestaboard.log"
+    "#;
+    let config: Config = toml::from_str(toml_str).expect("Failed to parse TOML");
+    assert_eq!(config.transport, None);
+    assert_eq!(config.get_transport(), TransportType::Local);
+  }
+
+  #[test]
+  fn test_transport_toml_parsing_invalid_value() {
+    let toml_str = r#"
+      log_level = "info"
+      log_file_path = "data/vestaboard.log"
+      transport = "wifi"
+    "#;
+    let result: Result<Config, _> = toml::from_str(toml_str);
+    assert!(result.is_err(), "Invalid transport value should fail to parse");
+  }
+
+  #[test]
+  fn test_config_serializes_transport() {
+    let mut config = Config::default();
+    config.transport = Some(TransportType::Internet);
+
+    let toml_str = toml::to_string(&config).expect("Failed to serialize config");
+    assert!(toml_str.contains("transport = \"internet\""), "Serialized config should contain transport");
   }
 }

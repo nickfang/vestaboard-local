@@ -74,6 +74,7 @@ console_log_level = "info""#,
       playlist_file_path: None,
       runtime_state_path: None,
       lock_file_path: None,
+      transport: None,
     };
 
     assert_eq!(config.get_log_level(), log::LevelFilter::Debug);
