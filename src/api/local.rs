@@ -86,13 +86,19 @@ impl LocalTransport {
       Ok(response) => {
         let status = response.status();
         log::info!("API response received: {} in {:?}", status, duration);
-        log::debug!("Response: {:?}", response);
+
         if status.is_success() {
           print_success("Sent to Vestaboard");
+          Ok(())
         } else {
-          print_error(&format!("Vestaboard error: HTTP {}", status));
+          let response_body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unable to read response".to_string());
+          log::error!("API error response: {}", response_body);
+          print_error(&format!("Vestaboard error: HTTP {} - {}", status, response_body));
+          Err(VestaboardError::api_error(Some(status.as_u16()), &response_body))
         }
-        Ok(())
       }
       Err(e) => {
         log::error!("API request failed after {:?}: {}", duration, e);

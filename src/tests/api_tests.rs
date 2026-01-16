@@ -1,10 +1,12 @@
-use crate::api::{create_client, send_codes, DEFAULT_TIMEOUT};
+use crate::api::common::{create_client, DEFAULT_TIMEOUT};
 
 // TODO: figure out how to test the api functions
 #[cfg(test)]
 #[tokio::test]
 #[ignore]
 async fn test_send_codes() {
+  use crate::api::{Transport, TransportType};
+  let transport = Transport::new(TransportType::Local).expect("Failed to create transport");
   let message = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -13,8 +15,8 @@ async fn test_send_codes() {
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   ];
-  let result = send_codes(message);
-  assert!(result.await.is_ok());
+  let result = transport.send_codes(message).await;
+  assert!(result.is_ok());
 }
 
 #[tokio::test]
