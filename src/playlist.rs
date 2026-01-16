@@ -254,7 +254,7 @@ impl Playlist {
 
 use std::time::Duration;
 
-use crate::api::{Transport, TransportType};
+use crate::api::Transport;
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::config::Config;
 use crate::process_control::ProcessController;
@@ -362,7 +362,7 @@ pub fn set_playlist_interval(seconds: u64) -> Result<(), VestaboardError> {
 }
 
 /// Preview all items in the playlist (dry-run mode)
-pub async fn preview_playlist() {
+pub async fn preview_playlist(transport: &Transport) {
   let path = get_playlist_path();
   let playlist = match Playlist::load_silent(&path) {
     Ok(p) => p,
@@ -376,16 +376,6 @@ pub async fn preview_playlist() {
     println!("Playlist is empty. Nothing to preview.");
     return;
   }
-
-  // TODO: #95 will wire transport through from config/CLI
-  // For Console destination, transport isn't used but we need to pass one
-  let transport = match Transport::new(TransportType::Local) {
-    Ok(t) => t,
-    Err(e) => {
-      print_error(&format!("Failed to create transport: {}", e.to_user_message()));
-      return;
-    },
-  };
 
   println!("Previewing {} playlist items ({} second interval):", playlist.len(), playlist.interval_seconds);
   println!();
@@ -421,12 +411,14 @@ pub async fn preview_playlist() {
 /// * `start_index` - Optional starting index (0-based)
 /// * `start_id` - Optional starting item ID
 /// * `dry_run` - If true, display to console instead of Vestaboard
+/// * `transport` - The transport to use for API communication
 pub async fn run_playlist(
   once: bool,
   resume: bool,
   start_index: Option<usize>,
   start_id: Option<String>,
   dry_run: bool,
+  transport: &Transport,
 ) -> Result<(), VestaboardError> {
   let playlist_path = get_playlist_path();
   let config = Config::load_silent().unwrap_or_default();
@@ -442,9 +434,6 @@ pub async fn run_playlist(
 
   // Acquire exclusive lock
   let _lock = InstanceLock::acquire("playlist")?;
-
-  // TODO: #95 will wire transport through from config/CLI
-  let transport = Transport::new(TransportType::Local)?;
 
   // Create runner with appropriate starting position
   let mut runner = match (start_index, start_id) {

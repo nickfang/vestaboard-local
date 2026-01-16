@@ -15,6 +15,7 @@ mod widgets;
 
 use api::{Transport, TransportType};
 use api_broker::{handle_message, MessageDestination};
+use config::Config;
 use cli_display::{init_output_control, print_error, print_progress, print_success};
 use cli_setup::{Cli, Command, PlaylistArgs, ScheduleArgs, WidgetCommand};
 use datetime::datetime_to_utc;
@@ -29,7 +30,11 @@ use widgets::widget_utils::error_to_display_message;
 use clap::Parser;
 use serde_json::json;
 
-async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -> Result<(), VestaboardError> {
+async fn process_widget_command(
+  widget_command: &WidgetCommand,
+  dry_run: bool,
+  transport: &Transport,
+) -> Result<(), VestaboardError> {
   let (widget_name, input_value) = match widget_command {
     WidgetCommand::Text(args) => ("text", json!(&args.message)),
     WidgetCommand::File(args) => ("file", json!(args.name.to_string_lossy())),
@@ -51,10 +56,7 @@ async fn process_widget_command(widget_command: &WidgetCommand, dry_run: bool) -
     MessageDestination::Vestaboard
   };
 
-  // TODO: #95 will wire transport through from config/CLI
-  let transport = Transport::new(TransportType::Local)?;
-
-  match handle_message(message.clone(), destination, &transport).await {
+  match handle_message(message.clone(), destination, transport).await {
     Ok(_) => Ok(()),
     Err(e) => {
       log::error!("Failed to handle message: {}", e);
@@ -79,11 +81,29 @@ async fn main() {
   // Initialize output control (quiet, verbose, TTY detection)
   init_output_control(cli.quiet, cli.verbose);
 
+  // Determine transport type: CLI flag takes priority over config
+  let config = Config::load_silent().unwrap_or_default();
+  let transport_type = if cli.internet {
+    TransportType::Internet
+  } else {
+    config.get_transport()
+  };
+
+  // Create transport (exit early if it fails)
+  let transport = match Transport::new(transport_type) {
+    Ok(t) => t,
+    Err(e) => {
+      log::error!("Failed to create transport: {}", e);
+      print_error(&e.to_user_message());
+      process::exit(1);
+    },
+  };
+
   let exit_code = match cli.command {
     Command::Show(show_args) => {
       log::info!("Processing show command with dry_run: {}", show_args.dry_run);
 
-      match process_widget_command(&show_args.widget_command, show_args.dry_run).await {
+      match process_widget_command(&show_args.widget_command, show_args.dry_run, &transport).await {
         Ok(_) => 0,
         Err(e) => {
           log::error!("Failed to process widget command: {}", e);
@@ -146,7 +166,7 @@ async fn main() {
 
           // Validate the widget can produce a valid message (dry-run mode - don't send to Vestaboard)
           print_progress("Validating...");
-          if let Err(e) = process_widget_command(&widget_command, true).await {
+          if let Err(e) = process_widget_command(&widget_command, true, &transport).await {
             log::error!("Scheduled widget validation failed: {}", e);
             print_error(&e.to_user_message());
             process::exit(1);
@@ -225,12 +245,12 @@ async fn main() {
         },
         ScheduleArgs::Preview => {
           log::info!("Running schedule preview");
-          preview_schedule().await;
+          preview_schedule(&transport).await;
           0
         },
         ScheduleArgs::Run { dry_run } => {
           log::info!("Running schedule - dry_run: {}", dry_run);
-          match run_schedule(dry_run).await {
+          match run_schedule(dry_run, &transport).await {
             Ok(_) => 0,
             Err(e) => {
               log::error!("Schedule run failed: {}", e);
@@ -290,7 +310,7 @@ async fn main() {
           };
 
           print_progress("Validating widget...");
-          if let Err(e) = process_widget_command(&widget_command, true).await {
+          if let Err(e) = process_widget_command(&widget_command, true, &transport).await {
             log::error!("Widget validation failed: {}", e);
             print_error(&e.to_user_message());
             process::exit(1);
@@ -377,7 +397,7 @@ async fn main() {
         },
         PlaylistArgs::Preview => {
           log::info!("Previewing playlist");
-          playlist::preview_playlist().await;
+          playlist::preview_playlist(&transport).await;
           0
         },
         PlaylistArgs::Run {
@@ -395,7 +415,7 @@ async fn main() {
             id,
             dry_run
           );
-          match playlist::run_playlist(once, resume, index, id, dry_run).await {
+          match playlist::run_playlist(once, resume, index, id, dry_run, &transport).await {
             Ok(_) => 0,
             Err(e) => {
               log::error!("Playlist run failed: {}", e);

@@ -9,7 +9,7 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::api::{Transport, TransportType};
+use crate::api::Transport;
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_progress, print_success, print_warning};
 use crate::widgets::resolver::execute_widget;
@@ -411,7 +411,7 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   Ok(())
 }
 
-pub async fn preview_schedule() {
+pub async fn preview_schedule(transport: &Transport) {
   log::debug!("Running schedule preview");
 
   let config = match Config::load_silent() {
@@ -431,16 +431,6 @@ pub async fn preview_schedule() {
     println!("Schedule is empty - nothing to preview");
     return;
   }
-
-  // TODO: #95 will wire transport through from config/CLI
-  // For Console destination, transport isn't used but we need to pass one
-  let transport = match Transport::new(TransportType::Local) {
-    Ok(t) => t,
-    Err(e) => {
-      print_error(&format!("Failed to create transport: {}", e.to_user_message()));
-      return;
-    },
-  };
 
   println!("Previewing {} scheduled tasks:\n", schedule.tasks.len());
 
@@ -481,7 +471,8 @@ pub async fn preview_schedule() {
 ///
 /// # Arguments
 /// * `dry_run` - If true, display to console instead of Vestaboard
-pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
+/// * `transport` - The transport to use for API communication
+pub async fn run_schedule(dry_run: bool, transport: &Transport) -> Result<(), VestaboardError> {
   use crate::process_control::ProcessController;
   use crate::runner::keyboard::{InputSource, KeyboardListener};
   use crate::runner::lock::InstanceLock;
@@ -502,9 +493,6 @@ pub async fn run_schedule(dry_run: bool) -> Result<(), VestaboardError> {
 
   // Acquire exclusive lock
   let _lock = InstanceLock::acquire("schedule")?;
-
-  // TODO: #95 will wire transport through from config/CLI
-  let transport = Transport::new(TransportType::Local)?;
 
   // Create schedule monitor for hot-reload
   let mut schedule_monitor = ScheduleMonitor::new(&schedule_path);
