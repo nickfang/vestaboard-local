@@ -167,9 +167,12 @@ mod transport_tests {
   #[test]
   fn test_transport_internet_requires_api_key() {
     // Internet transport requires INTERNET_API_KEY env var
-    // Without it set, should fail with config error
-    std::env::remove_var("INTERNET_API_KEY");
+    // Set to empty to simulate missing (dotenv won't override existing vars)
+    std::env::set_var("INTERNET_API_KEY", "");
     let result = Transport::new(TransportType::Internet);
+    // Clean up
+    std::env::remove_var("INTERNET_API_KEY");
+
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(err.to_string().contains("INTERNET_API_KEY"), "Error should mention missing env var");
