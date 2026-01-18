@@ -110,6 +110,7 @@ impl InternetTransport {
   ///
   /// Note: This method is kept for future features but is not yet fully implemented.
   /// The return type should eventually return the actual message data.
+  #[allow(dead_code)]
   pub async fn get_message(&self) -> Result<(), VestaboardError> {
     let client = &*INTERNET_CLIENT;
 

@@ -18,7 +18,7 @@ use api_broker::{handle_message, MessageDestination};
 use config::Config;
 use cli_display::{init_output_control, print_error, print_progress, print_success};
 use cli_setup::{Cli, Command, PlaylistArgs, ScheduleArgs, WidgetCommand};
-use datetime::datetime_to_utc;
+use datetime::{datetime_to_local, datetime_to_utc};
 use errors::VestaboardError;
 use scheduler::{
   add_task_to_schedule, clear_schedule, list_schedule, preview_schedule, remove_task_from_schedule, run_schedule,
@@ -120,9 +120,7 @@ async fn main() {
           let datetime_utc = match datetime_to_utc(&time) {
             Ok(dt) => {
               log::debug!("Parsed datetime: {}", dt);
-              let local_time = dt.with_timezone(&chrono::Local::now().timezone());
-              let formatted_time = local_time.format("%Y-%m-%d %I:%M %p").to_string();
-              print_progress(&format!("Scheduling task for {}...", formatted_time));
+              print_progress(&format!("Scheduling task for {}...", datetime_to_local(dt)));
               dt
             },
             Err(e) => {

@@ -1,8 +1,6 @@
-#[path = "../widget_utils.rs"]
-mod widget_utils;
 use crate::errors::VestaboardError;
+use crate::widgets::widget_utils::{center_line, error_to_display_message, format_error, format_message, full_justify_line};
 use std::io::{Error as IoError, ErrorKind};
-use widget_utils::{center_line, error_to_display_message, format_error, format_message, full_justify_line};
 
 #[cfg(test)]
 mod tests {

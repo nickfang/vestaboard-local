@@ -113,6 +113,7 @@ impl LocalTransport {
   ///
   /// Note: This method is kept for future features but is not yet fully implemented.
   /// The return type should eventually return the actual message data.
+  #[allow(dead_code)]
   pub async fn get_message(&self) -> Result<(), VestaboardError> {
     let client = &*LOCAL_CLIENT;
     let url = format!("http://{}:7000/local-api/message", &self.ip_address);

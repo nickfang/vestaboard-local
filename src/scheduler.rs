@@ -4,7 +4,7 @@ use std::{
   time::SystemTime,
 };
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -12,6 +12,7 @@ use serde_json::Value;
 use crate::api::Transport;
 use crate::api_broker::{handle_message, MessageDestination};
 use crate::cli_display::{print_error, print_progress, print_success, print_warning};
+use crate::datetime::datetime_to_local;
 use crate::widgets::resolver::execute_widget;
 use crate::widgets::widget_utils;
 use crate::{config::Config, errors::VestaboardError};
@@ -72,6 +73,7 @@ impl Schedule {
   pub fn get_task(&self, id: &str) -> Option<&ScheduledTask> {
     self.tasks.iter().find(|task| task.id == id)
   }
+  #[allow(dead_code)]
   pub fn get_task_mut(&mut self, id: &str) -> Option<&mut ScheduledTask> {
     self.tasks.iter_mut().find(|task| task.id == id)
   }
@@ -80,6 +82,12 @@ impl Schedule {
   }
   pub fn is_empty(&self) -> bool {
     self.tasks.is_empty()
+  }
+  pub fn len(&self) -> usize {
+    self.tasks.len()
+  }
+  pub fn sort_by_time(&mut self) {
+    self.tasks.sort_by_key(|task| task.time);
   }
 }
 
@@ -152,7 +160,7 @@ impl ScheduleMonitor {
     match load_schedule_silent(&self.schedule_file_path) {
       Ok(schedule) => {
         self.current_schedule = schedule;
-        log::info!("Schedule reloaded successfully, {} tasks loaded", self.current_schedule.tasks.len());
+        log::info!("Schedule reloaded successfully, {} tasks loaded", self.current_schedule.len());
         Ok(())
       },
       Err(e) => {
@@ -203,6 +211,7 @@ impl ScheduleMonitor {
   }
 
   /// Get the path to the schedule file being monitored
+  #[allow(dead_code)]
   pub fn get_schedule_file_path(&self) -> &Path {
     &self.schedule_file_path
   }
@@ -219,7 +228,7 @@ pub fn save_schedule_silent(schedule: &Schedule, path: &PathBuf) -> Result<(), V
 }
 
 fn save_schedule_internal(schedule: &Schedule, path: &PathBuf, silent: bool) -> Result<(), VestaboardError> {
-  log::debug!("Saving schedule with {} tasks to {}", schedule.tasks.len(), path.display());
+  log::debug!("Saving schedule with {} tasks to {}", schedule.len(), path.display());
 
   if !silent {
     print_progress("Saving schedule...");
@@ -260,8 +269,8 @@ fn load_schedule_internal(path: &PathBuf, silent: bool) -> Result<Schedule, Vest
       } else {
         match serde_json::from_str::<Schedule>(&content) {
           Ok(mut schedule) => {
-            schedule.tasks.sort_by_key(|task| task.time);
-            log::info!("Successfully loaded {} tasks from schedule {}", schedule.tasks.len(), path.display());
+            schedule.sort_by_time();
+            log::info!("Successfully loaded {} tasks from schedule {}", schedule.len(), path.display());
             Ok(schedule)
           },
           Err(e) => {
@@ -364,7 +373,7 @@ pub fn clear_schedule() -> Result<usize, VestaboardError> {
   let config = Config::load_silent()?;
   let schedule_path = config.get_schedule_file_path();
   let mut schedule = load_schedule_silent(&schedule_path)?;
-  let task_count = schedule.tasks.len();
+  let task_count = schedule.len();
 
   log::info!("Clearing schedule...");
   schedule.clear();
@@ -390,20 +399,19 @@ pub fn list_schedule() -> Result<(), VestaboardError> {
   let schedule_path = config.get_schedule_file_path();
   let schedule = load_schedule_silent(&schedule_path)?;
 
-  log::info!("Displaying {} scheduled tasks", schedule.tasks.len());
+  log::info!("Displaying {} scheduled tasks", schedule.len());
 
-  if schedule.tasks.is_empty() {
+  if schedule.is_empty() {
     log::debug!("No scheduled tasks found");
     println!("Schedule is empty");
     return Ok(());
   }
 
-  println!("Scheduled Tasks ({}):", schedule.tasks.len());
+  println!("Scheduled Tasks ({}):", schedule.len());
   println!("{:<6} | {:<22} | {:<15} | {}", "ID", "Time (Local)", "Widget", "Input");
   println!("{:-<80}", ""); // Separator line
-  for task in schedule.tasks {
-    let local_time = task.time.with_timezone(&Local::now().timezone());
-    let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+  for task in schedule.get_tasks() {
+    let formatted_time = datetime_to_local(task.time);
     let input_str = serde_json::to_string(&task.input).unwrap_or_else(|_| "Invalid JSON".to_string());
     println!("{:<6} | {:<22} | {:<15} | {}", task.id, formatted_time, task.widget, input_str);
   }
@@ -427,20 +435,19 @@ pub async fn preview_schedule(transport: &Transport) {
     Schedule::default()
   });
 
-  if schedule.tasks.is_empty() {
+  if schedule.is_empty() {
     println!("Schedule is empty - nothing to preview");
     return;
   }
 
-  println!("Previewing {} scheduled tasks:\n", schedule.tasks.len());
+  println!("Previewing {} scheduled tasks:\n", schedule.len());
 
-  log::info!("Executing dry run for {} scheduled tasks", schedule.tasks.len());
+  log::info!("Executing dry run for {} scheduled tasks", schedule.len());
 
-  for task in schedule.tasks.iter() {
+  for task in schedule.get_tasks() {
     log::debug!("Processing task {} (widget: {})", task.id, task.widget);
 
-    let local_time = task.time.with_timezone(&Local::now().timezone());
-    let formatted_time = local_time.format("%Y.%m.%d %I:%M %p").to_string();
+    let formatted_time = datetime_to_local(task.time);
 
     let message = match execute_widget(&task.widget, &task.input).await {
       Ok(msg) => msg,
@@ -486,7 +493,7 @@ pub async fn run_schedule(dry_run: bool, transport: &Transport) -> Result<(), Ve
   // Load initial schedule
   let schedule = load_schedule_silent(&schedule_path)?;
 
-  if schedule.tasks.is_empty() {
+  if schedule.is_empty() {
     println!("Schedule is empty. Add tasks with: vbl schedule add <time> <widget>");
     return Ok(());
   }
@@ -540,7 +547,7 @@ pub async fn run_schedule(dry_run: bool, transport: &Transport) -> Result<(), Ve
         log::info!("Schedule file updated, reloading");
         let new_schedule = schedule_monitor.get_current_schedule().clone();
         runner.reload_schedule(new_schedule);
-        print_success(&format!("Schedule reloaded ({} tasks)", schedule_monitor.get_current_schedule().tasks.len()));
+        print_success(&format!("Schedule reloaded ({} tasks)", schedule_monitor.get_current_schedule().len()));
       },
       Ok(false) => {},
       Err(e) => {

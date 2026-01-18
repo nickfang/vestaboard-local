@@ -4,6 +4,7 @@ pub enum VestaboardError {
   JsonError { source: serde_json::Error, context: String },
   ReqwestError { source: reqwest::Error, context: String },
   WidgetError { widget: String, message: String },
+  #[allow(dead_code)]
   ScheduleError { operation: String, message: String },
   ApiError { code: Option<u16>, message: String },
   ConfigError { field: String, message: String },
@@ -139,6 +140,7 @@ impl VestaboardError {
     }
   }
 
+  #[allow(dead_code)]
   pub fn schedule_error(operation: &str, message: &str) -> Self {
     VestaboardError::ScheduleError {
       operation: operation.to_string(),

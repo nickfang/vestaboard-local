@@ -85,6 +85,7 @@ impl Default for Playlist {
 
 impl Playlist {
   /// Add an item to the playlist
+  #[allow(dead_code)]
   pub fn add_item(&mut self, item: PlaylistItem) {
     self.items.push(item);
   }
@@ -122,7 +123,13 @@ impl Playlist {
     self.items.len()
   }
 
+  /// Get all items
+  pub fn get_items(&self) -> &[PlaylistItem] {
+    &self.items
+  }
+
   /// Get an item by ID
+  #[allow(dead_code)]
   pub fn get_item(&self, id: &str) -> Option<&PlaylistItem> {
     self.items.iter().find(|item| item.id == id)
   }
@@ -138,6 +145,7 @@ impl Playlist {
   }
 
   /// Validate that the interval is at least MIN_INTERVAL_SECONDS
+  #[allow(dead_code)]
   pub fn validate_interval(&self) -> Result<(), VestaboardError> {
     if self.interval_seconds < MIN_INTERVAL_SECONDS {
       return Err(VestaboardError::validation_error(&format!(
@@ -151,6 +159,7 @@ impl Playlist {
   // --- File operations (following scheduler.rs pattern) ---
 
   /// Load playlist from file (with progress messages)
+  #[allow(dead_code)]
   pub fn load(path: &Path) -> Result<Self, VestaboardError> {
     Self::load_internal(path, false)
   }
@@ -170,7 +179,7 @@ impl Playlist {
       },
       Ok(content) => match serde_json::from_str::<Self>(&content) {
         Ok(playlist) => {
-          log::info!("Loaded playlist with {} items", playlist.items.len());
+          log::info!("Loaded playlist with {} items", playlist.len());
           Ok(playlist)
         },
         Err(e) => {
@@ -200,6 +209,7 @@ impl Playlist {
   }
 
   /// Save playlist to file (with progress messages)
+  #[allow(dead_code)]
   pub fn save(&self, path: &Path) -> Result<(), VestaboardError> {
     self.save_internal(path, false)
   }
@@ -298,7 +308,7 @@ pub fn list_playlist() -> Result<(), VestaboardError> {
   println!("Playlist ({} items, {} second interval):", playlist.len(), playlist.interval_seconds);
   println!();
 
-  for (index, item) in playlist.items.iter().enumerate() {
+  for (index, item) in playlist.get_items().iter().enumerate() {
     println!("  {}. [{}] {}{}", index + 1, item.id, item.widget, item.format_input());
   }
 
@@ -380,7 +390,7 @@ pub async fn preview_playlist(transport: &Transport) {
   println!("Previewing {} playlist items ({} second interval):", playlist.len(), playlist.interval_seconds);
   println!();
 
-  for (index, item) in playlist.items.iter().enumerate() {
+  for (index, item) in playlist.get_items().iter().enumerate() {
     println!("--- Item {} of {}: {}{} ---", index + 1, playlist.len(), item.widget, item.format_input());
 
     // Execute widget and show preview

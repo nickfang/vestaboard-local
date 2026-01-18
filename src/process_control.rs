@@ -178,6 +178,7 @@ impl ProcessController {
   /// // Trigger shutdown due to critical error
   /// controller.request_shutdown();
   /// ```
+  #[allow(dead_code)]
   pub fn request_shutdown(&self) {
     log::info!("Manual shutdown request received");
     println!("Shutdown requested programmatically.");
@@ -192,6 +193,7 @@ impl ProcessController {
   ///
   /// Note: This does not unregister the signal handler, which cannot be undone
   /// due to ctrlc library limitations.
+  #[allow(dead_code)]
   pub fn reset(&self) {
     log::debug!("Resetting shutdown flag to false");
     self.shutdown_flag.store(false, Ordering::SeqCst);
@@ -200,6 +202,7 @@ impl ProcessController {
   /// Returns whether the signal handler has been registered.
   ///
   /// Useful for debugging and ensuring proper initialization.
+  #[allow(dead_code)]
   pub fn is_signal_handler_registered(&self) -> bool {
     self.signal_handler_registered.load(Ordering::SeqCst)
   }

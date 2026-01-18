@@ -86,6 +86,7 @@ impl RuntimeState {
   }
 
   /// Update index and save (convenience method)
+  #[allow(dead_code)]
   pub fn set_index_and_save(&mut self, index: usize, path: &Path) {
     self.playlist_index = index;
     self.last_shown_time = Some(Utc::now());

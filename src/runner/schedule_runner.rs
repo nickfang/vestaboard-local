@@ -92,6 +92,7 @@ impl<'a> ScheduleRunner<'a> {
   }
 
   /// Check if this runner is in dry-run mode.
+  #[allow(dead_code)]
   pub fn is_dry_run(&self) -> bool {
     self.dry_run
   }

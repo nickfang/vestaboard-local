@@ -87,16 +87,19 @@ impl<'a> PlaylistRunner<'a> {
   }
 
   /// Get the current index in the playlist.
+  #[allow(dead_code)]
   pub fn current_index(&self) -> usize {
     self.current_index
   }
 
   /// Get the current playlist state.
+  #[allow(dead_code)]
   pub fn state(&self) -> PlaylistState {
     self.state
   }
 
   /// Check if the playlist has completed a full cycle (for --once mode).
+  #[allow(dead_code)]
   pub fn is_complete(&self) -> bool {
     self.cycle_complete
   }

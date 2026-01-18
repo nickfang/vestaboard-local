@@ -3,6 +3,7 @@
 //! This module provides abstractions for keyboard input, including a mock
 //! implementation for testing and a real implementation using crossterm.
 
+#[cfg(test)]
 use std::collections::VecDeque;
 use std::io::IsTerminal;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -85,10 +86,12 @@ impl InputSource for KeyboardListener {
 ///
 /// Provides a predetermined sequence of keys for testing keyboard handling.
 /// Keys are returned in order, and `None` is returned once all keys are exhausted.
+#[cfg(test)]
 pub struct MockInput {
   keys: VecDeque<KeyCode>,
 }
 
+#[cfg(test)]
 impl MockInput {
   /// Create a new MockInput with the given sequence of keys.
   pub fn new(keys: Vec<KeyCode>) -> Self {
@@ -103,6 +106,7 @@ impl MockInput {
   }
 }
 
+#[cfg(test)]
 impl InputSource for MockInput {
   fn try_recv(&mut self) -> Option<KeyCode> {
     self.keys.pop_front()

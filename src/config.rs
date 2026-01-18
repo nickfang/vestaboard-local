@@ -50,6 +50,7 @@ impl Default for Config {
 }
 
 impl Config {
+  #[allow(dead_code)]
   pub fn load() -> Result<Self, VestaboardError> {
     Self::load_internal(true)
   }
@@ -154,6 +155,7 @@ impl Config {
     PathBuf::from(self.schedule_file_path.as_deref().unwrap_or(DEFAULT_SCHEDULE_FILE_PATH))
   }
 
+  #[allow(dead_code)]
   pub fn get_schedule_backup_path(&self) -> PathBuf {
     PathBuf::from(
       self
@@ -175,6 +177,7 @@ impl Config {
     PathBuf::from(self.runtime_state_path.as_deref().unwrap_or(DEFAULT_RUNTIME_STATE_PATH))
   }
 
+  #[allow(dead_code)]
   pub fn get_lock_file_path(&self) -> PathBuf {
     PathBuf::from(self.lock_file_path.as_deref().unwrap_or(DEFAULT_LOCK_FILE_PATH))
   }

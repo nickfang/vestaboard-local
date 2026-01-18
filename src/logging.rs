@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::datetime::now_local_24;
 use crate::errors::VestaboardError;
 use env_logger::{Builder, Target};
 use std::fs::OpenOptions;
@@ -30,7 +31,7 @@ pub fn init_logging() -> Result<(), VestaboardError> {
       writeln!(
         buf,
         "{} [{}] [{}:{}] {}",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+        now_local_24(),
         record.level(),
         record.file().unwrap_or("unknown"),
         record.line().unwrap_or(0),

@@ -117,6 +117,7 @@ impl InstanceLock {
   }
 
   /// Get the path to the lock file
+  #[allow(dead_code)]
   pub fn path(&self) -> &PathBuf {
     &self.path
   }
